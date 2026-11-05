@@ -24,7 +24,7 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: none
       - key: FRONTEND_ORIGIN
-        sync: false # set to the deployed frontend URL, e.g. https://lanterned.vercel.app
+        value: https://lantern-ed.vercel.app
       # Per-IP rate limits key on the connecting address. Behind Render's proxy that is the proxy, so every user
       # would share one bucket until uvicorn is told to trust X-Forwarded-For. Set this in the dashboard (e.g. "*",
       # since Render's edge is the only way in) after confirming from two networks that the client IPs differ.
