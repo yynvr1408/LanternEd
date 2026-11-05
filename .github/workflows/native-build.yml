@@ -92,7 +92,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-Android-Release-APK
-          path: frontend/android/app/build/outputs/apk/release/*.apk
+          path: frontend/android/app/build/outputs/apk/**/*.apk
 
   # 4. iOS Mobile Build (Capacitor -> iOS App & IPA)
   build-mobile-ios:

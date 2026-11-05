@@ -28,7 +28,7 @@ jobs:
         run: |
           heads=$(alembic heads | wc -l)
           test "$heads" -eq 1 || (echo "Multiple Alembic heads: merge them" && alembic heads && exit 1)
-      - run: pytest -q
+      - run: pytest -v --tb=short
 
   frontend:
     runs-on: ubuntu-latest
