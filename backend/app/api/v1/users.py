@@ -91,7 +91,9 @@ def erase_my_account(
 
         raise ValidationFailedError('Type DELETE to confirm.', code="CONFIRMATION_REQUIRED")
     privacy_service.erase_user(db, user, password=payload.password)
-    response.delete_cookie(settings.session_cookie_name, path="/")
+    samesite = settings.session_cookie_samesite.lower()
+    secure = settings.is_production or samesite == "none"
+    response.delete_cookie(settings.session_cookie_name, path="/", samesite=samesite, secure=secure, httponly=True)
     return None
 
 

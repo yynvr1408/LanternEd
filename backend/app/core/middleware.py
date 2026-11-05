@@ -32,7 +32,7 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app, *, allowed_origin: str):
         super().__init__(app)
-        self.allowed_origin = allowed_origin.rstrip("/")
+        self.allowed_origins = [o.strip().rstrip("/") for o in allowed_origin.split(",") if o.strip()]
 
     async def dispatch(self, request: Request, call_next):
         if request.method in _UNSAFE_METHODS:
@@ -53,7 +53,11 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
 
     def _is_allowed(self, request: Request, origin: str) -> bool:
         origin = origin.rstrip("/")
-        if origin == self.allowed_origin:
+        if origin in self.allowed_origins:
+            return True
+        if any("vercel.app" in o for o in self.allowed_origins) and (
+            origin.endswith(".vercel.app") or origin.startswith("https://lanterned")
+        ):
             return True
         # Same-origin deployments (the SPA served by the same host as the API, as in the
         # self-hosted Caddy setup) send an Origin equal to the request's own host.

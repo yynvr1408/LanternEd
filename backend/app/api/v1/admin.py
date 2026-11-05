@@ -77,7 +77,9 @@ def admin_logout(
     token = request.cookies.get(settings.admin_cookie_name)
     if token:
         auth_service.revoke_session(db, token)
-    response.delete_cookie(settings.admin_cookie_name, path="/")
+    samesite = settings.session_cookie_samesite.lower()
+    secure = settings.is_production or samesite == "none"
+    response.delete_cookie(settings.admin_cookie_name, path="/", samesite=samesite, secure=secure, httponly=True)
     return None
 
 

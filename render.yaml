@@ -94,7 +94,14 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false # an address on a domain verified in Resend, e.g. LanternED <no-reply@yourdomain.in>
+        value: LanternED <onboarding@resend.dev>
+      # ElevenLabs audio recap voiceover
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        value: 21m00Tcm4TlvDq8ikWAM
+      - key: ELEVENLABS_MODEL_ID
+        value: eleven_turbo_v2_5
       - key: SENTRY_DSN
         sync: false # error tracking; leave unset to disable
       # Optional: online payments (Razorpay), WhatsApp alerts, recording retention. See docs/OPERATIONS.md.

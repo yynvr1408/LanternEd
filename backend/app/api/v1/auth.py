@@ -41,6 +41,18 @@ def _set_session_cookie(response: Response, token: str, settings: Settings) -> N
     )
 
 
+def _delete_session_cookie(response: Response, settings: Settings) -> None:
+    samesite = settings.session_cookie_samesite.lower()
+    secure = settings.is_production or samesite == "none"
+    response.delete_cookie(
+        key=settings.session_cookie_name,
+        path="/",
+        samesite=samesite,
+        secure=secure,
+        httponly=True,
+    )
+
+
 @router.post("/register/request-otp", status_code=202)
 def register_request_otp(
     payload: RequestRegistrationOtpRequest,
@@ -151,7 +163,7 @@ def logout(
     token = request.cookies.get(settings.session_cookie_name)
     if token:
         auth_service.revoke_session(db, token)
-    response.delete_cookie(settings.session_cookie_name, path="/")
+    _delete_session_cookie(response, settings)
     return None
 
 

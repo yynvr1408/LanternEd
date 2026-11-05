@@ -89,11 +89,13 @@ async def lifespan(_app: FastAPI):
 _docs = {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.is_production else {}
 app = FastAPI(title="LanternED API", lifespan=lifespan, **_docs)
 
+allowed_origins = [o.strip().rstrip("/") for o in settings.frontend_origin.split(",") if o.strip()]
 app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.frontend_origin)
 app.add_middleware(RequestIdMiddleware)  # added after, so it wraps the origin check and its refusals carry a request id
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app" if any("vercel.app" in o for o in allowed_origins) else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
