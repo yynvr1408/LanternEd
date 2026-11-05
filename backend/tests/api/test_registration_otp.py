@@ -113,8 +113,9 @@ def test_requesting_an_otp_for_an_already_registered_email_is_rejected(client):
     assert r.json()["error"]["code"] == "EMAIL_TAKEN"
 
 
-def test_blocked_email_cannot_even_request_a_registration_otp(client):
-    r = client.post(f"{BASE}/register/request-otp", json={"email": "yynandhivardhanreddy@gmail.com"})
+def test_blocked_email_cannot_even_request_a_registration_otp(client, monkeypatch):
+    monkeypatch.setattr(auth_service.settings, "blocked_registration_emails_extra", "blocked@lanterned.test")
+    r = client.post(f"{BASE}/register/request-otp", json={"email": "blocked@lanterned.test"})
     assert r.status_code == 403
     assert r.json()["error"]["code"] == "EMAIL_NOT_ALLOWED"
 

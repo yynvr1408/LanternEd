@@ -71,6 +71,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
   // Step 3 ('pending') only happens for a college-scoped registration: the account exists but
   // waits for that college's administrator to approve it before it can sign in.
   const [step, setStep] = useState<'form' | 'otp' | 'pending'>('form')
+  const [devOtp, setDevOtp] = useState<string | null>(null)
   const [otp, setOtp] = useState('')
   const [otpError, setOtpError] = useState<string | null>(null)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
@@ -213,7 +214,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
 
     setIsLoading(true)
     try {
-      await authService.requestRegistrationOtp(email.trim())
+      const res = await authService.requestRegistrationOtp(email.trim())
+      setDevOtp(res.dev_otp || null)
       setSecondsLeft(OTP_TTL_SECONDS)
       setResendCooldown(RESEND_COOLDOWN_SECONDS)
       setOtp('')
@@ -280,7 +282,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     setIsResendingOtp(true)
     setOtpError(null)
     try {
-      await authService.requestRegistrationOtp(email.trim())
+      const res = await authService.requestRegistrationOtp(email.trim())
+      setDevOtp(res.dev_otp || null)
       setSecondsLeft(OTP_TTL_SECONDS)
       setResendCooldown(RESEND_COOLDOWN_SECONDS)
       setOtp('')
@@ -360,6 +363,30 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
             {otpError && (
               <div className="mb-4 p-3 rounded-lg bg-[#FDE8E7] border border-[#B42318]/30 text-[#B42318] text-xs" role="alert">
                 {otpError}
+              </div>
+            )}
+
+            {devOtp && (
+              <div className="mb-4 p-3 rounded-lg bg-[#EAF6F0] border border-[#0F5B57]/30 text-[#0F5B57] text-xs">
+                <div className="font-semibold mb-0.5">Verification Code (Sandbox / Dev Mode):</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-mono font-bold text-base bg-white px-2 py-0.5 rounded border border-[#CBD7D1] tracking-widest text-[#202B2A]">
+                    {devOtp}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtp(devOtp)
+                      setOtpError(null)
+                    }}
+                    className="text-[11px] underline font-medium hover:text-[#0b423f] cursor-pointer"
+                  >
+                    Auto-fill
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#687775] mt-1.5 leading-normal">
+                  In Resend Sandbox mode, email delivery is restricted until a custom domain is verified. Use the code above to proceed.
+                </p>
               </div>
             )}
 

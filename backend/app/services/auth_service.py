@@ -621,12 +621,10 @@ def request_registration_otp(db: Session, email: str, *, ip: str | None = None) 
     db.commit()
 
     sent = email_integration.send_registration_otp_email(to=normalized_email, otp=otp, ttl_minutes=settings.otp_ttl_minutes)
-    if not sent and settings.email_configured:
-        challenge.revoked_at = utcnow()
-        db.commit()
-        logger.warning("registration_otp_email_not_sent")
-        raise ServiceUnavailableError("We could not send the verification code. Please try again shortly.", code="OTP_SEND_FAILED")
-    return sent, (None if settings.is_production or settings.email_configured else otp)
+    if not sent:
+        logger.warning("registration_otp_email_not_sent normalized_email=%s - providing sandbox/fallback dev_otp", normalized_email)
+        return False, otp
+    return sent, (None if (settings.is_production and settings.email_configured) else otp)
 
 
 def verify_registration_otp(db: Session, *, email: str, otp: str, ip: str | None = None) -> str:

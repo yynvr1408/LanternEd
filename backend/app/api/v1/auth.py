@@ -61,8 +61,14 @@ def register_request_otp(
     settings: Settings = Depends(get_settings),
 ):
     sent, dev_otp = auth_service.request_registration_otp(db, payload.email, ip=request.client.host if request.client else None)
+    if sent:
+        msg = "A verification code has been sent to that email address."
+    elif dev_otp:
+        msg = f"Email delivery is restricted in sandbox mode. Your verification code is: {dev_otp}"
+    else:
+        msg = "Verification code generated."
     body = {
-        "message": "A verification code has been sent to that email address.",
+        "message": msg,
         "otp_ttl_minutes": settings.otp_ttl_minutes,
         "resend_cooldown_seconds": settings.otp_request_cooldown_seconds,
     }
