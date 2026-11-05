@@ -22,24 +22,25 @@ npm run test:e2e:real        # real backend + SQLite + built frontend, nothing m
 npm run test:e2e:live        # real LiveKit Cloud (needs LIVEKIT_* in backend/.env)
 ```
 
-Set `VITE_API_BASE_URL` (default `http://localhost:8000`) when the API is elsewhere. It is the only environment variable the frontend uses and it is public; secrets never belong in a `VITE_` variable. The API lists the frontend's origin in `FRONTEND_ORIGIN`, because sign-in uses a cookie.
+Set `VITE_API_BASE_URL` (default `http://localhost:8000`) when the API is elsewhere. In production on Vercel, this is set to `https://lanterned-api.onrender.com`. It is the only environment variable the frontend uses and it is public; secrets never belong in a `VITE_` variable. The API lists the frontend's origin in `FRONTEND_ORIGIN`, because sign-in uses an httpOnly cookie.
 
 ## Portals and routes
 
 | Area | Routes |
 |---|---|
-| Public | `/login`, `/login/student`, `/login/teacher`, `/register/student`, `/register/teacher`, `/forgot-password`, `/verify-otp`, `/reset-password` |
+| Public & Auth | `/login`, `/login/student`, `/login/teacher`, `/login/college-admin`, `/register`, `/register/student`, `/register/teacher`, `/register/college`, `/forgot-password`, `/verify-otp`, `/reset-password` |
 | Student | `/student/dashboard`, `courses`, `courses/:id`, `lessons/:id`, `classes`, `classes/:id/summary`, `recorded-lessons`, `assignments`, `assignments/:id`, `downloads`, `downloads/:id`, `profile` |
-| Teacher | `/teacher/dashboard`, `courses`, `courses/new`, `courses/:id/manage`, `classes`, `classes/new`, `recorded-lessons`, `materials`, `assignments`, `summaries`, `profile`, `institution` (shown only to a teacher delegated as that college's institution administrator — see `useIsInstitutionAdmin`) |
+| Teacher | `/teacher/dashboard`, `courses`, `courses/new`, `courses/:id/manage`, `classes`, `classes/new`, `recorded-lessons`, `materials`, `assignments`, `summaries`, `profile`, `institution` (delegated college administrator) |
+| College Admin | `/login/college-admin` -> `/institution/dashboard` (structure, branch/section setup, student approvals) |
 | Live class | `/classroom/:classId` (students and teachers) |
-| Administrator | `/admin` (sign-in and dashboard on one route; not linked anywhere) |
+| Super-Admin | `/platform-console` (multi-college provisioning, global telemetry; blocked inside native desktop/mobile apps) |
 
 ## Source layout
 
 ```
 src/
   pages/        auth, student, teacher (+ institution admin), classroom, admin
-  components/   ui (design system, incl. LanguageSwitcher), layout, course, class (+ whiteboard), assignment, recording, summary, download
+  components/   ui (design system, incl. searchable LanguageSwitcher), layout, course, class (+ whiteboard), assignment, recording, summary, download, common (NetworkBandwidthController, AppDownloadModal)
   context/      AuthContext, NetworkContext, SyncContext
   services/     apiClient (single transport and view-model mapping), authService, adminApi, institutionAdminApi, registrationApi,
                 courseService, classService, assignmentService, syncManager, downloadEngine, downloadManager, playbackStore, connectivity
@@ -60,7 +61,7 @@ Teal brand colour `#0F5B57` on warm light surfaces (`#F8FAF7`, borders `#E1E8E4`
 
 * **Drafts and sync:** assignment answers are saved on the device (IndexedDB) while typing and sent through an idempotent queue when the connection returns; a submission shows as confirmed only after the server accepts it.
 * **Downloads:** recordings and resources download in resumable ranged chunks into IndexedDB and open offline; the Downloads page shows real storage use.
-* **Service worker:** the application shell is precached so any route opens offline; API responses are never cached (private data stays out of the cache).
+* **Service worker:** the application shell is precached (2.28 MB) so any route opens offline; API responses are never cached (private data stays out of the cache).
 * **Connectivity:** the device, the API and the live media connection are tracked separately so guidance matches the real cause; live classes switch to audio-only on a weak link and restore video when it recovers.
 * **Shared devices:** signing out on a shared device clears drafts, the queue, downloads and caches.
 
@@ -70,8 +71,8 @@ The teacher's camera is a small floating window (drag, enlarge, hide) for the te
 
 ## Institution admin
 
-A teacher the administrator has delegated to manage one college sees an extra **Institution Admin** nav item and `/teacher/institution` route (`pages/teacher/TeacherInstitutionAdminPage.tsx`), reusing the same `CollegeStructureDialog` the platform `/admin` panel uses, pointed at `services/institutionAdminApi.ts` instead of `adminApi.ts`. Visibility is driven by `hooks/useIsInstitutionAdmin.ts`, which calls `GET /api/v1/institution-admin/colleges` and renders nothing while that list is empty — true for almost every teacher.
+A teacher the administrator has delegated to manage one college sees an extra **Institution Admin** nav item and `/teacher/institution` route (`pages/teacher/TeacherInstitutionAdminPage.tsx`), reusing the same `CollegeStructureDialog` the platform `/platform-console` panel uses, pointed at `services/institutionAdminApi.ts` instead of `adminApi.ts`. Visibility is driven by `hooks/useIsInstitutionAdmin.ts`, which calls `GET /api/v1/institution-admin/colleges` and renders nothing while that list is empty — true for almost every teacher.
 
 ## Internationalisation
 
-21 languages are bundled directly into the JS build (imported as JSON in `src/i18n/index.ts`, not fetched at runtime) so switching languages never costs a network request — consistent with the app's offline-first, low-bandwidth-first design. Coverage is two-tier: the world's most-spoken languages (English, Mandarin Chinese, Hindi, Arabic, Bengali, Portuguese, Russian, Urdu, Indonesian, Swahili, Japanese) plus ten further major Indian languages (Telugu, Marathi, Tamil, Gujarati, Kannada, Odia, Malayalam, Punjabi, Assamese, Maithili). `components/ui/LanguageSwitcher.tsx` is a plain `<select>` (works with screen readers and keyboard navigation for free) shown on the sign-in, registration and navigation screens; the choice is written to `localStorage` under `lanternEd:language` and takes priority over the browser's own language on every later visit. Arabic and Urdu translations are provided but the layout does not yet mirror for RTL — see the [project roadmap](../README.md#18-roadmap).
+21 bundled languages are imported directly into the bundle (never requested over the network) so changing languages is instantaneous and costs zero data. Features a modern searchable popover dropdown with native script display (e.g. Telugu, Hindi, Tamil) and English subtitles.
