@@ -232,8 +232,22 @@ class DecisionReject(BaseModel):
 
 
 
+class ApproveRegistrationIn(BaseModel):
+    branch_id: str | None = None
+    section_id: str | None = None
+    all_sections: bool = False
+
+
+class UserAllocation(BaseModel):
+    user_id: str
+    branch_id: str | None = None
+    section_id: str | None = None
+    all_sections: bool = False
+
+
 class BulkRegistrationsAction(BaseModel):
     user_ids: list[str] = Field(..., min_length=1, max_length=200)
+    allocations: list[UserAllocation] | None = None
     reason: str | None = Field(default=None, max_length=500)
 
 

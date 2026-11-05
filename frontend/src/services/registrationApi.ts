@@ -21,7 +21,7 @@ export interface RegistrationSection {
 
 export interface CollegeSelection {
   collegeId: string
-  branchId: string
+  branchId?: string
   /** Exactly one of sectionId / allSections. "All sections" is a branch-wide teacher assignment, never a section. */
   sectionId?: string
   allSections?: boolean

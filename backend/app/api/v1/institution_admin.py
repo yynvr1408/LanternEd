@@ -39,6 +39,7 @@ from app.schemas.admin import (
     BillingSummaryOut,
     MyAdminRoleRequestOut,
     PendingUserOut,
+    ApproveRegistrationIn,
     BulkRegistrationsAction,
     BulkActionResult,
     AiScreenedApplicantOut,
@@ -225,12 +226,22 @@ def list_pending_registrations(college_id: str, db: Session = Depends(get_db), u
 
 @router.post("/colleges/{college_id}/registrations/{user_id}/approve", response_model=PendingUserOut)
 def approve_registration(
-    college_id: str, user_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    college_id: str,
+    user_id: str,
+    payload: ApproveRegistrationIn | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
     college_service.assert_can_manage_college(db, user, college)
-    return college_service.approve_registration(db, user.id, college_id, user_id)
+    branch_id = payload.branch_id if payload else None
+    section_id = payload.section_id if payload else None
+    all_sections = payload.all_sections if payload else False
+    return college_service.approve_registration(
+        db, user.id, college_id, user_id,
+        branch_id=branch_id, section_id=section_id, all_sections=all_sections
+    )
 
 
 @router.post("/colleges/{college_id}/registrations/{user_id}/reject", response_model=PendingUserOut)
@@ -245,12 +256,18 @@ def reject_registration(
 
 @router.post("/colleges/{college_id}/registrations/bulk-approve", response_model=BulkActionResult)
 def bulk_approve_registrations(
-    college_id: str, payload: BulkRegistrationsAction, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    college_id: str,
+    payload: BulkRegistrationsAction,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
     college_service.assert_can_manage_college(db, user, college)
-    approved_ids = college_service.bulk_approve_registrations(db, user.id, college_id, payload.user_ids)
+    allocations = [a.model_dump() for a in payload.allocations] if payload.allocations else None
+    approved_ids = college_service.bulk_approve_registrations(
+        db, user.id, college_id, payload.user_ids, allocations=allocations
+    )
     return BulkActionResult(
         success_count=len(approved_ids),
         user_ids=approved_ids,

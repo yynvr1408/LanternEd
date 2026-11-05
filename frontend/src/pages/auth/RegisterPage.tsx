@@ -178,8 +178,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     else if (password.length < 8) errs.password = 'Password must be at least 8 characters long.'
     if (password && confirmPassword !== password) errs.confirmPassword = 'Passwords do not match.'
     if (!collegeId) errs.college = 'Select your college.'
-    if (collegeId && !branchId) errs.branch = 'Select your branch.'
-    if (branchId && !sectionId) errs.section = isTeacher ? 'Select a section or All Sections.' : 'Select your section.'
+    if (!isTeacher && collegeId && !branchId) errs.branch = 'Select your branch.'
     setFieldErrors(errs)
     setError(null)
     if (Object.keys(errs).length > 0) return
@@ -187,9 +186,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     if (!requiresOtp) {
       setIsLoading(true)
       try {
-        const allSections = isTeacher && sectionId === ALL_SECTIONS
         const selection = collegeId
-          ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() || undefined }
+          ? { collegeId, branchId: isTeacher ? undefined : branchId || undefined, collegeCode: collegeCode.trim() || undefined }
           : undefined
         const result = await register(email.trim(), fullName.trim(), password, role, undefined, selection)
         if (isRegistrationPending(result)) {
@@ -246,9 +244,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     setOtpError(null)
     try {
       const { verification_token: verificationToken } = await authService.verifyRegistrationOtp(email.trim(), otp)
-      const allSections = isTeacher && sectionId === ALL_SECTIONS
       const selection = collegeId
-        ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() || undefined }
+        ? { collegeId, branchId: isTeacher ? undefined : branchId || undefined, collegeCode: collegeCode.trim() || undefined }
         : undefined
       const result = await register(email, fullName, password, role, undefined, selection, verificationToken)
       if (isRegistrationPending(result)) {
@@ -641,55 +638,46 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
               </p>
             </FormField>
 
-            <FormField label="Branch" htmlFor="branch" required error={fieldErrors.branch}>
-              <Select
-                id="branch"
-                value={branchId}
-                onChange={(e) => onBranchChange(e.target.value)}
-                options={branchOptions}
-                isError={!!fieldErrors.branch}
-                disabled={!collegeId || branches.status !== 'ready' || branches.items.length === 0}
-              />
-            </FormField>
-            {collegeId && branches.status === 'error' && (
-              <p className="text-xs text-[#B42318] -mt-2" role="alert">
-                Could not load branches.{' '}
-                <button type="button" onClick={() => loadBranches(collegeId)} className="font-semibold underline">
-                  Try again
-                </button>
-              </p>
-            )}
-            {collegeId && branches.status === 'ready' && branches.items.length === 0 && (
-              <p className="text-xs text-[#687775] -mt-2" role="status">
-                This college has no branches yet. Please contact your administrator.
-              </p>
-            )}
+            {isTeacher ? (
+              <div className="p-3.5 rounded-xl bg-[#F0F4F2] border border-[#CBD7D1] text-[12px] text-[#202B2A] flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#0F5B57]" />
+                <div className="leading-relaxed">
+                  <strong>Department &amp; Section Allocation:</strong> Teachers register directly under their institution. Your academic branch and section assignments will be designated by your College Administrator upon reviewing your registration.
+                </div>
+              </div>
+            ) : (
+              <>
+                <FormField label="Branch / Department" htmlFor="branch" required error={fieldErrors.branch}>
+                  <Select
+                    id="branch"
+                    value={branchId}
+                    onChange={(e) => onBranchChange(e.target.value)}
+                    options={branchOptions}
+                    isError={!!fieldErrors.branch}
+                    disabled={!collegeId || branches.status !== 'ready' || branches.items.length === 0}
+                  />
+                </FormField>
+                {collegeId && branches.status === 'error' && (
+                  <p className="text-xs text-[#B42318] -mt-2" role="alert">
+                    Could not load branches.{' '}
+                    <button type="button" onClick={() => loadBranches(collegeId)} className="font-semibold underline">
+                      Try again
+                    </button>
+                  </p>
+                )}
+                {collegeId && branches.status === 'ready' && branches.items.length === 0 && (
+                  <p className="text-xs text-[#687775] -mt-2" role="status">
+                    This college has no branches yet. Please contact your administrator.
+                  </p>
+                )}
 
-            <FormField label="Section" htmlFor="section" required error={fieldErrors.section}>
-              <Select
-                id="section"
-                value={sectionId}
-                onChange={(e) => {
-                  setSectionId(e.target.value)
-                  setFieldErrors((f) => ({ ...f, section: undefined }))
-                }}
-                options={sectionOptions}
-                isError={!!fieldErrors.section}
-                disabled={!branchId || sections.status !== 'ready' || sections.items.length === 0}
-              />
-            </FormField>
-            {branchId && sections.status === 'error' && (
-              <p className="text-xs text-[#B42318] -mt-2" role="alert">
-                Could not load sections.{' '}
-                <button type="button" onClick={() => loadSections(branchId)} className="font-semibold underline">
-                  Try again
-                </button>
-              </p>
-            )}
-            {branchId && sections.status === 'ready' && sections.items.length === 0 && (
-              <p className="text-xs text-[#687775] -mt-2" role="status">
-                This branch has no sections yet. Please contact your administrator.
-              </p>
+                <div className="p-3.5 rounded-xl bg-[#F0F4F2] border border-[#CBD7D1] text-[12px] text-[#202B2A] flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#0F5B57]" />
+                  <div className="leading-relaxed">
+                    <strong>Section Allocation:</strong> Select your intended branch/department above. Your cohort section will be assigned by your College Administration upon reviewing and approving your registration.
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="p-3 rounded-xl bg-[#EAF6F0] border border-[#0F5B57]/20 text-[11px] text-[#0F5B57] flex items-start gap-2.5">

@@ -182,8 +182,9 @@ def test_inactive_section_rejected(admin):
 
 def test_missing_section_or_college_rejected(admin):
     college, secs = make_college(admin)
-    _, no_section = register(college, None)
-    assert no_section.json()["error"]["code"] == "SECTION_REQUIRED"
+    c = TestClient(app)
+    no_branch = c.post("/api/v1/auth/register", json={"full_name": "Student A", "email": "sa@example.com", "password": "password123", "role": "student", "college_id": college["id"]})
+    assert no_branch.status_code == 422 and no_branch.json()["error"]["code"] == "BRANCH_REQUIRED"
     _, nothing = register(None, None)
     assert nothing.status_code == 422 and nothing.json()["error"]["code"] == "COLLEGE_REQUIRED"
     c = TestClient(app)

@@ -356,11 +356,14 @@ def validate_registration_target(
     college_code: str | None,
     require_code: bool,
     allow_all_sections: bool,
-) -> tuple[College, CollegeBranch, CollegeSection | None] | None:
+    role: UserRole | None = None,
+) -> tuple[College, CollegeBranch | None, CollegeSection | None] | None:
     """Server-side check of the college -> branch -> section a new account asks to join. Returns None only
     when the request names nothing at all (legacy callers); anything partial or inconsistent is rejected
-    before any row is written. A teacher must also prove the code of THIS college. `all_sections` means
-    branch-wide coverage: the section is None and no section row is involved."""
+    before any row is written.
+    - Teachers register with college_id only (branch and section are allocated post-registration by the administrator).
+    - Students register by selecting college and their intended branch/department (section is allocated upon approval).
+    """
     import hmac
 
     if not any([college_id, branch_id, section_id, college_code, all_sections]):
@@ -379,26 +382,72 @@ def validate_registration_target(
         # One answer for a wrong code and for another college's code, so codes cannot be probed.
         if not hmac.compare_digest(supplied.encode(), college.code.encode()):
             raise ValidationFailedError("The college code is incorrect for the selected college.", code="INVALID_COLLEGE_CODE")
+
+    # TEACHER REGISTRATION:
+    if role == UserRole.teacher:
+        # Teachers register directly against their institution. Branch and section
+        # are assigned post-registration by the institution administrator.
+        if not branch_id and not section_id:
+            return college, None, None
+        branch = None
+        if branch_id:
+            branch = db.get(CollegeBranch, branch_id)
+            if branch is None or branch.college_id != college.id:
+                raise ValidationFailedError("The selected branch does not belong to this college.", code="INVALID_BRANCH")
+            if branch.status != CollegeStatus.active:
+                raise ConflictError("This branch is not available.", code="BRANCH_INACTIVE")
+        if all_sections:
+            return college, branch, None
+        section = None
+        if section_id:
+            section = db.get(CollegeSection, section_id)
+            if section is None or section.college_id != college.id or (branch and section.branch_id != branch.id):
+                raise ValidationFailedError("The selected section does not belong to this branch.", code="INVALID_SECTION")
+            if section.status != CollegeStatus.active:
+                raise ConflictError("This section is not available.", code="SECTION_INACTIVE")
+        return college, branch, section
+
+    # STUDENT REGISTRATION:
+    # Students register by selecting college and their intended branch/department.
+    # Cohort section is allocated by college admin during approval.
+    if role == UserRole.student:
+        if not branch_id:
+            raise ValidationFailedError("Select a branch.", code="BRANCH_REQUIRED")
+        branch = db.get(CollegeBranch, branch_id)
+        if branch is None or branch.college_id != college.id:
+            raise ValidationFailedError("The selected branch does not belong to this college.", code="INVALID_BRANCH")
+        if branch.status != CollegeStatus.active:
+            raise ConflictError("This branch is not available.", code="BRANCH_INACTIVE")
+        if all_sections:
+            raise ValidationFailedError("Only teachers can register for all sections.", code="INVALID_SECTION")
+        section = None
+        if section_id:
+            section = db.get(CollegeSection, section_id)
+            if section is None or section.branch_id != branch.id or section.college_id != college.id:
+                raise ValidationFailedError("The selected section does not belong to this branch.", code="INVALID_SECTION")
+            if section.status != CollegeStatus.active:
+                raise ConflictError("This section is not available.", code="SECTION_INACTIVE")
+        return college, branch, section
+
+    # FALLBACK / UNKNOWN ROLE:
     if not branch_id:
-        raise ValidationFailedError("Select a branch.", code="BRANCH_REQUIRED")
+        return college, None, None
     branch = db.get(CollegeBranch, branch_id)
     if branch is None or branch.college_id != college.id:
         raise ValidationFailedError("The selected branch does not belong to this college.", code="INVALID_BRANCH")
     if branch.status != CollegeStatus.active:
         raise ConflictError("This branch is not available.", code="BRANCH_INACTIVE")
     if all_sections:
-        if section_id:
-            raise ValidationFailedError("Choose either one section or all sections, not both.", code="INVALID_SECTION")
         if not allow_all_sections:
             raise ValidationFailedError("Only teachers can register for all sections.", code="INVALID_SECTION")
         return college, branch, None
-    if not section_id:
-        raise ValidationFailedError("Select a section.", code="SECTION_REQUIRED")
-    section = db.get(CollegeSection, section_id)
-    if section is None or section.branch_id != branch.id or section.college_id != college.id:
-        raise ValidationFailedError("The selected section does not belong to this branch.", code="INVALID_SECTION")
-    if section.status != CollegeStatus.active:
-        raise ConflictError("This section is not available.", code="SECTION_INACTIVE")
+    section = None
+    if section_id:
+        section = db.get(CollegeSection, section_id)
+        if section is None or section.branch_id != branch.id or section.college_id != college.id:
+            raise ValidationFailedError("The selected section does not belong to this branch.", code="INVALID_SECTION")
+        if section.status != CollegeStatus.active:
+            raise ConflictError("This section is not available.", code="SECTION_INACTIVE")
     return college, branch, section
 
 
@@ -724,13 +773,41 @@ def _get_pending_registration_or_404(db: Session, college_id: str, user_id: str)
     return user
 
 
-def approve_registration(db: Session, college_admin_id: str, college_id: str, user_id: str) -> User:
+def approve_registration(
+    db: Session,
+    college_admin_id: str,
+    college_id: str,
+    user_id: str,
+    *,
+    branch_id: str | None = None,
+    section_id: str | None = None,
+    all_sections: bool = False,
+) -> dict:
     user = _get_pending_registration_or_404(db, college_id, user_id)
+
+    # If branch/section allocation is provided or changed during approval
+    if branch_id is not None or section_id is not None or all_sections:
+        db.execute(delete(UserCollegeSection).where(UserCollegeSection.user_id == user.id))
+        db.execute(delete(UserBranchAssignment).where(UserBranchAssignment.user_id == user.id))
+        if section_id:
+            sec = get_section_or_404(db, section_id)
+            if sec.college_id != college_id:
+                raise ValidationFailedError("Section does not belong to this college.")
+            if branch_id and sec.branch_id != branch_id:
+                raise ValidationFailedError("Section does not belong to the selected branch.")
+            db.add(UserCollegeSection(user_id=user.id, college_section_id=sec.id))
+        elif branch_id:
+            branch = get_branch_or_404(db, branch_id)
+            if branch.college_id != college_id:
+                raise ValidationFailedError("Branch does not belong to this college.")
+            db.add(UserBranchAssignment(user_id=user.id, branch_id=branch.id))
+
     user.status = UserStatus.active
     db.commit()
     db.refresh(user)
     audit_service.record(db, actor_id=college_admin_id, action="registration_approved", resource_type="user", resource_id=user.id)
-    return user
+    hydrated = hydrate_users_with_affiliation(db, [user])
+    return hydrated[0]
 
 
 def reject_registration(db: Session, college_admin_id: str, college_id: str, user_id: str, *, reason: str | None) -> User:
@@ -742,14 +819,48 @@ def reject_registration(db: Session, college_admin_id: str, college_id: str, use
     return user
 
 
-def bulk_approve_registrations(db: Session, college_admin_id: str, college_id: str, user_ids: list[str]) -> list[str]:
+def bulk_approve_registrations(
+    db: Session,
+    college_admin_id: str,
+    college_id: str,
+    user_ids: list[str],
+    *,
+    allocations: list[dict] | None = None,
+) -> list[str]:
     stmt = (
         select(User)
         .where(User.college_id == college_id, User.status == UserStatus.pending, User.id.in_(user_ids))
     )
     users = list(db.execute(stmt).scalars())
+    alloc_map = {}
+    if allocations:
+        for a in allocations:
+            uid = a.get("user_id")
+            if uid:
+                alloc_map[uid] = a
+
     approved_ids = []
     for user in users:
+        alloc = alloc_map.get(user.id)
+        if alloc:
+            b_id = alloc.get("branch_id")
+            s_id = alloc.get("section_id")
+            all_sec = alloc.get("all_sections", False)
+            if s_id or b_id or all_sec:
+                db.execute(delete(UserCollegeSection).where(UserCollegeSection.user_id == user.id))
+                db.execute(delete(UserBranchAssignment).where(UserBranchAssignment.user_id == user.id))
+                if s_id:
+                    sec = get_section_or_404(db, s_id)
+                    if sec.college_id != college_id:
+                        raise ValidationFailedError("Section does not belong to this college.")
+                    if b_id and sec.branch_id != b_id:
+                        raise ValidationFailedError("Section does not belong to the selected branch.")
+                    db.add(UserCollegeSection(user_id=user.id, college_section_id=sec.id))
+                elif b_id:
+                    branch = get_branch_or_404(db, b_id)
+                    if branch.college_id != college_id:
+                        raise ValidationFailedError("Branch does not belong to this college.")
+                    db.add(UserBranchAssignment(user_id=user.id, branch_id=branch.id))
         user.status = UserStatus.active
         approved_ids.append(user.id)
         audit_service.record(db, actor_id=college_admin_id, action="registration_approved", resource_type="user", resource_id=user.id)
@@ -1190,7 +1301,7 @@ def hydrate_users_with_affiliation(db: Session, users: list[User]) -> list[dict]
         elif br:
             b_id, b_name = br.branch_id, br.branch_name
             s_id, s_name = None, None
-            all_sec = True
+            all_sec = (u.role == UserRole.teacher)
         else:
             b_id, b_name, s_id, s_name, all_sec = None, None, None, None, False
 

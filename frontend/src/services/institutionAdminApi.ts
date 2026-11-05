@@ -149,8 +149,15 @@ export const institutionAdminApi = {
   // ---- student/teacher registration review ------------------------------------------------
   listPendingRegistrations: (collegeId: string) =>
     apiRequest<PendingUser[]>(`/institution-admin/colleges/${collegeId}/registrations?status=pending`),
-  approveRegistration: (collegeId: string, userId: string) =>
-    apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/registrations/${userId}/approve`, { method: 'POST' }),
+  approveRegistration: (
+    collegeId: string,
+    userId: string,
+    allocation?: { branch_id?: string | null; section_id?: string | null; all_sections?: boolean }
+  ) =>
+    apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/registrations/${userId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(allocation || {}),
+    }),
   rejectRegistration: (collegeId: string, userId: string, reason?: string) =>
     apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/registrations/${userId}/reject`, {
       method: 'POST',
@@ -265,10 +272,14 @@ export const institutionAdminApi = {
   deleteRosterEntry: (collegeId: string, entryId: string) =>
     apiRequest<void>(`/institution-admin/colleges/${collegeId}/roster/${entryId}`, { method: 'DELETE' }),
 
-  bulkApproveRegistrations: (collegeId: string, userIds: string[]) =>
+  bulkApproveRegistrations: (
+    collegeId: string,
+    userIds: string[],
+    allocations?: { user_id: string; branch_id?: string | null; section_id?: string | null; all_sections?: boolean }[]
+  ) =>
     apiRequest<BulkActionResult>(`/institution-admin/colleges/${collegeId}/registrations/bulk-approve`, {
       method: 'POST',
-      body: JSON.stringify({ user_ids: userIds }),
+      body: JSON.stringify({ user_ids: userIds, allocations }),
     }),
   bulkRejectRegistrations: (collegeId: string, userIds: string[], reason?: string) =>
     apiRequest<BulkActionResult>(`/institution-admin/colleges/${collegeId}/registrations/bulk-reject`, {

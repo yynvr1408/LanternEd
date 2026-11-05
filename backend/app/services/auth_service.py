@@ -89,11 +89,12 @@ def register_user(
     target = college_service.validate_registration_target(
         db, college_id=college_id, branch_id=branch_id, section_id=section_id, all_sections=all_sections,
         college_code=college_code, require_code=False, allow_all_sections=role == UserRole.teacher,
+        role=role,
     )
     if target is None:
         college_required = settings.teacher_college_required if role == UserRole.teacher else settings.student_college_required
         if college_required:
-            raise ValidationFailedError("Select your college and choose a section.", code="COLLEGE_REQUIRED")
+            raise ValidationFailedError("Select your college.", code="COLLEGE_REQUIRED")
         if role == UserRole.teacher:
             _assert_may_register_as(role, invite_code)
     # (with a valid target the admin-issued college code is the proof; it grants nothing beyond the role)
@@ -107,7 +108,8 @@ def register_user(
     if target is not None and settings.require_registration_otp:
         roster_entry = roster_service.find_match(
             db, college_id=target[0].id, email=normalized_email, role=role,
-            branch_id=target[1].id, section_id=target[2].id if target[2] is not None else None,
+            branch_id=target[1].id if target[1] is not None else None,
+            section_id=target[2].id if target[2] is not None else None,
         )
 
     user = User(
@@ -129,7 +131,7 @@ def register_user(
         db.flush()
         if target[2] is not None:
             db.add(UserCollegeSection(user_id=user.id, college_section_id=target[2].id))
-        else:  # branch-wide: a branch assignment, never a section row
+        elif target[1] is not None:  # branch-wide or pending student's requested branch
             db.add(UserBranchAssignment(user_id=user.id, branch_id=target[1].id))
     if roster_entry is not None:
         roster_entry.claimed_at = utcnow()

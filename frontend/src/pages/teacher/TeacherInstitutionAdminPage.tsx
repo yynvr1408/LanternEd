@@ -482,20 +482,54 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
   }
 
   // -------------------------------------------------------------
-  // APPROVALS ACTIONS
+  // APPROVALS ACTIONS & SECTION ALLOCATION
   // -------------------------------------------------------------
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([])
   const [bulkActing, setBulkActing] = useState(false)
   const [screeningResults, setScreeningResults] = useState<Record<string, AiScreenedApplicant>>({})
 
-  const handleApprove = async (userId: string) => {
-    if (!activeCollege) return
+  // Single Approval Modal state
+  const [approvingUser, setApprovingUser] = useState<PendingUser | null>(null)
+  const [approveBranchId, setApproveBranchId] = useState('')
+  const [approveSectionId, setApproveSectionId] = useState('')
+  const [approveAllSections, setApproveAllSections] = useState(false)
+  const [approveBusy, setApproveBusy] = useState(false)
+
+  // Bulk Approval Modal state
+  const [isBulkReviewOpen, setIsBulkReviewOpen] = useState(false)
+  const [bulkAllocations, setBulkAllocations] = useState<
+    Record<string, { branch_id?: string | null; section_id?: string | null; all_sections?: boolean }>
+  >({})
+  const [batchBranchSections, setBatchBranchSections] = useState<Record<string, string>>({})
+
+  const openApproveModal = (u: PendingUser) => {
+    setApprovingUser(u)
+    const bId = u.branch_id || (branches.length > 0 ? branches[0].id : '')
+    setApproveBranchId(bId)
+    setApproveSectionId(u.section_id || '')
+    setApproveAllSections(u.role === 'teacher' && Boolean(u.all_sections))
+    if (bId && !branchSections[bId]) {
+      loadSectionsForBranch(bId)
+    }
+  }
+
+  const handleConfirmSingleApprove = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeCollege || !approvingUser) return
+    setApproveBusy(true)
     try {
-      await institutionAdminApi.approveRegistration(activeCollege.id, userId)
-      setNotice('Registration approved.')
+      await institutionAdminApi.approveRegistration(activeCollege.id, approvingUser.id, {
+        branch_id: approveBranchId || null,
+        section_id: approveAllSections ? null : (approveSectionId || null),
+        all_sections: approveAllSections,
+      })
+      setNotice(`Approved registration for ${approvingUser.full_name}.`)
+      setApprovingUser(null)
       loadMembers(activeCollege.id)
     } catch (err: any) {
       setError(err.message || 'Could not approve registration.')
+    } finally {
+      setApproveBusy(false)
     }
   }
 
@@ -510,13 +544,62 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
     }
   }
 
-  const handleBulkApprove = async () => {
+  const openBulkReviewModal = () => {
+    if (selectedPendingIds.length === 0) return
+    const selectedUsers = pendingApprovals.filter((p) => selectedPendingIds.includes(p.id))
+    const initialAlloc: Record<string, { branch_id?: string | null; section_id?: string | null; all_sections?: boolean }> = {}
+    selectedUsers.forEach((u) => {
+      const bId = u.branch_id || (branches.length > 0 ? branches[0].id : '')
+      initialAlloc[u.id] = {
+        branch_id: bId,
+        section_id: u.section_id || '',
+        all_sections: u.role === 'teacher' && Boolean(u.all_sections),
+      }
+      if (bId && !branchSections[bId]) {
+        loadSectionsForBranch(bId)
+      }
+    })
+    setBulkAllocations(initialAlloc)
+    setIsBulkReviewOpen(true)
+  }
+
+  const handleApplyBatchSection = (branchId: string, sectionId: string) => {
+    if (!branchId || !sectionId) return
+    setBulkAllocations((prev) => {
+      const next = { ...prev }
+      selectedPendingIds.forEach((id) => {
+        const user = pendingApprovals.find((p) => p.id === id)
+        if (user && (next[id]?.branch_id === branchId || user.branch_id === branchId)) {
+          next[id] = {
+            ...next[id],
+            branch_id: branchId,
+            section_id: sectionId,
+            all_sections: false,
+          }
+        }
+      })
+      return next
+    })
+  }
+
+  const handleConfirmBulkApprove = async () => {
     if (!activeCollege || selectedPendingIds.length === 0) return
     setBulkActing(true)
     try {
-      const res = await institutionAdminApi.bulkApproveRegistrations(activeCollege.id, selectedPendingIds)
+      const allocationsList = selectedPendingIds.map((id) => ({
+        user_id: id,
+        branch_id: bulkAllocations[id]?.branch_id || null,
+        section_id: bulkAllocations[id]?.all_sections ? null : (bulkAllocations[id]?.section_id || null),
+        all_sections: Boolean(bulkAllocations[id]?.all_sections),
+      }))
+      const res = await institutionAdminApi.bulkApproveRegistrations(
+        activeCollege.id,
+        selectedPendingIds,
+        allocationsList
+      )
       setNotice(res.message)
       setSelectedPendingIds([])
+      setIsBulkReviewOpen(false)
       loadMembers(activeCollege.id)
     } catch (err: any) {
       setError(err.message || 'Bulk approval failed.')
@@ -1329,9 +1412,9 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
                 <Button
                   size="sm"
                   isLoading={bulkActing}
-                  onClick={handleBulkApprove}
+                  onClick={openBulkReviewModal}
                 >
-                  Approve Selected ({selectedPendingIds.length})
+                  Review &amp; Allocate Selected ({selectedPendingIds.length})
                 </Button>
               )}
             </div>
@@ -1397,7 +1480,7 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
                       <Button
                         size="sm"
                         icon={<Check className="w-3.5 h-3.5" />}
-                        onClick={() => handleApprove(p.id)}
+                        onClick={() => openApproveModal(p)}
                       >
                         Approve
                       </Button>
@@ -1765,6 +1848,318 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
               onClick={handleRemoveMember}
             >
               Confirm Remove
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: SINGLE APPROVAL & SECTION ALLOCATION */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog
+        isOpen={Boolean(approvingUser)}
+        onClose={() => setApprovingUser(null)}
+        title={approvingUser?.role === 'teacher' ? 'Approve Faculty Registration' : 'Approve Student & Allocate Section'}
+      >
+        {approvingUser && (
+          <form onSubmit={handleConfirmSingleApprove} className="flex flex-col gap-4">
+            <div className="p-3 rounded-xl bg-[#F8FAF7] border border-[#CBD7D1] flex flex-col gap-1 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[#202B2A] text-sm">{approvingUser.full_name}</span>
+                <Badge variant={approvingUser.role === 'teacher' ? 'default' : 'secondary'} size="sm">
+                  {approvingUser.role}
+                </Badge>
+              </div>
+              <span className="text-[#687775]">{approvingUser.email}</span>
+              {approvingUser.role === 'student' && approvingUser.branch_name && (
+                <span className="text-[#0F5B57] font-medium">Requested Branch: {approvingUser.branch_name}</span>
+              )}
+            </div>
+
+            {approvingUser.role === 'student' ? (
+              <>
+                <FormField label="Assigned Branch / Department" required>
+                  <Select
+                    value={approveBranchId}
+                    onChange={(e) => {
+                      const bId = e.target.value
+                      setApproveBranchId(bId)
+                      setApproveSectionId('')
+                      if (bId && !branchSections[bId]) {
+                        loadSectionsForBranch(bId)
+                      }
+                    }}
+                    options={branches.map((b) => ({ value: b.id, label: `${b.name} (${b.short_code || 'General'})` }))}
+                  />
+                </FormField>
+
+                <FormField label="Designated Section" required hint="Allocate cohort section for this student">
+                  <Select
+                    value={approveSectionId}
+                    onChange={(e) => setApproveSectionId(e.target.value)}
+                    options={[
+                      { value: '', label: '-- Choose Cohort Section --' },
+                      ...(branchSections[approveBranchId] || []).map((s) => ({
+                        value: s.id,
+                        label: `Section ${s.name}`,
+                      })),
+                    ]}
+                  />
+                  {(!branchSections[approveBranchId] || branchSections[approveBranchId].length === 0) && (
+                    <p className="text-[11px] text-[#B42318] mt-1">
+                      No sections created for this branch yet. Please create a section in Branches tab first, or the student will be assigned branch-wide.
+                    </p>
+                  )}
+                </FormField>
+              </>
+            ) : (
+              <>
+                <FormField label="Department / Branch" required>
+                  <Select
+                    value={approveBranchId}
+                    onChange={(e) => {
+                      const bId = e.target.value
+                      setApproveBranchId(bId)
+                      setApproveSectionId('')
+                      if (bId && !branchSections[bId]) {
+                        loadSectionsForBranch(bId)
+                      }
+                    }}
+                    options={[
+                      { value: '', label: '-- General / Unassigned --' },
+                      ...branches.map((b) => ({ value: b.id, label: `${b.name} (${b.short_code || 'General'})` })),
+                    ]}
+                  />
+                </FormField>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="singleApproveAllSec"
+                    checked={approveAllSections}
+                    onChange={(e) => {
+                      setApproveAllSections(e.target.checked)
+                      if (e.target.checked) setApproveSectionId('')
+                    }}
+                    className="rounded border-[#CBD7D1] text-[#0F5B57] focus:ring-[#0F5B57]"
+                  />
+                  <label htmlFor="singleApproveAllSec" className="text-xs text-[#202B2A] font-medium cursor-pointer">
+                    Teach All Sections in this Branch (Branch-wide coverage)
+                  </label>
+                </div>
+
+                {!approveAllSections && approveBranchId && (
+                  <FormField label="Primary Section (Optional)">
+                    <Select
+                      value={approveSectionId}
+                      onChange={(e) => setApproveSectionId(e.target.value)}
+                      options={[
+                        { value: '', label: '-- None (Department General) --' },
+                        ...(branchSections[approveBranchId] || []).map((s) => ({
+                          value: s.id,
+                          label: `Section ${s.name}`,
+                        })),
+                      ]}
+                    />
+                  </FormField>
+                )}
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#CBD7D1]">
+              <Button size="sm" variant="outline" type="button" onClick={() => setApprovingUser(null)}>
+                Cancel
+              </Button>
+              <Button size="sm" type="submit" isLoading={approveBusy} icon={<Check className="w-4 h-4" />}>
+                Approve &amp; Grant Access
+              </Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL: BULK APPROVAL & SECTION ALLOCATION REVIEW */}
+      {/* ------------------------------------------------------------- */}
+      <Dialog
+        isOpen={isBulkReviewOpen}
+        onClose={() => setIsBulkReviewOpen(false)}
+        title={`Review & Allocate Registrations (${selectedPendingIds.length} Selected)`}
+      >
+        <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-1">
+          <p className="text-xs text-[#687775] leading-relaxed">
+            Review incoming student registration requests and designate cohort sections before approving.
+          </p>
+
+          {/* Quick Batch Allocation Tool for Branches */}
+          {Array.from(
+            new Set(
+              pendingApprovals
+                .filter((p) => selectedPendingIds.includes(p.id) && p.role === 'student' && p.branch_id)
+                .map((p) => p.branch_id!)
+            )
+          ).map((branchId) => {
+            const branch = branches.find((b) => b.id === branchId)
+            const countInBranch = pendingApprovals.filter(
+              (p) => selectedPendingIds.includes(p.id) && p.branch_id === branchId
+            ).length
+            const sections = branchSections[branchId] || []
+            const selectedBatchSec = batchBranchSections[branchId] || ''
+            return (
+              <div
+                key={branchId}
+                className="p-3 bg-[#EAF6F0] border border-[#0F5B57]/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              >
+                <div>
+                  <span className="font-bold text-[#0F5B57]">
+                    Batch Assign for {branch?.name || 'Branch'} ({countInBranch} students):
+                  </span>
+                  <p className="text-[11px] text-[#687775]">Allocate the same section to all selected students in this branch.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedBatchSec}
+                    onChange={(e) => setBatchBranchSections((prev) => ({ ...prev, [branchId]: e.target.value }))}
+                    className="text-xs px-2.5 py-1.5 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A] focus:outline-none focus:ring-1 focus:ring-[#0F5B57]"
+                  >
+                    <option value="">-- Choose Section --</option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        Section {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!selectedBatchSec}
+                    onClick={() => handleApplyBatchSection(branchId, selectedBatchSec)}
+                  >
+                    Apply to All
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* List of members to review */}
+          <div className="flex flex-col gap-3">
+            {pendingApprovals
+              .filter((p) => selectedPendingIds.includes(p.id))
+              .map((p) => {
+                const alloc = bulkAllocations[p.id] || {}
+                const currentBranchId = alloc.branch_id || p.branch_id || ''
+                const currentSectionId = alloc.section_id || ''
+                const sections = branchSections[currentBranchId] || []
+                return (
+                  <div
+                    key={p.id}
+                    className="p-3 bg-white border border-[#CBD7D1] rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#202B2A] truncate">{p.full_name}</span>
+                        <Badge variant={p.role === 'teacher' ? 'default' : 'secondary'} size="sm">
+                          {p.role}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-[#687775] truncate">{p.email}</p>
+                      {p.role === 'student' && (
+                        <p className="text-[11px] text-[#0F5B57] font-medium mt-0.5">
+                          Department: {p.branch_name || 'General'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {p.role === 'student' ? (
+                        <div className="flex items-center gap-2">
+                          <label className="text-[11px] text-[#687775] font-medium">Cohort Section:</label>
+                          <select
+                            value={currentSectionId}
+                            onChange={(e) =>
+                              setBulkAllocations((prev) => ({
+                                ...prev,
+                                [p.id]: {
+                                  ...prev[p.id],
+                                  branch_id: currentBranchId,
+                                  section_id: e.target.value,
+                                },
+                              }))
+                            }
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A] focus:outline-none focus:ring-1 focus:ring-[#0F5B57]"
+                          >
+                            <option value="">-- Select Section --</option>
+                            {sections.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                Section {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <label className="text-[11px] text-[#687775] font-medium">Branch:</label>
+                          <select
+                            value={currentBranchId}
+                            onChange={(e) => {
+                              const bId = e.target.value
+                              if (bId && !branchSections[bId]) loadSectionsForBranch(bId)
+                              setBulkAllocations((prev) => ({
+                                ...prev,
+                                [p.id]: {
+                                  ...prev[p.id],
+                                  branch_id: bId,
+                                  section_id: '',
+                                },
+                              }))
+                            }}
+                            className="text-xs px-2 py-1.5 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
+                          >
+                            <option value="">-- General --</option>
+                            {branches.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.name}
+                              </option>
+                            ))}
+                          </select>
+                          <label className="flex items-center gap-1 text-[11px] text-[#202B2A] ml-2">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(alloc.all_sections)}
+                              onChange={(e) =>
+                                setBulkAllocations((prev) => ({
+                                  ...prev,
+                                  [p.id]: {
+                                    ...prev[p.id],
+                                    all_sections: e.target.checked,
+                                    section_id: e.target.checked ? '' : alloc.section_id,
+                                  },
+                                }))
+                              }
+                              className="rounded border-[#CBD7D1] text-[#0F5B57]"
+                            />
+                            All Sections
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#CBD7D1]">
+            <Button size="sm" variant="outline" onClick={() => setIsBulkReviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              isLoading={bulkActing}
+              onClick={handleConfirmBulkApprove}
+              icon={<Check className="w-4 h-4" />}
+            >
+              Confirm &amp; Approve All ({selectedPendingIds.length})
             </Button>
           </div>
         </div>
