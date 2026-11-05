@@ -354,6 +354,7 @@ def approve_summary(db: Session, teacher: User, summary: LectureSummary) -> Lect
     if (summary.content_json or {}).get("transcript_complete") is False:
         raise ConflictError("This summary was built from an incomplete transcript and cannot be published.", code="SUMMARY_SOURCE_INCOMPLETE")
     summary.status = SummaryStatus.completed
+    summary.is_approved = True
     summary.reviewed_by = teacher.id
     summary.reviewed_at = utcnow()
     db.commit()

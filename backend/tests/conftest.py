@@ -20,7 +20,7 @@ if not _shutil.which("ffmpeg") and not os.environ.get("FFMPEG_PATH"):
         os.environ["FFMPEG_PATH"] = imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:  # noqa: BLE001 - ffmpeg-dependent tests are skipped when unavailable
         pass
-os.environ["SESSION_COOKIE_NAME"] = "eduvillage_session"
+os.environ["SESSION_COOKIE_NAME"] = "lanterned_session"
 # Legacy fixtures register teachers/students without a college; tests of the college rule switch this back on.
 # Many existing tests sign the same user in from several clients; the second-device OTP rule has its own tests.
 os.environ["CONCURRENT_LOGIN_OTP"] = "false"

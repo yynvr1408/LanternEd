@@ -98,7 +98,7 @@ export const StudentProfilePage: React.FC = () => {
             onClick={() => logout()}
             icon={<LogOut className="w-4 h-4 text-[#687775]" />}
           >
-            Sign Out of LanternEd
+            Sign Out of LanternED
           </Button>
           <p className="text-xs text-[#687775] text-center mt-2">
             Signing out wipes draft tokens and pending queue records from this device for privacy.

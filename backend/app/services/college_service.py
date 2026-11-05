@@ -509,7 +509,7 @@ def request_admin_role(db: Session, user: User, *, message: str | None):
     if is_college_admin(db, user.id, college.id):
         raise ConflictError("You already administer this college.", code="ALREADY_ADMIN")
     if db.execute(select(CollegeAdministrator.id).where(CollegeAdministrator.college_id == college.id)).first():
-        raise ConflictError("This college already has an administrator. Ask them, or contact LanternEd.", code="COLLEGE_ALREADY_HAS_ADMINISTRATOR")
+        raise ConflictError("This college already has an administrator. Ask them, or contact LanternED.", code="COLLEGE_ALREADY_HAS_ADMINISTRATOR")
     if _pending_admin_request(db, user.id) is not None:
         raise ConflictError("You already have a request waiting for review.", code="REQUEST_ALREADY_PENDING")
     request = CollegeAdminRequest(college_id=college.id, user_id=user.id, message=(message or "").strip()[:500] or None)

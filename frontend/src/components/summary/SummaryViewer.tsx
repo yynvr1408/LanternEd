@@ -21,6 +21,7 @@ import { Dialog } from '../ui/Dialog'
 import { Flashcards } from './Flashcards'
 import { useReadAloud } from '../../hooks/useReadAloud'
 import { exportSummary, buildSummaryBlocks } from '../../utils/summaryExport'
+import { downloadManager } from '../../services/downloadManager'
 
 export interface SummaryViewerProps {
   summary: Summary
@@ -42,6 +43,27 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
   const [exporting, setExporting] = React.useState(false)
   const [exportError, setExportError] = React.useState<string | null>(null)
   const [flashcardsOpen, setFlashcardsOpen] = React.useState(false)
+  const [isAudioDownloaded, setIsAudioDownloaded] = React.useState(false)
+  const [isDownloadingAudio, setIsDownloadingAudio] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!summary?.class_id) return
+    downloadManager.getDownloadedSummaryForClass(summary.class_id).then((saved) => {
+      if (saved) setIsAudioDownloaded(true)
+    }).catch(() => {})
+  }, [summary?.class_id])
+
+  const handleDownloadAudioRecap = async () => {
+    try {
+      setIsDownloadingAudio(true)
+      await downloadManager.downloadSummary(summary, `Lecture Summary - ${summary.class_id}`)
+      setIsAudioDownloaded(true)
+    } catch (err) {
+      console.error('Failed to download recap for offline:', err)
+    } finally {
+      setIsDownloadingAudio(false)
+    }
+  }
   const hasFlashcards = Boolean(summary.definitions && summary.definitions.length > 0)
   const reader = useReadAloud()
   const handleToggleReadAloud = () => {
@@ -81,6 +103,18 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
           >
             {isApproved ? 'Teacher Approved' : isRevisionRequested ? 'Revision Requested' : 'Pending Review'}
           </Badge>
+          {summary.status === 'PROCESSING' && (
+            <Badge variant="warning" size="sm" className="flex items-center gap-1">
+              <Clock className="w-3 h-3 animate-spin" />
+              Synthesizing...
+            </Badge>
+          )}
+          {summary.status === 'FAILED' && (
+            <Badge variant="error" size="sm" className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              AI Error
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -123,6 +157,20 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
         </div>
       </div>
 
+      {summary.status === 'PROCESSING' && (
+        <div className="p-3 bg-[#E8F3FC] text-[#2364AA] border border-[#2364AA]/30 rounded-xl flex items-center gap-2.5 text-xs" role="status">
+          <Clock className="w-4 h-4 animate-spin shrink-0" />
+          <span>AI Lecture Summary is currently being synthesized. Audio transcription is processing in background...</span>
+        </div>
+      )}
+
+      {summary.status === 'FAILED' && (
+        <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#B42318]/30 rounded-xl flex items-center gap-2.5 text-xs" role="alert">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>Automated transcription/summary incomplete (AI provider offline or credentials missing). Notes remain editable.</span>
+        </div>
+      )}
+
       {exportError && (
         <div className="p-3 bg-[#FDE8E7] border border-[#B42318]/30 rounded-lg text-xs text-[#B42318]" role="alert">
           {exportError}
@@ -138,6 +186,38 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
               ? 'This summary was synthesized from the lecture audio and is pending teacher validation.'
               : 'The teacher has requested revisions for this lecture recap.'}
           </span>
+        </div>
+      )}
+
+      {/* ElevenLabs Low-Data Audio Recap */}
+      {summary.audio_recap_url && (isApproved || summary.is_approved || isTeacher) && (
+        <div className="p-3.5 bg-[#F1F5F2] border border-[#0F5B57]/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+            <span className="text-xs font-semibold text-[#0F5B57] flex items-center gap-1.5">
+              <span>🎧 2-Min Audio Recap (ElevenLabs) • Low-Data (~1.2 MB)</span>
+            </span>
+            <audio
+              controls
+              src={summary.audio_recap_url}
+              className="h-8 w-full max-w-md"
+              preload="metadata"
+            >
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDownloadAudioRecap}
+              isLoading={isDownloadingAudio}
+              disabled={isAudioDownloaded || isDownloadingAudio}
+              icon={<Download className="w-3.5 h-3.5" />}
+              className="text-xs whitespace-nowrap"
+            >
+              {isAudioDownloaded ? 'Saved for Offline' : 'Download for Offline'}
+            </Button>
+          </div>
         </div>
       )}
 

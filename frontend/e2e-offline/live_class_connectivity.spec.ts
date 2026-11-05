@@ -3,14 +3,14 @@ import { test, expect, type Page } from '@playwright/test'
 /**
  * Live class connectivity in a real browser with the REAL livekit-client. There is no LiveKit server in
  * this environment, so the media connection genuinely fails to establish; what is verified here is how the
- * app diagnoses and explains that, using three separate signals (device, LanternEd API, live media).
+ * app diagnoses and explains that, using three separate signals (device, LanternED API, live media).
  * Successful live audio/video, quality adaptation on a real network and reconnection to a real server
  * are NOT covered (they need a LiveKit server and participants).
  */
 
 const API = 'http://localhost:8000'
 const ORIGIN = 'http://localhost:4173'
-const USER = { id: 'u1', email: 'student@eduvillage.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
+const USER = { id: 'u1', email: 'student@lanterned.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
 const COURSE = { id: 'c1', title: 'Biology', description: 'd', subject: 'BIO', teacher_id: 't1', teacher_name: 'Prof', status: 'published', created_at: '2026-01-01T00:00:00' }
 const CLASS = { id: 'k1', course_id: 'c1', teacher_id: 't1', title: 'Cell Biology Live', scheduled_start: '2026-10-15T10:00:00', scheduled_end: null, status: 'live', livekit_room_name: 'room-1', section_ids: [] }
 
@@ -41,7 +41,7 @@ async function mockBackend(page: Page) {
 
 async function signInAndJoin(page: Page) {
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)
@@ -56,7 +56,7 @@ test('media down while internet and API are fine: the guidance names the live se
   const dialog = page.getByRole('alertdialog')
   await expect(dialog).toBeVisible({ timeout: 45000 }) // sustained outage (20 s grace) before recovery is offered
   await expect(dialog).toContainText('The live class connection was lost')
-  await expect(dialog).toContainText(/internet and LanternEd are working/i)
+  await expect(dialog).toContainText(/internet and LanternED are working/i)
   await expect(dialog.getByRole('link', { name: /go to downloads/i })).toHaveAttribute('href', '/student/downloads')
 })
 

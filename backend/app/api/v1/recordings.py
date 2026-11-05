@@ -25,7 +25,7 @@ from datetime import timedelta
 from app.services import rate_limit_service, recording_service, summary_service
 
 router = APIRouter(prefix="/recordings", tags=["recordings"])
-logger = logging.getLogger("eduvillage.recordings")
+logger = logging.getLogger("lanterned.recordings")
 
 
 def _get_visible(db: Session, user: User, recording_id: str):

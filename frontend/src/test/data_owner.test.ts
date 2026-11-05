@@ -34,7 +34,7 @@ describe('offline data ownership', () => {
     await db.claimDataOwner('user-b')
 
     expect(await db.cachedSummaries.count()).toBe(0)
-    expect(localStorage.getItem('eduvillage_data_owner')).toBe('user-b')
+    expect(localStorage.getItem('lanterned_data_owner')).toBe('user-b')
   })
 
   it('does not wipe data it cannot attribute (first sign-in after upgrade)', async () => {

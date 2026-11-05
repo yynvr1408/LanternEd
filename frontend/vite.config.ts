@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'LanternEd',
-        short_name: 'LanternEd',
+        name: 'LanternED',
+        short_name: 'LanternED',
         description: 'Offline-First Low-Bandwidth Learning Platform',
         theme_color: '#0F5B57',
         background_color: '#FFFFFF',

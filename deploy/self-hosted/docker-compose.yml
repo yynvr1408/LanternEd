@@ -1,4 +1,4 @@
-# Self-hosted LanternEd for a single institution: one domain, one `docker compose up -d`.
+# Self-hosted LanternED for a single institution: one domain, one `docker compose up -d`.
 # Postgres + the API/worker + the built frontend, all behind Caddy for automatic HTTPS.
 #
 # This is the SAME codebase as the centrally-hosted version — nothing here is a fork or a

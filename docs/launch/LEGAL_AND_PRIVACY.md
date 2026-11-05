@@ -15,7 +15,7 @@
 
 ## 2. Draft privacy notice (plain language)
 
-> **What LanternEd is.** LanternEd is a learning platform your college has chosen. Your college decides who may join; LanternEd runs the service for them.
+> **What LanternED is.** LanternED is a learning platform your college has chosen. Your college decides who may join; LanternED runs the service for them.
 >
 > **What we collect and why.** Your name, email, college and class, so you can sign in and see the right classes. Your attendance in live classes, your submitted work and your marks, so teachers can run the course. Recordings of live classes, only when your teacher starts a recording, so you can catch up. Text of recordings and a summary written by an AI model and reviewed by your teacher, so you can revise.
 >
@@ -25,7 +25,7 @@
 >
 > **Where it is stored.** <list of processors and countries; fill in from section 1>.
 >
-> **How long.** Until your college asks us to delete it or you ask us to delete your account, and no longer than <period> after your college stops using LanternEd.
+> **How long.** Until your college asks us to delete it or you ask us to delete your account, and no longer than <period> after your college stops using LanternED.
 >
 > **Your rights.** To know what we hold about you, to correct it, to ask for it to be erased, and to complain. Write to <grievance officer name, email, phone>. We reply within <period>. If you are under 18, your parent or guardian can make these requests.
 >

@@ -8,7 +8,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 const API = 'http://localhost:8000'
 const ORIGIN = 'http://localhost:4173'
-const USER = { id: 'u1', email: 'student@eduvillage.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
+const USER = { id: 'u1', email: 'student@lanterned.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
 const COURSE = { id: 'c1', title: 'Biology', description: 'd', subject: 'BIO', teacher_id: 't1', teacher_name: 'Prof', status: 'published', created_at: '2026-01-01T00:00:00' }
 const ASSIGNMENT = { id: 'a1', course_id: 'c1', created_by: 't1', title: 'Cell quiz', instructions: 'Describe organelles.', due_at: '2026-12-31T00:00:00', status: 'published' }
 
@@ -49,7 +49,7 @@ async function mockBackend(page: Page) {
 
 async function openAssignment(page: Page) {
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)

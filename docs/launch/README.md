@@ -1,4 +1,4 @@
-# LanternEd launch kit (4 months: late October 2026 to late February 2027)
+# LanternED launch kit (4 months: late October 2026 to late February 2027)
 
 Target: **public launch in the week of 22 February 2027**, aimed at the even-semester start. Pilots run before it; a college that has used the product for a term is your best sales asset.
 

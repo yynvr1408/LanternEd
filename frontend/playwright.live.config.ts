@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  */
 const FRONTEND_PORT = 4176
 const BACKEND_PORT = 8011
-const dir = mkdtempSync(join(tmpdir(), 'eduvillage-live-'))
+const dir = mkdtempSync(join(tmpdir(), 'lanterned-live-'))
 const db = `sqlite:///${join(dir, 'e2e.db').replace(/\\/g, '/')}`
 
 function readBackendEnv(key: string): string {

@@ -16,10 +16,10 @@ Set them in `backend/.env` locally (git-ignored) and in the hosting dashboard (`
 
 ## Security model
 
-* Its own httpOnly cookie (`eduvillage_admin_session`) and server-side session with expiry, idle timeout and revocation on sign-out.
+* Its own httpOnly cookie (`lanterned_admin_session`) and server-side session with expiry, idle timeout and revocation on sign-out.
 * **One active administrator session at a time:** a second sign-in with the correct password is refused while the first session is active; a session idle past the timeout counts as ended, so a forgotten sign-out never locks the administrator out.
 * Every `/api/v1/admin/*` route except sign-in requires a valid administrator session, checked on every request. Student and teacher sessions are rejected there, and an administrator session is rejected by the student and teacher API.
-* Requests that change data (including sign-in) carry the header `X-EduVillage-Admin: 1`; a cross-site form cannot add it and a cross-origin script is stopped by the CORS preflight.
+* Requests that change data (including sign-in) carry the header `X-LanternED-Admin: 1`; a cross-site form cannot add it and a cross-origin script is stopped by the CORS preflight.
 * Generic sign-in errors, a constant-time check for unknown usernames, and rate limiting of failed attempts.
 * The administrator role cannot be registered, signed in through `/auth/login`, or reset through password recovery, and nobody can self-register with the administrator's own email address. College codes never grant any privilege.
 

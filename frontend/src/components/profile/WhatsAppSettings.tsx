@@ -58,7 +58,7 @@ export const WhatsAppSettings: React.FC = () => {
         <label className="flex items-start gap-2 text-xs text-[#202B2A]">
           <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} className="mt-0.5" />
           <span>
-            I agree to receive LanternEd updates (live class alerts, new assignments, grades) on WhatsApp at this number. I can switch this off here at any time.
+            I agree to receive LanternED updates (live class alerts, new assignments, grades) on WhatsApp at this number. I can switch this off here at any time.
           </span>
         </label>
         {needsNumber && <p className="text-xs text-[#8A5700]">Add your number to turn alerts on.</p>}

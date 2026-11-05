@@ -18,7 +18,7 @@ uvicorn app.main:app --reload         # http://localhost:8000  (/health, /ready,
 python -m app.worker                  # optional second terminal: background job worker (--once for a single pass)
 ```
 
-The default database is SQLite (`sqlite:///./dev.db`). For PostgreSQL set `DATABASE_URL` (for example `postgresql+psycopg2://user:pass@host:5432/eduvillage`) or run `docker compose up` in `backend/`, which starts PostgreSQL, the API (migrating first) and the worker. A local `.env` must point at a **development** database, never at production.
+The default database is SQLite (`sqlite:///./dev.db`). For PostgreSQL set `DATABASE_URL` (for example `postgresql+psycopg2://user:pass@host:5432/lanterned`) or run `docker compose up` in `backend/`, which starts PostgreSQL, the API (migrating first) and the worker. A local `.env` must point at a **development** database, never at production.
 
 ## Environment variables
 
@@ -30,13 +30,13 @@ Copy `backend/.env.example` to `backend/.env`. The file holds placeholders only;
 | | `FRONTEND_ORIGIN` | `http://localhost:5173` | the single allowed CORS origin (credentials enabled) |
 | | `API_V1_PREFIX` | `/api/v1` | route prefix |
 | Sessions | `SESSION_SECRET` | dev value | keys the OTP hashing; must be set in production |
-| | `SESSION_COOKIE_NAME`, `SESSION_TTL_HOURS` | `eduvillage_session`, 72 | student/teacher session cookie and absolute lifetime |
+| | `SESSION_COOKIE_NAME`, `SESSION_TTL_HOURS` | `lanterned_session`, 72 | student/teacher session cookie and absolute lifetime |
 | | `SESSION_COOKIE_SAMESITE` | `lax` | `none` for a frontend and API on different sites (requires HTTPS) |
 | | `CONCURRENT_LOGIN_OTP` | `true` | second-device sign-in needs an emailed code |
 | Administrator | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | unset | the single administrator (password stored hashed); blank disables `/admin` sign-in |
 | | `ADMIN_RESET_PASSWORD_ON_START` | `false` | `true` for one restart replaces the stored password with `ADMIN_PASSWORD` |
 | | `ADMIN_SESSION_TTL_MINUTES`, `ADMIN_IDLE_TIMEOUT_SECONDS` | 120, 120 | admin session lifetime and idle timeout |
-| | `ADMIN_COOKIE_NAME`, `ADMIN_LOGIN_MAX_ATTEMPTS` | `eduvillage_admin_session`, 5 | cookie name; failed attempts per client and username in 15 minutes |
+| | `ADMIN_COOKIE_NAME`, `ADMIN_LOGIN_MAX_ATTEMPTS` | `lanterned_admin_session`, 5 | cookie name; failed attempts per client and username in 15 minutes |
 | Registration | `TEACHER_COLLEGE_REQUIRED`, `STUDENT_COLLEGE_REQUIRED` | `true` | college, code, branch and section are mandatory at registration |
 | | `TEACHER_INVITE_CODE` | unset | legacy teacher gate when the college is not required |
 | Database | `DATABASE_URL` | SQLite file | SQLAlchemy URL |

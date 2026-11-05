@@ -11,7 +11,7 @@ export const AdminApp: React.FC = () => {
   const [state, setState] = useState<State>({ status: 'checking' })
 
   useEffect(() => {
-    document.title = 'LanternEd Administration'
+    document.title = 'LanternED Administration'
     let cancelled = false
     adminApi.me().then(
       (a) => {

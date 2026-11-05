@@ -1,6 +1,6 @@
 # Multi-college support
 
-How LanternEd models colleges today, and the roadmap for institution-level administration. Details of the admin panel: [ADMIN_PANEL.md](ADMIN_PANEL.md). Tables: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+How LanternED models colleges today, and the roadmap for institution-level administration. Details of the admin panel: [ADMIN_PANEL.md](ADMIN_PANEL.md). Tables: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
 ## What is implemented
 

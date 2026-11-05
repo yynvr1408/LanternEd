@@ -11,7 +11,7 @@ from app.integrations import email
 @pytest.fixture
 def resend(monkeypatch):
     monkeypatch.setattr(email.settings, "resend_api_key", "re_test_key")
-    monkeypatch.setattr(email.settings, "email_from", "LanternEd <no-reply@example.test>")
+    monkeypatch.setattr(email.settings, "email_from", "LanternED <no-reply@example.test>")
     sent = []
 
     def fake_post(url, **kwargs):
@@ -36,7 +36,7 @@ def test_each_otp_email_goes_through_resend_with_the_code(resend, sender, subjec
     url, kwargs = resend[0]
     assert url == email.RESEND_API_URL and kwargs["headers"]["Authorization"] == "Bearer re_test_key"
     body = kwargs["json"]
-    assert body["to"] == ["asha@example.com"] and body["from"] == "LanternEd <no-reply@example.test>"
+    assert body["to"] == ["asha@example.com"] and body["from"] == "LanternED <no-reply@example.test>"
     assert subject_word.lower() in body["subject"].lower()
     assert "482913" in body["text"] and "482913" in body["html"] and "5 minutes" in body["text"]
 

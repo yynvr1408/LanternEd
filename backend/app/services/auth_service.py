@@ -30,7 +30,7 @@ settings = get_settings()
 _MAX_ATTEMPTS = 10
 _WINDOW = timedelta(minutes=15)
 # A per-IP budget for password-reset requests is deliberately looser than the per-email one:
-# LanternEd is explicitly used from shared community/school devices (see the "shared device"
+# LanternED is explicitly used from shared community/school devices (see the "shared device"
 # login option), where one public IP legitimately serves many different students resetting
 # their own, different accounts — a tight per-IP limit would lock all of them out together.
 _RESET_IP_MAX_ATTEMPTS = 30

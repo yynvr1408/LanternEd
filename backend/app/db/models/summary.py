@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -38,6 +38,8 @@ class LectureSummary(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    audio_recap_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class BackgroundJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):

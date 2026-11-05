@@ -106,7 +106,7 @@ describe('Recorded Classes, Shared Devices & Multi-Section Workflows', () => {
       title: 'Hydraulic Conductivity Laboratory',
       status: 'SCHEDULED',
       scheduled_at: new Date(Date.now() + 3600000).toISOString(),
-      livekit_room_name: 'eduvillage-class-cls-101',
+      livekit_room_name: 'lanterned-class-cls-101',
       section_id: 'sec-a',
       section_name: 'Section A (Cohort 2026)',
     }
@@ -132,15 +132,15 @@ describe('Recorded Classes, Shared Devices & Multi-Section Workflows', () => {
     // The cached profile (display only; auth is an httpOnly cookie) lives in sessionStorage on a shared device
     const user = { id: 'u1', email: 'a@b.c', full_name: 'A', role: 'student' as const }
     authService.cacheUser(user)
-    expect(sessionStorage.getItem('eduvillage_user')).not.toBeNull()
-    expect(localStorage.getItem('eduvillage_user')).toBeNull()
+    expect(sessionStorage.getItem('lanterned_user')).not.toBeNull()
+    expect(localStorage.getItem('lanterned_user')).toBeNull()
 
     // Logging out revokes the server session (so a leftover cookie is dead) and wipes the local cache
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
     await authService.logout()
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/v1/auth/logout'), expect.objectContaining({ method: 'POST', credentials: 'include' }))
-    expect(sessionStorage.getItem('eduvillage_user')).toBeNull()
+    expect(sessionStorage.getItem('lanterned_user')).toBeNull()
   })
 
   it('still wipes the local cache when logout cannot reach the server', async () => {
@@ -163,14 +163,14 @@ describe('Recorded Classes, Shared Devices & Multi-Section Workflows', () => {
     const studentUser: User = {
       id: 'std-1',
       full_name: 'Priya Sharma',
-      email: 'priya@eduvillage.org',
+      email: 'priya@lanterned.org',
       role: 'student',
       created_at: new Date().toISOString(),
     }
 
-    localStorage.setItem('eduvillage_shared_device', 'true')
-    sessionStorage.setItem('eduvillage_user', JSON.stringify(studentUser))
-    sessionStorage.setItem('eduvillage_token', 'token-123')
+    localStorage.setItem('lanterned_shared_device', 'true')
+    sessionStorage.setItem('lanterned_user', JSON.stringify(studentUser))
+    sessionStorage.setItem('lanterned_token', 'token-123')
 
     // Add an unsynchronized assignment draft in IndexedDB
     await db.assignmentDrafts.put({

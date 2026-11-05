@@ -14,7 +14,7 @@ from app.services import audit_service, course_service, notification_service, se
 
 
 def _room_name_for(class_id: str) -> str:
-    return f"eduvillage-class-{class_id}"
+    return f"lanterned-class-{class_id}"
 
 
 def get_class_or_404(db: Session, class_id: str) -> Class:

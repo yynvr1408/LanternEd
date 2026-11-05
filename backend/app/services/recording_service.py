@@ -40,7 +40,7 @@ def _storage_key_for(class_id: str, recording_id: str, *, audio_only: bool = Fal
 
 
 def _room_name_for(cls: Class) -> str:
-    return cls.livekit_room_name or f"eduvillage-class-{cls.id}"
+    return cls.livekit_room_name or f"lanterned-class-{cls.id}"
 
 
 def get_recording_or_404(db: Session, recording_id: str) -> ClassRecording:

@@ -13,7 +13,7 @@ describe('Authentication & Protected Routes', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders LanternEd login interface with monochrome styling and credentials inputs', () => {
+  it('renders LanternED login interface with monochrome styling and credentials inputs', () => {
     const { container } = render(
       <BrowserRouter>
         <AuthProvider>
@@ -22,7 +22,7 @@ describe('Authentication & Protected Routes', () => {
       </BrowserRouter>
     )
 
-    expect(screen.getByRole('heading', { name: /LanternEd/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /LanternED/i })).toBeInTheDocument()
     expect(container.querySelector('#email')).toBeInTheDocument()
     expect(container.querySelector('#password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument()
@@ -85,8 +85,8 @@ describe('Authentication & Protected Routes', () => {
       created_at: new Date().toISOString(),
     }
 
-    localStorage.setItem('eduvillage_user', JSON.stringify(studentUser))
-    localStorage.setItem('eduvillage_token', 'valid-token')
+    localStorage.setItem('lanterned_user', JSON.stringify(studentUser))
+    localStorage.setItem('lanterned_token', 'valid-token')
     vi.spyOn(authService, 'getMe').mockResolvedValue(studentUser)
 
     render(

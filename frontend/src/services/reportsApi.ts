@@ -24,7 +24,7 @@ export async function downloadFile(path: string, filename: string): Promise<void
   try {
     response = await fetch(apiUrl(path), { credentials: 'include' })
   } catch {
-    throw new ApiError('Unable to connect to LanternEd server. Try again when you are online.', 0, true)
+    throw new ApiError('Unable to connect to LanternED server. Try again when you are online.', 0, true)
   }
   if (!response.ok) throw new ApiError('Could not download the report.', response.status)
   const url = URL.createObjectURL(await response.blob())

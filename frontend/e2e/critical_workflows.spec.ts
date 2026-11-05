@@ -1,15 +1,15 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('LanternEd Critical Workflows', () => {
+test.describe('LanternED Critical Workflows', () => {
   test('student authentication, dashboard rendering, and mobile bottom navigation', async ({ page }) => {
     await page.goto('/login')
 
-    // Expect brand name LanternEd
-    await expect(page.locator('h1')).toContainText('LanternEd')
+    // Expect brand name LanternED
+    await expect(page.locator('h1')).toContainText('LanternED')
 
     // Quick fill Student demo
     await page.click('text=Student Demo')
-    await expect(page.locator('#email')).toHaveValue('student@eduvillage.org')
+    await expect(page.locator('#email')).toHaveValue('student@lanterned.org')
     await expect(page.locator('#password')).toHaveValue('student123')
 
     // Submit

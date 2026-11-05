@@ -22,7 +22,7 @@ Notes:
 
 ## 2. The pitch (30 seconds)
 
-> "Your teachers already run classes on WhatsApp and Zoom, and your students in the villages drop off when the internet does. LanternEd is the classroom that keeps working: live classes that fall back to audio, recorded lessons they can download, assignments they can write offline, and notes in their own language. Your teachers upload a class list, and you see attendance and marks on one screen."
+> "Your teachers already run classes on WhatsApp and Zoom, and your students in the villages drop off when the internet does. LanternED is the classroom that keeps working: live classes that fall back to audio, recorded lessons they can download, assignments they can write offline, and notes in their own language. Your teachers upload a class list, and you see attendance and marks on one screen."
 
 Proof points to use only if true on the day: number of colleges, teacher usage, one named champion quote, a measured number (for example "students attended X% of live classes").
 
@@ -53,7 +53,7 @@ End with a single ask: "Which branch would you like to start with next week?"
 
 | They say | You say |
 |---|---|
-| "We use Google Classroom / Teams." | "Keep them for documents. Use LanternEd for the class itself on weak connections: audio fallback, downloads, offline assignments. Does your Classroom work when a student has 30 kbps?" |
+| "We use Google Classroom / Teams." | "Keep them for documents. Use LanternED for the class itself on weak connections: audio fallback, downloads, offline assignments. Does your Classroom work when a student has 30 kbps?" |
 | "Students won't install anything." | "It is a web app. They add it to the home screen; it also comes from Google Play." |
 | "Is the student data safe?" | Show the privacy notice, the audit log, and the backup routine; say where data is stored and who the processors are. |
 | "What if the internet is down for the teacher?" | "Recorded lessons and downloads keep students working; live classes recover when the connection returns." Be honest that a live class needs the teacher online. |
@@ -66,7 +66,7 @@ Assume roughly 60 demos, leading to 15 pilots or trials, leading to 6-8 paid col
 
 ## 7. One-page proposal (template)
 
-- Title: "LanternEd for <College name>, <term>"
+- Title: "LanternED for <College name>, <term>"
 - Their problem in their words (one sentence from your discovery call)
 - What they will have by week 4 (three bullets from the pilot results)
 - Price: plan, number of students, annual cost, per-term invoices, GST

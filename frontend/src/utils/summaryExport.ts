@@ -14,7 +14,7 @@ export interface ExportBlock {
 
 export function buildSummaryBlocks(summary: Summary, classTitle?: string): ExportBlock[] {
   const blocks: ExportBlock[] = [
-    { kind: 'title', text: 'LanternEd Lecture Summary' },
+    { kind: 'title', text: 'LanternED Lecture Summary' },
     { kind: 'meta', text: classTitle ? `Class: ${classTitle}` : `Class session: ${summary.class_id}` },
     { kind: 'meta', text: `Date: ${new Date(summary.created_at).toLocaleDateString()}` },
     { kind: 'heading', text: 'Overview' },
@@ -66,7 +66,7 @@ export async function exportSummary(summary: Summary, classTitle?: string): Prom
   const blocks = buildSummaryBlocks(summary, classTitle)
   try {
     const blob = await buildDocx(blocks)
-    const filename = `eduvillage-summary-${summary.class_id}.docx`
+    const filename = `lanterned-summary-${summary.class_id}.docx`
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

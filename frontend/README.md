@@ -1,6 +1,6 @@
-# LanternEd frontend
+# LanternED frontend
 
-The LanternEd web app: a React 19 + TypeScript single-page application and progressive web app (installable, works offline) for students, teachers and the administrator. Deployed as static files on Vercel. Project overview: [../README.md](../README.md).
+The LanternED web app: a React 19 + TypeScript single-page application and progressive web app (installable, works offline) for students, teachers and the administrator. Deployed as static files on Vercel. Project overview: [../README.md](../README.md).
 
 ## Stack
 

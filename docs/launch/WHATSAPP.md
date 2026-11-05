@@ -1,6 +1,6 @@
 # WhatsApp notifications
 
-LanternEd can message students and teachers on WhatsApp when a class goes live, a new assignment is posted, work is graded, or class notes are approved. It is off until you configure it, and nobody is messaged unless they add their number **and** tick the consent box on their profile.
+LanternED can message students and teachers on WhatsApp when a class goes live, a new assignment is posted, work is graded, or class notes are approved. It is off until you configure it, and nobody is messaged unless they add their number **and** tick the consent box on their profile.
 
 SMS is not built: sending SMS in India needs sender and template registration (DLT) with your telecom provider, which is a business process first.
 
@@ -12,11 +12,11 @@ SMS is not built: sending SMS in India needs sender and template registration (D
    - Category: **Utility**
    - Language: English (`en`). Create the same template in Telugu (`te`) and Hindi (`hi`) if you want to send in those; the current setting sends one language per installation.
    - Body (exactly two variables):
-     `LanternEd: {{1}}. {{2}}`
-   - Sample for review: `LanternEd: Class is live: Physics. Tap to join now.`
+     `LanternED: {{1}}. {{2}}`
+   - Sample for review: `LanternED: Class is live: Physics. Tap to join now.`
 3. Create a **permanent access token** (a System User token with `whatsapp_business_messaging`) and note the **Phone number ID**.
 
-## 2. Configure LanternEd
+## 2. Configure LanternED
 
 Set these on the API **and the worker** (messages are sent by the worker, not during the request):
 

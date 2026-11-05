@@ -7,7 +7,7 @@ const SHOTS = process.env.LAYOUT_SHOTS_DIR || 'test-results/layout'
 const TAG = process.env.LAYOUT_TAG || 'run'
 mkdirSync(SHOTS, { recursive: true })
 
-const USER = { id: 'u1', email: 'student@eduvillage.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
+const USER = { id: 'u1', email: 'student@lanterned.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
 const course = (i: number, title: string, subject: string) => ({
   id: `c${i}`, title, description: 'Curriculum module covering theory, field practice and revision.', subject,
   teacher_id: 't1', teacher_name: 'Prof. Miller', status: 'published', created_at: '2026-01-01T00:00:00',
@@ -48,7 +48,7 @@ async function mock(page: Page, opts: { classes?: unknown[]; courses?: unknown[]
 
 async function signIn(page: Page) {
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)

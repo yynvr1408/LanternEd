@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
 
     session_secret: str = "dev-secret-change-me"
-    session_cookie_name: str = "eduvillage_session"
+    session_cookie_name: str = "lanterned_session"
     session_ttl_hours: int = 72
     # "lax" works when the SPA and API share a registrable domain (e.g. app.x.com / api.x.com).
     # Use "none" when they're on unrelated domains (e.g. a Netlify/Vercel default URL and a
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     admin_password: str | None = None
     admin_reset_password_on_start: bool = False  # set true once to rotate the password to the current ADMIN_PASSWORD
     admin_session_ttl_minutes: int = 120
-    admin_cookie_name: str = "eduvillage_admin_session"
+    admin_cookie_name: str = "lanterned_admin_session"
     admin_login_max_attempts: int = 5  # per client + username, and per client, per 15 minutes (anyone + username: 10x)
     # Transactional email via Resend (https://resend.com): preferred when set, because EmailJS's free tier caps at
     # 200 emails a month. EMAIL_FROM must be an address on a domain verified in Resend.
@@ -158,6 +158,14 @@ class Settings(BaseSettings):
     # to an OpenAI-compatible third-party provider instead — e.g. Groq, which hosts Whisper too:
     # https://api.groq.com/openai/v1 with model whisper-large-v3-turbo.
     speech_to_text_base_url: str | None = None
+
+    # ElevenLabs voice summary recap
+    elevenlabs_api_key: str | None = None
+    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
+    elevenlabs_model_id: str = "eleven_turbo_v2_5"
+
+    # Render Workflows
+    render_api_key: str | None = None
 
     # Transactional email: EmailJS's REST API (https://api.emailjs.com/api/v1.0/email/send),
     # called server-side via httpx — never the browser-side emailjs-com SDK. That's deliberate:

@@ -40,6 +40,9 @@ class ObjectStorage(ABC):
     def delete(self, storage_key: str) -> None: ...
 
     @abstractmethod
+    def upload_file(self, local_path: Path | str, storage_key: str, content_type: str = "application/octet-stream") -> None: ...
+
+    @abstractmethod
     def read_head(self, storage_key: str, nbytes: int = 8192) -> bytes:
         """The first bytes of an object (for content sniffing) without reading all of it."""
 
@@ -71,6 +74,12 @@ class LocalObjectStorage(ObjectStorage):
         path = self._path(storage_key)
         if path.exists():
             path.unlink()
+
+    def upload_file(self, local_path: Path | str, storage_key: str, content_type: str = "application/octet-stream") -> None:
+        import shutil
+        dest = self._path(storage_key)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(str(local_path), str(dest))
 
     def read_head(self, storage_key: str, nbytes: int = 8192) -> bytes:
         with open(self._path(storage_key), "rb") as f:
@@ -163,6 +172,9 @@ class S3ObjectStorage(ObjectStorage):
 
     def delete(self, storage_key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=storage_key)
+
+    def upload_file(self, local_path: Path | str, storage_key: str, content_type: str = "application/octet-stream") -> None:
+        self.client.upload_file(str(local_path), self.bucket, storage_key, ExtraArgs={"ContentType": content_type})
 
     def read_head(self, storage_key: str, nbytes: int = 8192) -> bytes:
         response = self.client.get_object(Bucket=self.bucket, Key=storage_key, Range=f"bytes=0-{nbytes - 1}")

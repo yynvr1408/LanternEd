@@ -1,8 +1,8 @@
-# LanternEd
+# LanternED
 
 **An offline-first, low-bandwidth learning platform for any institution where connectivity is unreliable — rural or urban, any country: live classes that adapt to weak connections, recorded lessons, AI-assisted study notes, downloadable materials, and assignments that can be written and submitted without a connection.**
 
-LanternEd gives a college everything it needs to teach students who have unreliable, expensive or slow internet and few devices: teachers run live classes (with a floating video window, a shared whiteboard, screen sharing and a blurred background), record them, and publish lessons with transcripts and AI summaries they approve; students join live, catch up from recordings, download material for offline study and submit work even when the network drops. Colleges, branches and sections are set up by an administrator, and registration is tied to a college code.
+LanternED gives a college everything it needs to teach students who have unreliable, expensive or slow internet and few devices: teachers run live classes (with a floating video window, a shared whiteboard, screen sharing and a blurred background), record them, and publish lessons with transcripts and AI summaries they approve; students join live, catch up from recordings, download material for offline study and submit work even when the network drops. Colleges, branches and sections are set up by an administrator, and registration is tied to a college code.
 
 * **Live app:** frontend <https://edu-village-nine.vercel.app> · backend API <https://eduvillage-api.onrender.com> (`/health`, `/docs`)
 * **Documentation:** [Admin panel](docs/ADMIN_PANEL.md) · [Classroom and course tools](docs/CLASSROOM_AND_COURSE_TOOLS.md) · [API reference](docs/API_CONTRACTS.md) · [Database schema](docs/DATABASE_SCHEMA.md) · [Backend setup](docs/BACKEND_SETUP.md) · [Backend overview](docs/BACKEND_AUDIT.md) · [Requirements matrix](docs/BACKEND_REQUIREMENTS_MATRIX.md) · [Verification status](docs/FINAL_AUDIT.md) · [Recording pipeline](docs/RECORDING_VERIFICATION.md) · [Multi-college support](docs/MULTI_INSTITUTION_AUDIT.md) · [Codebase structure](docs/DEDUPLICATION_REPORT.md) · [Scalability architecture](docs/SCALABILITY_ARCHITECTURE.md) · [Infrastructure cost model](docs/INFRASTRUCTURE_COST_MODEL.md) · [Upgrade roadmap](docs/DEPLOYMENT_UPGRADE_ROADMAP.md) · [Evaluation answers](docs/SCALABILITY_EVALUATION_ANSWERS.md) · [Capacity test plan](docs/CAPACITY_TEST_PLAN.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Frontend guide](frontend/README.md) · [Operations runbook](docs/OPERATIONS.md) · [Launch kit](docs/launch/README.md)
@@ -57,7 +57,7 @@ A step-by-step tour of the product, in the order a college would use it. (Self-r
 
 ## 2. Problem and solution
 
-| Challenge in connectivity-constrained institutions | What LanternEd provides |
+| Challenge in connectivity-constrained institutions | What LanternED provides |
 |---|---|
 | Weak or expensive internet | Adaptive audio-only mode in live classes; offline-first assignment drafts and sync; resumable downloads of recordings and materials; a whiteboard that works over a few hundred bytes per stroke |
 | Few devices, shared computers | Shared-device mode clears drafts, queue and downloads on sign-out; revocable server sessions |
@@ -109,7 +109,7 @@ Authorisation is decided in backend services from the server-side session; a cli
 | AI | OpenAI-compatible provider selected by configuration: Groq `openai/gpt-oss-120b` and `whisper-large-v3-turbo` in `render.yaml`; a labelled stub when unconfigured |
 | Storage | Cloudflare R2 (S3 API); local disk in development |
 | Hosting | Vercel (frontend), Render (backend Docker service), Neon, LiveKit Cloud, Cloudflare R2 |
-| Source control | GitHub (`yynvr1408/LanternEd`) |
+| Source control | GitHub (`yynvr1408/LanternED`) |
 | Testing | pytest, Vitest with Testing Library, Playwright |
 | Tooling | oxlint, strict TypeScript build, Docker Compose for local PostgreSQL |
 
@@ -194,8 +194,8 @@ want to keep their own data on their own infrastructure can run the same codebas
 **Prerequisites:** Python 3.12, Node.js 20+ with npm, Git. Docker is optional (`backend/compose.yaml` provides PostgreSQL 16).
 
 ```bash
-git clone https://github.com/yynvr1408/LanternEd.git
-cd LanternEd
+git clone https://github.com/yynvr1408/LanternED.git
+cd LanternED
 ```
 
 **Backend**
@@ -303,7 +303,7 @@ Latest results (2026-10-18): backend 459 passed, 12 skipped on SQLite (one summa
 ## 15. Project structure
 
 ```
-LanternEd/
+LanternED/
   README.md  render.yaml
   docs/                         guides, references, scalability and cost documents, cost_model.py
   backend/

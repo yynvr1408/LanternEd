@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog } from '../ui/Dialog'
 import { Button } from '../ui/Button'
 import { FormField } from '../ui/FormField'
@@ -19,12 +19,19 @@ export const SummaryReviewModal: React.FC<SummaryReviewModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  if (!summary) return null
-
-  const [overview, setOverview] = useState(summary.overview || '')
-  const [teacherNotes, setTeacherNotes] = useState(summary.teacher_notes || '')
+  const [overview, setOverview] = useState(summary?.overview || '')
+  const [teacherNotes, setTeacherNotes] = useState(summary?.teacher_notes || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (summary) {
+      setOverview(summary.overview || '')
+      setTeacherNotes(summary.teacher_notes || '')
+    }
+  }, [summary])
+
+  if (!summary) return null
 
   const handleReview = async (action: 'APPROVE' | 'REVISE') => {
     setIsSubmitting(true)
@@ -39,8 +46,8 @@ export const SummaryReviewModal: React.FC<SummaryReviewModalProps> = ({
       })
       onSuccess()
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to update review status')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update review status')
     } finally {
       setIsSubmitting(false)
     }
@@ -58,6 +65,25 @@ export const SummaryReviewModal: React.FC<SummaryReviewModalProps> = ({
         {error && (
           <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#B42318]/30 rounded-lg font-medium">
             {error}
+          </div>
+        )}
+
+        {summary.audio_recap_url && (
+          <div className="p-3 bg-[#F1F5F2] border border-[#CBD7D1] rounded-xl flex flex-col gap-2">
+            <span className="font-semibold text-[#0F5B57] flex items-center gap-1.5">
+              <span>🎧 ElevenLabs Audio Recap Preview (~2 Min)</span>
+            </span>
+            <audio
+              controls
+              src={summary.audio_recap_url}
+              className="w-full h-8"
+              preload="metadata"
+            >
+              Your browser does not support the audio element.
+            </audio>
+            <span className="text-[11px] text-[#687775]">
+              Listen to the synthesized audio recap before approving it for student access.
+            </span>
           </div>
         )}
 

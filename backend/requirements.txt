@@ -15,3 +15,5 @@ openai
 httpx
 pypdf
 sentry-sdk[fastapi]
+render>=1.0.1
+elevenlabs>=1.0.0

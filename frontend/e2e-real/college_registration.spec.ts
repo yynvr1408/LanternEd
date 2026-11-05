@@ -57,7 +57,7 @@ test.describe.serial('admin-managed colleges drive registration', () => {
   // Only one administrator session may be active at a time: end it after every test so the next one can sign in.
   test.afterEach(async ({ page }) => {
     await page.request
-      .post('http://localhost:8010/api/v1/admin/auth/logout', { headers: { 'X-EduVillage-Admin': '1' } })
+      .post('http://localhost:8010/api/v1/admin/auth/logout', { headers: { 'X-LanternED-Admin': '1' } })
       .catch(() => undefined)
   })
 

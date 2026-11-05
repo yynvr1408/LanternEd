@@ -57,7 +57,7 @@ describe('Navigation & Domain Components', () => {
       title: 'Field Diagnostics: Ground Faults & Inverter Calibration',
       status: 'LIVE',
       scheduled_at: new Date().toISOString(),
-      livekit_room_name: 'eduvillage-live-1',
+      livekit_room_name: 'lanterned-live-1',
     }
 
     render(
@@ -82,7 +82,7 @@ describe('Navigation & Domain Components', () => {
       title: 'Intro to Off-Grid Inverters',
       status: 'SCHEDULED',
       scheduled_at: new Date().toISOString(),
-      livekit_room_name: 'eduvillage-class-sched-1',
+      livekit_room_name: 'lanterned-class-sched-1',
     }
 
     const onCancel = vi.fn()
@@ -112,7 +112,7 @@ describe('Navigation & Domain Components', () => {
       title: 'Intro to Off-Grid Inverters',
       status: 'SCHEDULED',
       scheduled_at: new Date().toISOString(),
-      livekit_room_name: 'eduvillage-class-sched-2',
+      livekit_room_name: 'lanterned-class-sched-2',
     }
 
     const onCancel = vi.fn()
@@ -142,7 +142,7 @@ describe('Navigation & Domain Components', () => {
       title: 'Intro to Off-Grid Inverters',
       status: 'CANCELLED',
       scheduled_at: new Date().toISOString(),
-      livekit_room_name: 'eduvillage-class-cancelled-1',
+      livekit_room_name: 'lanterned-class-cancelled-1',
     }
 
     const { rerender } = render(
@@ -199,13 +199,13 @@ describe('Navigation & Domain Components', () => {
   it('renders mobile navigation bottom bar for students with 5 accessible touch destinations', () => {
     const studentUser = {
       id: 'student-1',
-      email: 'student@eduvillage.org',
+      email: 'student@lanterned.org',
       full_name: 'Amina Diallo',
       role: 'student' as const,
       created_at: new Date().toISOString(),
     }
-    localStorage.setItem('eduvillage_user', JSON.stringify(studentUser))
-    localStorage.setItem('eduvillage_token', 'valid-token')
+    localStorage.setItem('lanterned_user', JSON.stringify(studentUser))
+    localStorage.setItem('lanterned_token', 'valid-token')
 
     render(
       <BrowserRouter>

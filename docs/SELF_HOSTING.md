@@ -1,12 +1,12 @@
-# Self-hosting LanternEd
+# Self-hosting LanternED
 
-LanternEd is centrally hosted by default (see [README.md § 8 Deployment](../README.md)) so most
+LanternED is centrally hosted by default (see [README.md § 8 Deployment](../README.md)) so most
 institutions get the platform with zero infrastructure to run. This guide is for the smaller
 number of institutions that have the means and want to run their own instance instead — keeping
 their own students' videos, materials, and submissions on their own infrastructure, under their
 own control.
 
-This is **the same codebase**, not a fork or a reduced edition. The central LanternEd team's role
+This is **the same codebase**, not a fork or a reduced edition. The central LanternED team's role
 toward a self-hosted instance is limited to maintaining the source and shipping updates — we do
 not have access to a self-hosted instance's database or files.
 
@@ -20,7 +20,7 @@ exactly the "zero IT burden" case it's built for.
 ## What you get
 
 - Your own Postgres database, your own file storage (local disk by default), your own instance
-  of the full application — nothing routes through LanternEd's central servers.
+  of the full application — nothing routes through LanternED's central servers.
 - The exact same features as the hosted version: live classes, offline-first assignments, AI
   lecture summaries, multi-section course management, your own `/admin` platform-admin account.
 - Automatic HTTPS (via Caddy + Let's Encrypt) for one domain you point at this server.
@@ -51,8 +51,8 @@ needs to change, since it only ever talks to whatever `LIVEKIT_URL` points to.
 
 2. **Clone the repo** on that server:
    ```bash
-   git clone https://github.com/yynvr1408/LanternEd.git
-   cd LanternEd/deploy/self-hosted
+   git clone https://github.com/yynvr1408/LanternED.git
+   cd LanternED/deploy/self-hosted
    ```
 
 3. **Configure:**

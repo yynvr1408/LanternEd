@@ -15,7 +15,7 @@ import { Rate } from 'k6/metrics'
 
 const BASE = (__ENV.BASE_URL || '').replace(/\/$/, '')
 if (!BASE) throw new Error('Set -e BASE_URL=https://your-staging-api')
-if (/lanterned|edu-village|onrender\.com/.test(BASE) && !__ENV.I_KNOW_THIS_IS_STAGING) {
+if (/lanterned|lantern-ed|onrender\.com/.test(BASE) && !__ENV.I_KNOW_THIS_IS_STAGING) {
   throw new Error('BASE_URL looks like a production host. Set -e I_KNOW_THIS_IS_STAGING=1 only for a staging host.')
 }
 
