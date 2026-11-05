@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "fileName": "LanternEd-0.1.0-universal.dmg",
+  "version": "0.1.1",
+  "fileName": "LanternEd-0.1.1-universal.dmg",
   "installerType": "dmg",
   "downloadUrl": "/api/v1/releases/download/macos",
   "fileSizeMb": 0.0,

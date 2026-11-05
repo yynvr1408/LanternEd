@@ -5,6 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v0.1.1] — 2026-11-05
+
+### 🚀 Institutional Hierarchy & CI Reliability Updates
+
+This update standardizes institutional onboarding hierarchy, resolves UI test conflicts, simplifies live network bandwidth simulation, introduces searchable institution selection for students/faculty, and connects cross-platform release artifacts directly with GitHub Releases.
+
+#### 🛠️ Fixed & Polished:
+- **CI Test Suite Resolution (Vitest):** Resolved element selector ambiguity in `multi_dashboard_portals.test.tsx` by eliminating duplicate `h2` headings in `LoginPage.tsx` and querying the semantic `h1` portal role heading.
+- **Institution Admin Portal Renaming:** Renamed the legacy "College Admin Portal" to **"Institution Admin Portal"** across sign-in forms, portal choices, navigation routing, and internationalization strings.
+- **Institutional Onboarding Hierarchy:**
+  - Removed direct manual college creation from the Super Admin platform console.
+  - Institutional registration now canonically routes through `/register/college`.
+  - Super admins review and approve pending requests from the **"Institution Onboarding Queue"** on `/platform-console`.
+  - Super admin approval automatically provisions the institution record and founding administrator account.
+- **Student & Faculty Searchable Campus Picker:** Added real-time search filtering on `/register` allowing students and faculty to quickly find their institution by name or city from extensive nationwide registries.
+- **Simplified Bandwidth Simulation Controller:**
+  - Streamlined the draggable floating widget on all dashboards into an intuitive, high-visibility control panel.
+  - One-click presets: `Offline (0 kbps)`, `2G Voice (20 kbps)`, `3G Constrained (150 kbps)`, `4G Fast (1.5 Mbps)`, and `Native Speed`.
+  - Prominent **"Restore Internet & Forward-Push Queue"** action for immediate cloud recovery and Dexie.js offline draft synchronization.
+- **Automated GitHub Releases Publishing:** Configured `.github/workflows/native-build.yml` with `softprops/action-gh-release@v2` to automatically publish all 4 cross-platform binaries (Windows `.exe`, macOS `.dmg`, Android `.apk`, iOS `.ipa`) to GitHub Releases when version tags (`v*`) are pushed.
+- **Housekeeping:** Removed deprecated `security-audit-skill` directory from repository.
+
+---
+
 ## [v0.1.0] — 2026-11-05
 
 ### 🚀 Cross-Platform Client Applications (All 4 Platforms)

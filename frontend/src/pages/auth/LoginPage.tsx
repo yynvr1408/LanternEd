@@ -49,7 +49,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
         await logout()
         setChallenge(null)
         setPassword('')
-        setError('This portal is reserved for designated College Administrators. Please use your Student login portal.')
+        setError('This portal is reserved for designated Institution Administrators. Please use your Student login portal.')
         return
       }
       try {
@@ -58,7 +58,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
           await logout()
           setChallenge(null)
           setPassword('')
-          setError('This account does not have College Administrator delegation. Please use the Teacher login portal.')
+          setError('This account does not have Institution Administrator delegation. Please use the Teacher login portal.')
           return
         }
         if (from && from !== '/' && !from.startsWith('/login')) {
@@ -71,7 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
         await logout()
         setChallenge(null)
         setPassword('')
-        setError('Failed to verify college administrator delegation. Please check your connection and try again.')
+        setError('Failed to verify institution administrator delegation. Please check your connection and try again.')
         return
       }
     }
@@ -198,7 +198,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">
               {portal === 'college-admin'
-                ? 'College Administrator Sign In'
+                ? 'Institution Administrator Sign In'
                 : portal === 'teacher'
                 ? 'Teacher Sign In'
                 : portal === 'student'
@@ -210,7 +210,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
                 ? 'Access your course materials, offline downloads, and classes'
                 : portal === 'teacher'
                 ? 'Manage curriculum, conduct classes, and review summaries'
-                : 'Manage college structures, departments, and registrations'}
+                : 'Manage institution structures, departments, and registrations'}
             </p>
           </div>
 
@@ -228,13 +228,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
           {/* Card */}
           <div className="bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl p-6 sm:p-8 shadow-sm">
           <h2 className="text-lg font-bold text-[#202B2A] mb-5">
-            {portal === 'college-admin'
-              ? 'College Administrator Sign In'
-              : portal === 'teacher'
-              ? 'Teacher Sign In'
-              : portal === 'student'
-              ? 'Student Sign In'
-              : 'Sign In to Your Account'}
+            Sign In to Your Account
           </h2>
 
           {error && (

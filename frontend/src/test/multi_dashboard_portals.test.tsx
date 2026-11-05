@@ -38,7 +38,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
 
       expect(screen.getByText(/Student Portal/i)).toBeInTheDocument()
       expect(screen.getByText(/Teacher Portal/i)).toBeInTheDocument()
-      expect(screen.getByText(/College Admin Portal/i)).toBeInTheDocument()
+      expect(screen.getByText(/Institution Admin Portal|College Admin Portal/i)).toBeInTheDocument()
     })
 
     it('hides platform management link inside native client applications', () => {
@@ -84,7 +84,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
         </MemoryRouter>
       )
 
-      expect(screen.getByText(/College Administrator Sign In/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: /Institution Administrator Sign In|College Administrator Sign In/i })).toBeInTheDocument()
 
       fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: 'prof.sharma@college.edu' } })
       fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'secretpass' } })
@@ -109,7 +109,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
       fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'studentpass' } })
       fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
-      expect(await screen.findByText(/This portal is reserved for designated College Administrators/i)).toBeInTheDocument()
+      expect(await screen.findByText(/This portal is reserved for designated (Institution|College) Administrators/i)).toBeInTheDocument()
       expect(logout).toHaveBeenCalled()
     })
 
@@ -130,7 +130,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
       fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'teacherpass' } })
       fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
-      expect(await screen.findByText(/does not have College Administrator delegation/i)).toBeInTheDocument()
+      expect(await screen.findByText(/does not have (Institution|College) Administrator delegation/i)).toBeInTheDocument()
       expect(logout).toHaveBeenCalled()
     })
   })

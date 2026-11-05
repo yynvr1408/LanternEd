@@ -169,3 +169,15 @@ jobs:
           else
             echo "APP_RELEASES_PAT secret not configured; skipping automatic cross-repo push."
           fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            releases/windows/*
+            releases/macos/*
+            releases/android/*
+            releases/ios/*
+            releases/manifest.json
+          generate_release_notes: true

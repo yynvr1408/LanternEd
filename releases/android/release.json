@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "fileName": "LanternEd-v0.1.0.apk",
+  "version": "0.1.1",
+  "fileName": "LanternEd-v0.1.1.apk",
   "installerType": "apk",
   "downloadUrl": "/api/v1/releases/download/android",
   "fileSizeMb": 0.0,

@@ -241,7 +241,23 @@ const PendingCollegeRequests: React.FC<{ onDecided: () => void; guard: (err: unk
     }
   }
 
-  if (!requests || requests.length === 0) return null
+  if (!requests || requests.length === 0) {
+    return (
+      <section aria-label="Pending institution requests" className="bg-white border border-[#E1E8E4] rounded-xl p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-[#202B2A]">Institution Onboarding Queue</h2>
+            <p className="text-xs text-[#687775] mt-0.5">
+              Institutions register via <code className="text-[#0F5B57] font-semibold bg-[#EAF6F0] px-1.5 py-0.5 rounded">/register/college</code>. Incoming requests are reviewed and approved here.
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold bg-[#EAF6F0] text-[#0F5B57] px-2.5 py-1 rounded-full border border-[#CDE5DA] shrink-0 self-start sm:self-auto">
+            0 Pending Requests
+          </span>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section aria-label="Pending institution requests" className="flex flex-col gap-3">
@@ -588,7 +604,12 @@ export const AdminDashboardPage: React.FC<{ username: string; onSignedOut: () =>
 
         <section aria-label="Colleges" className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-            <h2 className="text-lg font-bold text-[#202B2A]">Colleges</h2>
+            <div>
+              <h2 className="text-lg font-bold text-[#202B2A]">Institutions</h2>
+              <p className="text-xs text-[#687775]">
+                Verified institutions onboarded through the registration hierarchy.
+              </p>
+            </div>
             <Button
               icon={<Plus className="w-4 h-4" />}
               onClick={() => {

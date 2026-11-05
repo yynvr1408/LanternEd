@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "releaseDate": "2026-11-05T12:00:00Z",
-  "releaseNotes": "LanternEd v0.1.0 initial cross-platform release with offline bundle syncing, on-device Whisper transcription, and zero-internet campus LAN mode.",
+  "version": "0.1.1",
+  "releaseDate": "2026-11-05T14:53:28.792299+00:00",
+  "releaseNotes": "LanternED v0.1.1: Institutional onboarding hierarchy, searchable campus selection, streamlined bandwidth simulation, and cross-platform native release distribution.",
   "platforms": {
     "windows": {
-      "version": "0.1.0",
-      "fileName": "LanternEd-Setup-0.1.0.exe",
+      "version": "0.1.1",
+      "fileName": "LanternEd-Setup-0.1.1.exe",
       "installerType": "exe",
       "downloadUrl": "/api/v1/releases/download/windows",
       "fileSizeMb": 0.0,
@@ -14,8 +14,8 @@
       "arch": "x64"
     },
     "macos": {
-      "version": "0.1.0",
-      "fileName": "LanternEd-0.1.0-universal.dmg",
+      "version": "0.1.1",
+      "fileName": "LanternEd-0.1.1-universal.dmg",
       "installerType": "dmg",
       "downloadUrl": "/api/v1/releases/download/macos",
       "fileSizeMb": 0.0,
@@ -24,8 +24,8 @@
       "arch": "Universal (Apple Silicon & Intel)"
     },
     "android": {
-      "version": "0.1.0",
-      "fileName": "LanternEd-v0.1.0.apk",
+      "version": "0.1.1",
+      "fileName": "LanternEd-v0.1.1.apk",
       "installerType": "apk",
       "downloadUrl": "/api/v1/releases/download/android",
       "fileSizeMb": 0.0,
@@ -34,8 +34,8 @@
       "arch": "arm64-v8a, armeabi-v7a"
     },
     "ios": {
-      "version": "0.1.0",
-      "fileName": "LanternEd-v0.1.0.ipa",
+      "version": "0.1.1",
+      "fileName": "LanternEd-v0.1.1.ipa",
       "installerType": "ipa",
       "downloadUrl": "/api/v1/releases/download/ios",
       "fileSizeMb": 0.0,

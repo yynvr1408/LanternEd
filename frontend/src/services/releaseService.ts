@@ -7,7 +7,7 @@
 
 import { platformAdapter, type OperatingSystem } from './platformAdapter'
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || ''
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000'
 
 export interface PlatformReleaseDetails {
   version: string
@@ -45,7 +45,7 @@ export interface UpdateCheckResult {
   is_critical?: boolean
 }
 
-export const APP_CURRENT_VERSION = '0.1.0'
+export const APP_CURRENT_VERSION = '0.1.1'
 
 export const releaseService = {
   getCurrentVersion(): string {
@@ -82,6 +82,7 @@ export const releaseService = {
 
   /** Returns the direct installer download URL for a platform. */
   getDownloadUrl(platform: 'windows' | 'macos' | 'android' | 'ios'): string {
-    return `${API_BASE}/api/v1/releases/download/${platform}`
+    const GITHUB_REPO = 'https://github.com/yynvr1408/LanternEd'
+    return `${GITHUB_REPO}/releases/latest`
   },
 }

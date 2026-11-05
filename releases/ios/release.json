@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "fileName": "LanternEd-v0.1.0.ipa",
+  "version": "0.1.1",
+  "fileName": "LanternEd-v0.1.1.ipa",
   "installerType": "ipa",
   "downloadUrl": "/api/v1/releases/download/ios",
   "fileSizeMb": 0.0,

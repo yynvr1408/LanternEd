@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, Clock, Mail, ShieldCheck, UserPlus } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -72,6 +72,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
   // waits for that college's administrator to approve it before it can sign in.
   const [step, setStep] = useState<'form' | 'otp' | 'pending'>('form')
   const [devOtp, setDevOtp] = useState<string | null>(null)
+  const [institutionSearch, setInstitutionSearch] = useState('')
   const [otp, setOtp] = useState('')
   const [otpError, setOtpError] = useState<string | null>(null)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
@@ -294,9 +295,18 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     }
   }
 
+  const filteredColleges = useMemo(() => {
+    if (colleges.status !== 'ready') return colleges.items
+    const q = institutionSearch.trim().toLowerCase()
+    if (!q) return colleges.items
+    return colleges.items.filter(
+      (c) => c.name.toLowerCase().includes(q) || (c.location && c.location.toLowerCase().includes(q))
+    )
+  }, [colleges, institutionSearch])
+
   const collegeOptions = [
     { value: '', label: colleges.status === 'loading' ? 'Loading colleges...' : 'Select your college' },
-    ...colleges.items.map((c) => ({ value: c.id, label: c.location ? `${c.name} — ${c.location}` : c.name })),
+    ...filteredColleges.map((c) => ({ value: c.id, label: c.location ? `${c.name} — ${c.location}` : c.name })),
   ]
   const branchOptions = [
     {
@@ -560,14 +570,24 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
             </FormField>
 
             <FormField label="College" htmlFor="college" required error={fieldErrors.college}>
-              <Select
-                id="college"
-                value={collegeId}
-                onChange={(e) => onCollegeChange(e.target.value)}
-                options={collegeOptions}
-                isError={!!fieldErrors.college}
-                disabled={colleges.status !== 'ready' || colleges.items.length === 0}
-              />
+              <div className="flex flex-col gap-2">
+                <input
+                  id="institutionSearch"
+                  type="text"
+                  placeholder="🔍 Type institution name or city to filter..."
+                  value={institutionSearch}
+                  onChange={(e) => setInstitutionSearch(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-[#F8FAF7] text-[#202B2A] placeholder-[#84908D] focus:outline-none focus:ring-1 focus:ring-[#0F5B57] focus:border-[#0F5B57] focus:bg-white transition-all"
+                />
+                <Select
+                  id="college"
+                  value={collegeId}
+                  onChange={(e) => onCollegeChange(e.target.value)}
+                  options={collegeOptions}
+                  isError={!!fieldErrors.college}
+                  disabled={colleges.status !== 'ready' || colleges.items.length === 0}
+                />
+              </div>
             </FormField>
             {collegesUnavailable && (
               <p className="text-xs text-[#B42318] -mt-2" role="alert">
@@ -659,12 +679,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
               </p>
             )}
 
+            <div className="p-3 rounded-xl bg-[#EAF6F0] border border-[#0F5B57]/20 text-[11px] text-[#0F5B57] flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-[#0F5B57]" />
+              <div className="leading-relaxed">
+                <strong>Institution Approval Process:</strong> Once submitted, your registration request is routed to your institution's administrator. They will verify your profile and approve your account, granting access to your institution's dashboard.
+              </div>
+            </div>
+
             <Button
               type="submit"
               fullWidth
               isLoading={isLoading}
               icon={requiresOtp ? <Mail className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-              className="mt-3"
+              className="mt-2"
             >
               {requiresOtp ? 'Send Verification Code' : 'Register'}
             </Button>

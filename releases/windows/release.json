@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "fileName": "LanternEd-Setup-0.1.0.exe",
+  "version": "0.1.1",
+  "fileName": "LanternEd-Setup-0.1.1.exe",
   "installerType": "exe",
   "downloadUrl": "/api/v1/releases/download/windows",
   "fileSizeMb": 0.0,
