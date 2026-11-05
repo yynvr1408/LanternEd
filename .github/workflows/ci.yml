@@ -28,7 +28,16 @@ jobs:
         run: |
           heads=$(alembic heads | wc -l)
           test "$heads" -eq 1 || (echo "Multiple Alembic heads: merge them" && alembic heads && exit 1)
-      - run: pytest -v --tb=short
+      - name: Run Backend Tests
+        run: |
+          pytest -v --tb=short 2>&1 | tee test_results.log
+      - name: Report Failures to Step Summary
+        if: failure()
+        run: |
+          echo "### Pytest Failure Details" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "(FAILED|ERROR)" -A 15 test_results.log | head -n 100 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   frontend:
     runs-on: ubuntu-latest
