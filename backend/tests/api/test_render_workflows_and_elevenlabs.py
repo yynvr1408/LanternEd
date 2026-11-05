@@ -89,6 +89,18 @@ def test_workflow_task_transcribe_and_summarize(tmp_path):
 
 
 def test_workflow_task_elevenlabs_voiceover_and_save(db_session):
+    from datetime import datetime, timezone
+    from app.db.models.classroom import Class
+    from app.db.models.course import Course
+    from app.db.models.user import User
+    from app.db.models.enums import UserRole
+
+    teacher_user = User(id="tch-123", email="t123@example.com", full_name="Teacher 123", role=UserRole.teacher, hashed_password="pw")
+    course = Course(id="crs-123", teacher_id="tch-123", title="Course 123")
+    cls_row = Class(id="cls-123", course_id="crs-123", teacher_id="tch-123", title="Class 123", scheduled_start=datetime.now(timezone.utc))
+    db_session.add_all([teacher_user, course, cls_row])
+    db_session.commit()
+
     mock_ctx = MagicMock()
     summary_dict = {
         "overview": "Binary search divides the sorted array in half repeatedly.",

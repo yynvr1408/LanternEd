@@ -21,6 +21,7 @@ if not _shutil.which("ffmpeg") and not os.environ.get("FFMPEG_PATH"):
     except Exception:  # noqa: BLE001 - ffmpeg-dependent tests are skipped when unavailable
         pass
 os.environ["SESSION_COOKIE_NAME"] = "lanterned_session"
+os.environ["SESSION_COOKIE_SAMESITE"] = "lax"
 # Legacy fixtures register teachers/students without a college; tests of the college rule switch this back on.
 # Many existing tests sign the same user in from several clients; the second-device OTP rule has its own tests.
 os.environ["CONCURRENT_LOGIN_OTP"] = "false"
@@ -49,6 +50,7 @@ for _var in (
     "EMAILJS_SERVICE_ID", "EMAILJS_TEMPLATE_ID", "EMAILJS_LOGIN_TEMPLATE_ID", "EMAILJS_REGISTRATION_TEMPLATE_ID",
     "EMAILJS_PUBLIC_KEY", "EMAILJS_PRIVATE_KEY",
     "EMAILJS_REGISTRATION_SERVICE_ID", "EMAILJS_REGISTRATION_PUBLIC_KEY", "EMAILJS_REGISTRATION_PRIVATE_KEY",
+    "RENDER_API_KEY", "ELEVENLABS_API_KEY",
 ):
     os.environ[_var] = ""
 
