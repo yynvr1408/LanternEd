@@ -91,15 +91,34 @@ def main():
     if args.push:
         print("\nStaging, committing, and pushing release artifacts...")
         subprocess.run(["git", "add", "."], cwd=str(target_dir), check=True)
-        subprocess.run(["git", "commit", "-m", "chore(release): publish v" + version + " cross-platform release artifacts"], cwd=str(target_dir), check=True)
-        subprocess.run(["git", "push", "-u", "origin", "main", "--force"], cwd=str(target_dir), check=True)
-        print("[SUCCESS] Published release packages to remote repository!")
+        subprocess.run(
+            ["git", "commit", "-m", f"chore(release): publish v{version} cross-platform release artifacts"],
+            cwd=str(target_dir),
+            capture_output=True,
+            text=True,
+        )
+        try:
+            push_res = subprocess.run(
+                ["git", "push", "-u", "origin", "main", "--force"],
+                cwd=str(target_dir),
+                capture_output=True,
+                text=True,
+            )
+            if push_res.returncode == 0:
+                print("[SUCCESS] Published release packages to remote repository!")
+            else:
+                err_msg = push_res.stderr.strip() or push_res.stdout.strip()
+                print(f"[WARNING] Remote push was not accepted (returncode={push_res.returncode}): {err_msg}")
+                print("[INFO] Release assets are preserved locally in target directory and workflow artifacts.")
+        except Exception as push_err:
+            print(f"[WARNING] Could not push to remote releases repository: {push_err}")
+            print("[INFO] Release assets are preserved locally in target directory and workflow artifacts.")
     else:
         print(f"\n[OK] Release repository prepared at: {target_dir}")
         print("To push manually, run:")
         print(f"  cd \"{target_dir}\"")
         print("  git add .")
-        print("  git commit -m \"chore(release): publish v{version} cross-platform release artifacts\"")
+        print(f"  git commit -m \"chore(release): publish v{version} cross-platform release artifacts\"")
         print("  git remote add origin <YOUR_APP_RELEASES_REPO_URL>")
         print("  git push -u origin main")
 
