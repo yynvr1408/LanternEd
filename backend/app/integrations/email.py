@@ -145,7 +145,11 @@ def send_otp_email(*, to: str, otp: str, ttl_minutes: int) -> bool:
     """Password-reset OTP. template_params match the template described in the task: {{otp}} is
     the only sensitive one — never logged, never returned to any API caller."""
     if settings.resend_configured:
-        return _send_resend(to_email=to, kind="reset", otp=otp, ttl_minutes=ttl_minutes)
+        if _send_resend(to_email=to, kind="reset", otp=otp, ttl_minutes=ttl_minutes):
+            return True
+        if not settings.emailjs_configured:
+            return False
+        logger.info("Resend send failed; falling back to EmailJS for %s", to)
     return _send(to_email=to, template_id=settings.emailjs_template_id, template_params={"otp": otp, "ttl_minutes": ttl_minutes})
 
 
@@ -155,7 +159,11 @@ def send_login_approval_otp_email(*, to: str, otp: str, ttl_minutes: int) -> boo
     template when configured. Falls back to the password-reset template if the dedicated one
     hasn't been set up yet, so the flow still works (just with reset-flavored wording) either way."""
     if settings.resend_configured:
-        return _send_resend(to_email=to, kind="login", otp=otp, ttl_minutes=ttl_minutes)
+        if _send_resend(to_email=to, kind="login", otp=otp, ttl_minutes=ttl_minutes):
+            return True
+        if not settings.emailjs_configured:
+            return False
+        logger.info("Resend send failed; falling back to EmailJS for %s", to)
     template_id = settings.emailjs_login_template_id or settings.emailjs_template_id
     return _send(to_email=to, template_id=template_id, template_params={"otp": otp, "ttl_minutes": ttl_minutes})
 
@@ -170,7 +178,11 @@ def send_registration_otp_email(*, to: str, otp: str, ttl_minutes: int) -> bool:
     every field to be overridden together would silently pair the new template with the old
     service_id and get rejected by EmailJS."""
     if settings.resend_configured:
-        return _send_resend(to_email=to, kind="registration", otp=otp, ttl_minutes=ttl_minutes)
+        if _send_resend(to_email=to, kind="registration", otp=otp, ttl_minutes=ttl_minutes):
+            return True
+        if not settings.emailjs_configured:
+            return False
+        logger.info("Resend send failed; falling back to EmailJS for %s", to)
     return _send(
         to_email=to,
         template_id=settings.emailjs_registration_template_id or settings.emailjs_template_id,
@@ -192,7 +204,11 @@ def send_college_deletion_otp_email(*, to: str, otp: str, ttl_minutes: int) -> b
     template/account: this is a rare, low-volume flow that doesn't warrant its own EmailJS
     template the way registration's higher-volume flow does."""
     if settings.resend_configured:
-        return _send_resend(to_email=to, kind="deletion", otp=otp, ttl_minutes=ttl_minutes)
+        if _send_resend(to_email=to, kind="deletion", otp=otp, ttl_minutes=ttl_minutes):
+            return True
+        if not settings.emailjs_configured:
+            return False
+        logger.info("Resend send failed; falling back to EmailJS for %s", to)
     return _send(to_email=to, template_id=settings.emailjs_template_id, template_params={"otp": otp, "ttl_minutes": ttl_minutes})
 
 
