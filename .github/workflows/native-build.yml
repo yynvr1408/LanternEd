@@ -119,3 +119,53 @@ jobs:
         with:
           name: LanternEd-iOS-Build
           path: frontend/ios/App/build/
+
+  # 5. Publish to Dedicated App Releases Repository (LanternEd-App-Releases)
+  publish-to-releases-repo:
+    name: Publish to LanternEd-App-Releases Repository
+    needs: [build-desktop-windows, build-desktop-macos, build-mobile-android, build-mobile-ios]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: LanternEd-Windows-Setup
+          path: releases/windows/
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: LanternEd-macOS-Universal-DMG
+          path: releases/macos/
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: LanternEd-Android-Release-APK
+          path: releases/android/
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: LanternEd-iOS-Build
+          path: releases/ios/
+      - name: Update Manifest and Checksums
+        run: python scripts/package_release.py --action update-hashes
+      - name: Push to LanternEd-App-Releases
+        env:
+          APP_RELEASES_PAT: ${{ secrets.APP_RELEASES_PAT }}
+        run: |
+          if [ -n "$APP_RELEASES_PAT" ]; then
+            python scripts/sync_to_app_releases_repo.py \
+              --target-dir ./export_releases \
+              --git-remote "https://${APP_RELEASES_PAT}@github.com/yynvr1408/LanternEd-App-Releases.git" \
+              --push
+          else
+            echo "APP_RELEASES_PAT secret not configured; skipping automatic cross-repo push."
+          fi
