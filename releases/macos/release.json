@@ -4,7 +4,7 @@
   "installerType": "dmg",
   "downloadUrl": "/api/v1/releases/download/macos",
   "fileSizeMb": 0.0,
-  "sha256": "1a703984ecfcdc263c2cacac0d1e759b9f3372fe9315563c2941f931af38e464",
+  "sha256": "2380bbb5ae64b6f85202d2627757a78d5ee86b58809e1d2fa6a072f31fada38e",
   "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
   "arch": "Universal (Apple Silicon & Intel)"
 }

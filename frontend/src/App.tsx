@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { NetworkProvider } from './context/NetworkContext'
 import { SyncProvider } from './context/SyncContext'
 import { AppRoutes } from './routes/AppRoutes'
+import { NetworkBandwidthController } from './components/common/NetworkBandwidthController'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,8 @@ export function App() {
           <NetworkProvider>
             <SyncProvider>
               <AppRoutes />
+              {/* Inbuilt draggable network bandwidth controller accessible across all dashboard pages */}
+              <NetworkBandwidthController />
             </SyncProvider>
           </NetworkProvider>
         </AuthProvider>

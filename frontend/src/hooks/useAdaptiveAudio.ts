@@ -277,6 +277,16 @@ export function useAdaptiveAudio({
       }
     }
 
+    const handleSimulatedQuality = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail
+      if (detail?.quality === 'poor' || detail?.quality === 'offline') {
+        reportQuality(ConnectionQuality.Poor, 'stats')
+      } else if (detail?.quality === 'good' || detail?.quality === 'excellent') {
+        reportQuality(ConnectionQuality.Good, 'stats')
+      }
+    }
+    window.addEventListener('lanterned:network-quality', handleSimulatedQuality)
+
     room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQuality)
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
     room.on(RoomEvent.TrackPublished, handleTrackPublished)
@@ -287,6 +297,7 @@ export function useAdaptiveAudio({
     reapply() // initial mount / room ready
 
     return () => {
+      window.removeEventListener('lanterned:network-quality', handleSimulatedQuality)
       room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQuality)
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed)
       room.off(RoomEvent.TrackPublished, handleTrackPublished)

@@ -4,7 +4,7 @@
   "installerType": "exe",
   "downloadUrl": "/api/v1/releases/download/windows",
   "fileSizeMb": 0.0,
-  "sha256": "c951053278473bfbc5e1b425822f665062463788e215f9d56e1f0de2a3deb253",
+  "sha256": "2fd51e677b9d0cbe94851f95650709f309e43abe526d3c15c5e4ee37e13041e7",
   "minOsVersion": "Windows 10 / 11 (64-bit)",
   "arch": "x64"
 }

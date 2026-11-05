@@ -4,7 +4,7 @@
   "installerType": "ipa",
   "downloadUrl": "/api/v1/releases/download/ios",
   "fileSizeMb": 0.0,
-  "sha256": "ba6eac048ca9f23374759052b4de80cc2792127fa48a6eaba30b68cbb975d35d",
+  "sha256": "788c528fd4fcd65ec8da28287c55eb2e9f04222969bb895cd201db38673dc954",
   "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
   "arch": "arm64"
 }

@@ -96,6 +96,22 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
     headers.set('Content-Type', 'application/json')
   }
 
+  // Check simulated network bandwidth
+  if (typeof window !== 'undefined' && (window as any).__LANTERNED_SIMULATED_KBPS__ === 0) {
+    const offlineMsg = 'Unable to connect to LanternED server. Operating in offline mode.'
+    throw new ApiError(offlineMsg, 0, true, 'NETWORK_OFFLINE')
+  }
+
+  if (
+    typeof window !== 'undefined' &&
+    typeof (window as any).__LANTERNED_SIMULATED_KBPS__ === 'number' &&
+    (window as any).__LANTERNED_SIMULATED_KBPS__ > 0 &&
+    (window as any).__LANTERNED_SIMULATED_KBPS__ <= 300
+  ) {
+    const simKbps = (window as any).__LANTERNED_SIMULATED_KBPS__
+    await sleep(Math.min(2000, Math.round(30000 / simKbps)))
+  }
+
   for (let attempt = 0; ; attempt++) {
     // A server that never answers (black-holed connection) must not leave the UI loading forever.
     const controller = new AbortController()

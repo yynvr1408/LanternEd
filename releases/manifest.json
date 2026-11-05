@@ -9,7 +9,7 @@
       "installerType": "exe",
       "downloadUrl": "/api/v1/releases/download/windows",
       "fileSizeMb": 0.0,
-      "sha256": "c951053278473bfbc5e1b425822f665062463788e215f9d56e1f0de2a3deb253",
+      "sha256": "2fd51e677b9d0cbe94851f95650709f309e43abe526d3c15c5e4ee37e13041e7",
       "minOsVersion": "Windows 10 / 11 (64-bit)",
       "arch": "x64"
     },
@@ -19,7 +19,7 @@
       "installerType": "dmg",
       "downloadUrl": "/api/v1/releases/download/macos",
       "fileSizeMb": 0.0,
-      "sha256": "1a703984ecfcdc263c2cacac0d1e759b9f3372fe9315563c2941f931af38e464",
+      "sha256": "2380bbb5ae64b6f85202d2627757a78d5ee86b58809e1d2fa6a072f31fada38e",
       "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
       "arch": "Universal (Apple Silicon & Intel)"
     },
@@ -29,7 +29,7 @@
       "installerType": "apk",
       "downloadUrl": "/api/v1/releases/download/android",
       "fileSizeMb": 0.0,
-      "sha256": "c00fe95f74800dd209f0e9e08d72c0fa53b3071efed9123127a75d58d7d5885c",
+      "sha256": "734777ba3c3a1cc6585a0dfb695983ecb67db18922ab4988c16828fae17e956d",
       "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
       "arch": "arm64-v8a, armeabi-v7a"
     },
@@ -39,7 +39,7 @@
       "installerType": "ipa",
       "downloadUrl": "/api/v1/releases/download/ios",
       "fileSizeMb": 0.0,
-      "sha256": "ba6eac048ca9f23374759052b4de80cc2792127fa48a6eaba30b68cbb975d35d",
+      "sha256": "788c528fd4fcd65ec8da28287c55eb2e9f04222969bb895cd201db38673dc954",
       "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
       "arch": "arm64"
     }
