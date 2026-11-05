@@ -33,7 +33,9 @@
     "institutionAccount": "机构账户",
     "institutionAccountDesc": "注册您的机构并管理其院系、班级和注册申请",
     "alreadyRegistered": "已经注册过了?",
-    "signInHere": "在此登录"
+    "signInHere": "在此登录",
+    "collegeAdminPortal": "学院管理门户",
+    "collegeAdminPortalDesc": "验证注册、配置学院设置、管理分支机构"
   },
   "language": {
     "switchLabel": "语言"

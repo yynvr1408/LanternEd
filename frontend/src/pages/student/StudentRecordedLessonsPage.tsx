@@ -12,6 +12,7 @@ import {
   Search,
   Filter,
   HardDrive,
+  Package,
 } from 'lucide-react'
 import { api } from '../../services/apiClient'
 import { downloadManager } from '../../services/downloadManager'
@@ -42,6 +43,20 @@ export const StudentRecordedLessonsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterMode, setFilterMode] = useState<'all' | 'ready' | 'downloaded'>('all')
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadingBundleId, setDownloadingBundleId] = useState<string | null>(null)
+
+  const handleDownloadBundle = async (recording: Recording, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      setDownloadingBundleId(recording.id)
+      await downloadManager.downloadLessonBundle(recording.id, `${recording.title || 'lesson'}-bundle.zip`)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download lesson bundle')
+    } finally {
+      setDownloadingBundleId(null)
+    }
+  }
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set())
 
   const { data: recordings, isLoading, error, refetch } = useQuery<Recording[]>({
@@ -266,6 +281,21 @@ export const StudentRecordedLessonsPage: React.FC = () => {
                         title={`Download for offline study (~${Math.round(recording.file_size_bytes / (1024 * 1024))} MB)`}
                       >
                         {downloadingId === recording.id ? 'Saving...' : 'Download'}
+                      </Button>
+                    )}
+
+                    {/* Bundle Button */}
+                    {!isProcessing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => handleDownloadBundle(recording, e)}
+                        disabled={downloadingBundleId === recording.id}
+                        className="text-xs h-10 sm:h-8 px-2 flex-1 sm:flex-none"
+                        icon={<Package className="w-3.5 h-3.5 text-[#0F5B57]" />}
+                        title="Download compressed lesson bundle (.zip) with video, notes, summary, and transcript"
+                      >
+                        {downloadingBundleId === recording.id ? 'Bundling...' : 'Bundle (.zip)'}
                       </Button>
                     )}
 

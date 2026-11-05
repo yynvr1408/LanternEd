@@ -53,6 +53,48 @@ export interface CollegeDeletionRequest {
   confirmed_at: string | null
 }
 
+
+export interface AiScreenedApplicant {
+  user_id: string
+  full_name: string
+  email: string
+  role: 'student' | 'teacher'
+  branch_name: string | null
+  section_name: string | null
+  ai_score: number
+  ai_recommendation: 'approve' | 'review' | 'reject'
+  ai_risk_level: 'low' | 'medium' | 'high'
+  ai_reasons: string[]
+  roster_matched: boolean
+}
+
+export interface BulkActionResult {
+  success_count: number
+  user_ids: string[]
+  message: string
+}
+
+export interface AiAutoApproveResult {
+  approved_count: number
+  remaining_count: number
+  approved_user_ids: string[]
+  message: string
+}
+
+export interface CollegeSettings {
+  college_id: string
+  institution_type: string
+  approval_mode: 'manual_admin' | 'ai_auto_approve' | 'instant_code'
+  allowed_email_domains: string[]
+  features: {
+    whiteboard_enabled: boolean
+    ai_summaries_enabled: boolean
+    offline_bundles_enabled: boolean
+    low_bandwidth_default: boolean
+    whatsapp_alerts_enabled: boolean
+  }
+}
+
 export const institutionAdminApi = {
   myColleges: () => apiRequest<College[]>('/institution-admin/colleges'),
   getCollege: (id: string) => apiRequest<College>(`/institution-admin/colleges/${id}`),
@@ -139,4 +181,28 @@ export const institutionAdminApi = {
     ),
   deleteRosterEntry: (collegeId: string, entryId: string) =>
     apiRequest<void>(`/institution-admin/colleges/${collegeId}/roster/${entryId}`, { method: 'DELETE' }),
+
+  bulkApproveRegistrations: (collegeId: string, userIds: string[]) =>
+    apiRequest<BulkActionResult>(`/institution-admin/colleges/${collegeId}/registrations/bulk-approve`, {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds }),
+    }),
+  bulkRejectRegistrations: (collegeId: string, userIds: string[], reason?: string) =>
+    apiRequest<BulkActionResult>(`/institution-admin/colleges/${collegeId}/registrations/bulk-reject`, {
+      method: 'POST',
+      body: JSON.stringify({ user_ids: userIds, reason: reason || undefined }),
+    }),
+  aiScreenRegistrations: (collegeId: string) =>
+    apiRequest<AiScreenedApplicant[]>(`/institution-admin/colleges/${collegeId}/registrations/ai-screen`),
+  aiAutoApproveRegistrations: (collegeId: string) =>
+    apiRequest<AiAutoApproveResult>(`/institution-admin/colleges/${collegeId}/registrations/ai-auto-approve`, {
+      method: 'POST',
+    }),
+  getCollegeSettings: (collegeId: string) =>
+    apiRequest<CollegeSettings>(`/institution-admin/colleges/${collegeId}/settings`),
+  updateCollegeSettings: (collegeId: string, updates: Partial<CollegeSettings>) =>
+    apiRequest<CollegeSettings>(`/institution-admin/colleges/${collegeId}/settings`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
 }

@@ -33,7 +33,9 @@
     "institutionAccount": "સંસ્થા ખાતું",
     "institutionAccountDesc": "તમારી સંસ્થાની નોંધણી કરો અને તેની શાખાઓ, વિભાગો અને નોંધણીઓનું સંચાલન કરો",
     "alreadyRegistered": "પહેલેથી જ રજિસ્ટર્ડ છો?",
-    "signInHere": "અહીં સાઇન ઇન કરો"
+    "signInHere": "અહીં સાઇન ઇન કરો",
+    "collegeAdminPortal": "કોલેજ એડમિન પોર્ટલ",
+    "collegeAdminPortalDesc": "નોંધણી ચકાસો, કોલેજ સેટિંગ્સ ગોઠવો, શાખાઓનું સંચાલન કરો"
   },
   "language": {
     "switchLabel": "ભાષા"

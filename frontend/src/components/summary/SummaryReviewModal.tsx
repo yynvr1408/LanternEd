@@ -19,12 +19,19 @@ export const SummaryReviewModal: React.FC<SummaryReviewModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  if (!summary) return null
-
-  const [overview, setOverview] = useState(summary.overview || '')
-  const [teacherNotes, setTeacherNotes] = useState(summary.teacher_notes || '')
+  const [overview, setOverview] = useState(summary?.overview || '')
+  const [teacherNotes, setTeacherNotes] = useState(summary?.teacher_notes || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (summary) {
+      setOverview(summary.overview || '')
+      setTeacherNotes(summary.teacher_notes || '')
+    }
+  }, [summary])
+
+  if (!summary) return null
 
   const handleReview = async (action: 'APPROVE' | 'REVISE') => {
     setIsSubmitting(true)

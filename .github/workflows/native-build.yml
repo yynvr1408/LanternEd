@@ -1,0 +1,121 @@
+name: Native Cross-Platform Builds
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # 1. Windows Desktop Build (Tauri 2.0 -> .exe / .msi)
+  build-desktop-windows:
+    name: Desktop - Windows (x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Build Tauri Windows Bundle
+        run: npx tauri build --target x86_64-pc-windows-msvc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LanternEd-Windows-Setup
+          path: frontend/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+
+  # 2. macOS Desktop Build (Tauri 2.0 -> .dmg Universal Apple Silicon + Intel)
+  build-desktop-macos:
+    name: Desktop - macOS (Universal)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Build Tauri macOS Universal Bundle
+        run: npx tauri build --target universal-apple-darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LanternEd-macOS-Universal-DMG
+          path: frontend/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+
+  # 3. Android Mobile Build (Capacitor 6 -> .apk)
+  build-mobile-android:
+    name: Mobile - Android (APK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Sync Capacitor Android
+        run: npx cap sync android
+      - name: Build Android Release APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LanternEd-Android-Release-APK
+          path: frontend/android/app/build/outputs/apk/release/*.apk
+
+  # 4. iOS Mobile Build (Capacitor 6 -> iOS Xcode Archive)
+  build-mobile-ios:
+    name: Mobile - iOS (Xcode Project)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+      - name: Build iOS Xcode Archive
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO clean build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LanternEd-iOS-Build
+          path: frontend/ios/App/build/

@@ -13,7 +13,18 @@
     "test:e2e:offline": "playwright test -c playwright.offline.config.ts",
     "test:e2e:layout": "playwright test -c playwright.layout.config.ts",
     "test:e2e:real": "playwright test -c playwright.real.config.ts",
-    "test:e2e:live": "playwright test -c playwright.live.config.ts"
+    "test:e2e:live": "playwright test -c playwright.live.config.ts",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "cap:sync": "cap sync",
+    "cap:build": "cap build",
+    "tauri:build:win": "tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:mac": "tauri build --target universal-apple-darwin",
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
@@ -38,7 +49,12 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
     "@playwright/test": "^1.64.1",
+    "@tauri-apps/cli": "^2.12.4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",

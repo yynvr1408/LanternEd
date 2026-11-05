@@ -182,3 +182,16 @@ class CollegeDeletionRequest(UUIDPrimaryKeyMixin, Base):
     )
     confirmed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     confirmed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class CollegeSetting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Dynamic institution-wide operational and feature settings configured by the college administrator."""
+
+    __tablename__ = "college_settings"
+
+    college_id: Mapped[str] = mapped_column(String(36), ForeignKey("colleges.id", ondelete="CASCADE"), unique=True, index=True, nullable=False)
+    institution_type: Mapped[str] = mapped_column(String(50), nullable=False, default="engineering")
+    approval_mode: Mapped[str] = mapped_column(String(50), nullable=False, default="manual_admin")
+    allowed_email_domains_json: Mapped[str] = mapped_column(String(1000), nullable=False, default="[]")
+    features_json: Mapped[str] = mapped_column(String(2000), nullable=False, default="{}")
+

@@ -231,6 +231,61 @@ class DecisionReject(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
+
+class BulkRegistrationsAction(BaseModel):
+    user_ids: list[str] = Field(..., min_length=1, max_length=200)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class BulkActionResult(BaseModel):
+    success_count: int
+    user_ids: list[str]
+    message: str
+
+
+class AiScreenedApplicantOut(BaseModel):
+    user_id: str
+    full_name: str
+    email: str
+    role: UserRole
+    branch_name: str | None = None
+    section_name: str | None = None
+    ai_score: int = Field(ge=0, le=100)
+    ai_recommendation: str  # "approve" | "review" | "reject"
+    ai_risk_level: str  # "low" | "medium" | "high"
+    ai_reasons: list[str] = Field(default_factory=list)
+    roster_matched: bool = False
+
+
+class AiAutoApproveResult(BaseModel):
+    approved_count: int
+    remaining_count: int
+    approved_user_ids: list[str]
+    message: str
+
+
+class CollegeFeaturesDict(BaseModel):
+    whiteboard_enabled: bool = True
+    ai_summaries_enabled: bool = True
+    offline_bundles_enabled: bool = True
+    low_bandwidth_default: bool = False
+    whatsapp_alerts_enabled: bool = True
+
+
+class CollegeSettingsOut(BaseModel):
+    college_id: str
+    institution_type: str = "engineering"  # "engineering" | "polytechnic" | "school" | "coaching" | "general"
+    approval_mode: str = "manual_admin"  # "manual_admin" | "ai_auto_approve" | "instant_code"
+    allowed_email_domains: list[str] = Field(default_factory=list)
+    features: dict[str, bool] = Field(default_factory=dict)
+
+
+class CollegeSettingsUpdate(BaseModel):
+    institution_type: str | None = None
+    approval_mode: str | None = None
+    allowed_email_domains: list[str] | None = None
+    features: dict[str, bool] | None = None
+
 class PendingUserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -11,6 +11,7 @@ from app.api.v1 import (
     notifications,
     recordings,
     registration,
+    releases,
     resources,
     sections,
     summaries,
@@ -36,3 +37,4 @@ api_router.include_router(summaries.router)
 api_router.include_router(synchronization.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(notifications.router)
+api_router.include_router(releases.router)

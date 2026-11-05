@@ -87,6 +87,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/login" element={<LoginChoicePage />} />
         <Route path="/login/student" element={<LoginPage portal="student" />} />
         <Route path="/login/teacher" element={<LoginPage portal="teacher" />} />
+        <Route path="/login/college-admin" element={<LoginPage portal="college-admin" />} />
+        <Route path="/login/institution-admin" element={<Navigate to="/login/college-admin" replace />} />
         <Route path="/register" element={<RegisterChoicePage />} />
         <Route path="/register/student" element={<RegisterPage portal="student" />} />
         <Route path="/register/teacher" element={<RegisterPage portal="teacher" />} />
@@ -155,6 +157,19 @@ export const AppRoutes: React.FC = () => {
           <Route path="summaries/:classId" element={<TeacherSummaryDetailPage />} />
           <Route path="institution" element={<TeacherInstitutionAdminPage />} />
           <Route path="profile" element={<TeacherProfilePage />} />
+        </Route>
+
+        {/* College Admin (Institution Admin) Portal & Dashboard */}
+        <Route
+          path="/institution"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <TeacherLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/institution/dashboard" replace />} />
+          <Route path="dashboard" element={<TeacherInstitutionAdminPage />} />
         </Route>
 
         {/* Admin panel: outside the student/teacher guards; access is enforced by the backend session, not the

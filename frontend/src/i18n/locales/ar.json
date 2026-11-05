@@ -33,7 +33,9 @@
     "institutionAccount": "حساب المؤسسة",
     "institutionAccountDesc": "سجّل مؤسستك وأدر فروعها وأقسامها وطلبات التسجيل فيها",
     "alreadyRegistered": "هل سجلت من قبل؟",
-    "signInHere": "سجّل الدخول هنا"
+    "signInHere": "سجّل الدخول هنا",
+    "collegeAdminPortal": "بوابة مدير الكلية",
+    "collegeAdminPortalDesc": "التحقق من التسجيلات، تكوين إعدادات الكلية، وإدارة الفروع"
   },
   "language": {
     "switchLabel": "اللغة"

@@ -33,7 +33,9 @@
     "institutionAccount": "संस्था खाते",
     "institutionAccountDesc": "तुमची संस्था नोंदणी करा आणि तिच्या शाखा, विभाग आणि नोंदणी व्यवस्थापित करा",
     "alreadyRegistered": "आधीच नोंदणी केली आहे?",
-    "signInHere": "इथे साइन इन करा"
+    "signInHere": "इथे साइन इन करा",
+    "collegeAdminPortal": "कॉलेज अ‍ॅडमिन पोर्टल",
+    "collegeAdminPortalDesc": "नोंदणी सत्यापित करा, कॉलेज सेटिंग्ज कॉन्फिगर करा, शाखा व्यवस्थापित करा"
   },
   "language": {
     "switchLabel": "भाषा"

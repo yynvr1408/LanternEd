@@ -46,6 +46,8 @@ export default defineConfig({
         EMAILJS_PUBLIC_KEY: '',
         EMAILJS_PRIVATE_KEY: '',
         CONCURRENT_LOGIN_OTP: 'true',
+        REQUIRE_REGISTRATION_OTP: 'false',
+        COLLEGE_REGISTRATION_REQUIRES_APPROVAL: 'false',
         ADMIN_USERNAME: process.env.E2E_ADMIN_USERNAME,
         ADMIN_PASSWORD: process.env.E2E_ADMIN_PASSWORD,
       },
@@ -55,7 +57,7 @@ export default defineConfig({
       url: `http://localhost:${FRONTEND_PORT}`,
       reuseExistingServer: false,
       timeout: 180_000,
-      env: { VITE_API_BASE_URL: `http://localhost:${BACKEND_PORT}` },
+      env: { VITE_API_BASE_URL: `http://localhost:${BACKEND_PORT}`, VITE_REQUIRE_REGISTRATION_OTP: 'false' },
     },
   ],
 })

@@ -33,7 +33,9 @@
     "institutionAccount": "Akaunti ya Taasisi",
     "institutionAccountDesc": "Sajili taasisi yako na simamia matawi, sehemu na usajili wake",
     "alreadyRegistered": "Tayari umejisajili?",
-    "signInHere": "Ingia hapa"
+    "signInHere": "Ingia hapa",
+    "collegeAdminPortal": "Lango la Msimamizi wa Chuo",
+    "collegeAdminPortalDesc": "Thibitisha usajili, sanidi mipangilio ya chuo, simamia matawi"
   },
   "language": {
     "switchLabel": "Lugha"

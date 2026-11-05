@@ -115,7 +115,7 @@ def register_user(
         # A collegeless registration (only reachable when *_college_required is off — a dev/test
         # convenience, see config.py) has no administrator who could ever approve it, so it stays
         # active immediately, exactly as before this feature existed.
-        status=UserStatus.active if (target is None or roster_entry is not None) else UserStatus.pending,
+        status=UserStatus.active if (target is None or roster_entry is not None or not settings.college_registration_requires_approval) else UserStatus.pending,
     )
     if target is not None:
         user.college_id = target[0].id

@@ -486,3 +486,98 @@ def update_progress(db: Session, user: User, recording: ClassRecording, *, posit
     db.commit()
     db.refresh(progress)
     return progress
+
+
+def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -> Path:
+    """Packages a lecture's recording, summary, transcript, and metadata into a single
+    compressed .zip bundle for offline download and local playback."""
+    assert_can_access(db, user, recording)
+    if recording.status == RecordingStatus.failed:
+        raise ConflictError("This recording failed and cannot be bundled.", code="RECORDING_FAILED")
+    if recording.status == RecordingStatus.archived:
+        raise ConflictError("This recording has been removed.", code="RECORDING_ARCHIVED")
+    if recording.status != RecordingStatus.available:
+        raise ConflictError("This recording isn't ready yet.", code="RECORDING_NOT_READY")
+
+    import json
+    import tempfile
+    import zipfile
+    from pathlib import Path
+
+    cls = _class_of(db, recording)
+    course = course_service.get_course_or_404(db, cls.course_id)
+    is_teacher = course_service.is_teaching(db, user, course)
+    summary = _summary_for(db, recording)
+    if summary is not None and not is_teacher and summary.status != SummaryStatus.completed:
+        summary = None
+    transcript = _transcript_for(db, recording) if (is_teacher or summary is not None) else None
+
+    tmp_zip = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    tmp_path = Path(tmp_zip.name)
+    tmp_zip.close()
+
+    try:
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            metadata = {
+                "recording_id": recording.id,
+                "class_id": cls.id,
+                "class_title": cls.title,
+                "course_id": course.id,
+                "course_title": course.title,
+                "audio_only": recording.audio_only,
+                "duration_seconds": recording.duration_seconds,
+                "size_bytes": recording.size_bytes,
+                "started_at": recording.started_at.isoformat() if recording.started_at else None,
+                "completed_at": recording.completed_at.isoformat() if recording.completed_at else None,
+            }
+            zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+
+            if summary and summary.content_json:
+                zf.writestr("summary.json", json.dumps(summary.content_json, indent=2))
+                md_lines = [f"# {cls.title} - Lecture Summary", f"**Course:** {course.title}", ""]
+                overview = summary.content_json.get("overview")
+                if overview:
+                    md_lines.extend(["## Overview", overview, ""])
+                key_concepts = summary.content_json.get("key_concepts", [])
+                if key_concepts:
+                    md_lines.append("## Key Concepts")
+                    for kc in key_concepts:
+                        if isinstance(kc, dict):
+                            concept = kc.get("concept", "")
+                            explanation = kc.get("explanation", "")
+                            md_lines.append(f"- **{concept}**: {explanation}")
+                        else:
+                            md_lines.append(f"- {kc}")
+                    md_lines.append("")
+                rev_q = summary.content_json.get("revision_questions", [])
+                if rev_q:
+                    md_lines.append("## Revision Questions")
+                    for i, q in enumerate(rev_q, 1):
+                        md_lines.append(f"{i}. {q}")
+                    md_lines.append("")
+                teacher_notes = summary.content_json.get("teacher_notes")
+                if teacher_notes:
+                    md_lines.extend(["## Teacher Notes", teacher_notes, ""])
+                zf.writestr("summary.md", "\n".join(md_lines))
+
+            if transcript and transcript.content:
+                zf.writestr("transcript.txt", transcript.content)
+
+            if recording.storage_key:
+                storage = get_storage()
+                if storage.verify_uploaded(recording.storage_key) is not None:
+                    media_ext = "ogg" if recording.audio_only else "mp4"
+                    media_temp = tempfile.NamedTemporaryFile(suffix=f".{media_ext}", delete=False)
+                    media_path = Path(media_temp.name)
+                    media_temp.close()
+                    try:
+                        storage.fetch_to_path(recording.storage_key, media_path)
+                        zf.write(media_path, arcname=f"media.{media_ext}", compress_type=zipfile.ZIP_STORED)
+                    finally:
+                        if media_path.exists():
+                            media_path.unlink()
+        return tmp_path
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise

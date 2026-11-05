@@ -33,7 +33,9 @@
     "institutionAccount": "প্রতিষ্ঠান অ্যাকাউন্ট",
     "institutionAccountDesc": "আপনার প্রতিষ্ঠান নিবন্ধন করুন এবং এর শাখা, বিভাগ ও নিবন্ধন পরিচালনা করুন",
     "alreadyRegistered": "ইতিমধ্যে নিবন্ধিত?",
-    "signInHere": "এখানে সাইন ইন করুন"
+    "signInHere": "এখানে সাইন ইন করুন",
+    "collegeAdminPortal": "কলেজ অ্যাডমিন পোর্টাল",
+    "collegeAdminPortalDesc": "নিবন্ধন যাচাই করুন, কলেজ সেটিংস কনফিগার করুন, শাখা পরিচালনা করুন"
   },
   "language": {
     "switchLabel": "ভাষা"

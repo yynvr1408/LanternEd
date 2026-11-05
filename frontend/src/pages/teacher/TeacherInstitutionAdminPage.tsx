@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Building2, Check, Download, FileUp, KeyRound, Layers, Mail, Pencil, PauseCircle, PlayCircle, ShieldAlert, UserMinus, Users, X } from 'lucide-react'
+import { Building2, Check, Download, RefreshCw, FileUp, KeyRound, Layers, Mail, Pencil, PauseCircle, PlayCircle, ShieldAlert, UserMinus, Users, X, Sparkles, Sliders, CheckSquare, Square, ChevronDown, ChevronRight, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { PageContainer } from '../../components/layout/PageContainer'
 import { Card, CardContent, Badge, Button, Dialog, FormField, Input, LoadingState, ErrorState, EmptyState } from '../../components/ui'
 import { CollegeStructureDialog } from '../admin/CollegeStructureDialog'
@@ -9,8 +9,13 @@ import {
   type PendingUser,
   type RosterEntry,
   type RosterImportResult,
+  type AiScreenedApplicant,
+  type CollegeSettings,
 } from '../../services/institutionAdminApi'
 import type { BillingSummary, College } from '../../services/adminApi'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
+import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 
 /** "Rural Science College" -> "RSC"; a single-word name falls back to its first few letters
  * ("Harvard" -> "HARV") rather than a single, meaningless initial. */
@@ -505,14 +510,40 @@ const RosterImportSection: React.FC<{ collegeId: string }> = ({ collegeId }) => 
 
 const PendingRegistrationsSection: React.FC<{ collegeId: string; onChange: () => void }> = ({ collegeId, onChange }) => {
   const [pending, setPending] = useState<PendingUser[] | null>(null)
+  const [aiScreening, setAiScreening] = useState<Record<string, AiScreenedApplicant>>({})
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [actingOn, setActingOn] = useState<string | null>(null)
+  const [isBulkActing, setIsBulkActing] = useState(false)
+  const [isAiScreening, setIsAiScreening] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successNotice, setSuccessNotice] = useState<string | null>(null)
 
   const load = async () => {
     try {
-      setPending(await institutionAdminApi.listPendingRegistrations(collegeId))
+      const list = await institutionAdminApi.listPendingRegistrations(collegeId)
+      setPending(list)
+      if (list.length > 0) {
+        void runAiScreening()
+      }
     } catch (err: any) {
       setError(err.message || 'Could not load pending registrations.')
+    }
+  }
+
+  const runAiScreening = async () => {
+    setIsAiScreening(true)
+    try {
+      const screening = await institutionAdminApi.aiScreenRegistrations(collegeId)
+      const map: Record<string, AiScreenedApplicant> = {}
+      screening.forEach((s) => {
+        map[s.user_id] = s
+      })
+      setAiScreening(map)
+    } catch {
+      // Non-fatal, admin can still review manually
+    } finally {
+      setIsAiScreening(false)
     }
   }
 
@@ -521,12 +552,44 @@ const PendingRegistrationsSection: React.FC<{ collegeId: string; onChange: () =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collegeId])
 
-  const act = async (userId: string, action: 'approve' | 'reject') => {
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    if (!pending) return
+    if (selectedIds.size === pending.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(pending.map((p) => p.id)))
+    }
+  }
+
+  const selectVerifiedOnly = () => {
+    if (!pending) return
+    const verified = pending
+      .filter((p) => aiScreening[p.id]?.ai_recommendation === 'approve')
+      .map((p) => p.id)
+    setSelectedIds(new Set(verified))
+  }
+
+  const actSingle = async (userId: string, action: 'approve' | 'reject') => {
     setActingOn(userId)
     setError(null)
+    setSuccessNotice(null)
     try {
       if (action === 'approve') await institutionAdminApi.approveRegistration(collegeId, userId)
       else await institutionAdminApi.rejectRegistration(collegeId, userId)
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(userId)
+        return next
+      })
       await load()
       onChange()
     } catch (err: any) {
@@ -536,45 +599,436 @@ const PendingRegistrationsSection: React.FC<{ collegeId: string; onChange: () =>
     }
   }
 
+  const actBulk = async (action: 'approve' | 'reject') => {
+    if (selectedIds.size === 0) return
+    setIsBulkActing(true)
+    setError(null)
+    setSuccessNotice(null)
+    try {
+      const ids = Array.from(selectedIds)
+      if (action === 'approve') {
+        const res = await institutionAdminApi.bulkApproveRegistrations(collegeId, ids)
+        setSuccessNotice(res.message)
+      } else {
+        const reason = window.prompt('Optional reason for rejecting selected applications:') || undefined
+        const res = await institutionAdminApi.bulkRejectRegistrations(collegeId, ids, reason)
+        setSuccessNotice(res.message)
+      }
+      setSelectedIds(new Set())
+      await load()
+      onChange()
+    } catch (err: any) {
+      setError(err.message || 'Could not complete bulk operation.')
+    } finally {
+      setIsBulkActing(false)
+    }
+  }
+
+  const handleAiAutoApprove = async () => {
+    setIsBulkActing(true)
+    setError(null)
+    setSuccessNotice(null)
+    try {
+      const res = await institutionAdminApi.aiAutoApproveRegistrations(collegeId)
+      setSuccessNotice(res.message)
+      setSelectedIds(new Set())
+      await load()
+      onChange()
+    } catch (err: any) {
+      setError(err.message || 'AI Auto-Approval encountered an error.')
+    } finally {
+      setIsBulkActing(false)
+    }
+  }
+
   if (pending === null) return null
   if (pending.length === 0) return null
 
+  const verifiedCount = pending.filter((p) => aiScreening[p.id]?.ai_recommendation === 'approve').length
+
   return (
-    <div className="border-t border-[#E1E8E4] pt-4 flex flex-col gap-2">
-      <p className="text-xs font-bold text-[#687775] uppercase tracking-wider">
-        Pending Registrations ({pending.length})
-      </p>
-      {error && <p className="text-xs text-[#B42318]">{error}</p>}
-      <div className="flex flex-col gap-2">
-        {pending.map((u) => (
-          <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-[#F8FAF7] border border-[#E1E8E4] rounded-lg">
-            <div>
-              <p className="text-sm font-semibold text-[#202B2A]">{u.full_name}</p>
-              <p className="text-xs text-[#687775]">
-                {u.email} · <Badge variant="secondary" size="sm">{u.role}</Badge>
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="primary" isLoading={actingOn === u.id} onClick={() => act(u.id, 'approve')} icon={<Check className="w-3.5 h-3.5" />}>
-                Approve
-              </Button>
-              <Button size="sm" variant="outline" disabled={actingOn === u.id} onClick={() => act(u.id, 'reject')} icon={<X className="w-3.5 h-3.5" />}>
-                Reject
-              </Button>
-            </div>
+    <div className="border-t border-[#E1E8E4] pt-4 flex flex-col gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold text-[#687775] uppercase tracking-wider">
+              Pending Registrations ({pending.length})
+            </p>
+            {isAiScreening && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#0F5B57] bg-[#DDF3EA] px-2 py-0.5 rounded-full font-medium">
+                <Sparkles className="w-3 h-3 animate-spin" /> AI Screening Active...
+              </span>
+            )}
           </div>
-        ))}
+          <p className="text-xs text-[#687775] mt-0.5">
+            Verified applications are screened for institutional validity and fraud prevention.
+          </p>
+        </div>
+
+        {verifiedCount > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleAiAutoApprove}
+            disabled={isBulkActing}
+            isLoading={isBulkActing}
+            className="text-xs h-8 border-[#0F5B57] text-[#0F5B57] hover:bg-[#DDF3EA]"
+            icon={<Sparkles className="w-3.5 h-3.5" />}
+          >
+            Auto-Approve {verifiedCount} Verified with AI
+          </Button>
+        )}
+      </div>
+
+      {successNotice && (
+        <div className="p-2.5 bg-[#E5F5EB] border border-[#CBD7D1] rounded-lg text-xs text-[#247A4D] font-medium flex items-center justify-between">
+          <span>{successNotice}</span>
+          <button type="button" onClick={() => setSuccessNotice(null)} className="p-1 text-[#247A4D] hover:opacity-75">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-xs text-[#B42318]">{error}</p>}
+
+      {/* Bulk Action Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#F1F5F2] border border-[#CBD7D1] rounded-lg text-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={selectAll}
+            className="inline-flex items-center gap-1.5 font-medium text-[#202B2A] hover:text-[#0F5B57] cursor-pointer"
+          >
+            {selectedIds.size > 0 && selectedIds.size === pending.length ? (
+              <CheckSquare className="w-4 h-4 text-[#0F5B57]" />
+            ) : (
+              <Square className="w-4 h-4 text-[#687775]" />
+            )}
+            <span>Select All ({selectedIds.size}/{pending.length})</span>
+          </button>
+
+          {verifiedCount > 0 && (
+            <button
+              type="button"
+              onClick={selectVerifiedOnly}
+              className="text-[#0F5B57] hover:underline font-semibold ml-2 cursor-pointer"
+            >
+              Select Verified Only ({verifiedCount})
+            </button>
+          )}
+        </div>
+
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="primary"
+              isLoading={isBulkActing}
+              onClick={() => actBulk('approve')}
+              className="text-xs h-7 px-2.5"
+              icon={<Check className="w-3 h-3" />}
+            >
+              Approve ({selectedIds.size})
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isBulkActing}
+              onClick={() => actBulk('reject')}
+              className="text-xs h-7 px-2.5 text-[#B42318] hover:bg-[#FDE8E7]"
+              icon={<X className="w-3 h-3" />}
+            >
+              Reject ({selectedIds.size})
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Applicants List */}
+      <div className="flex flex-col gap-2">
+        {pending.map((u) => {
+          const ai = aiScreening[u.id]
+          const isSelected = selectedIds.has(u.id)
+          const isExpanded = expandedId === u.id
+
+          return (
+            <div
+              key={u.id}
+              className={`flex flex-col gap-2 p-3 bg-[#FFFFFF] border rounded-xl transition-all ${
+                isSelected ? 'border-[#0F5B57] bg-[#F8FAF7]' : 'border-[#E1E8E4]'
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleSelect(u.id)}
+                    className="cursor-pointer text-[#0F5B57] p-0.5"
+                    aria-label={isSelected ? 'Deselect applicant' : 'Select applicant'}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-[#0F5B57]" />
+                    ) : (
+                      <Square className="w-4 h-4 text-[#CBD7D1] hover:text-[#687775]" />
+                    )}
+                  </button>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-[#202B2A] truncate">{u.full_name}</p>
+                      <Badge variant="secondary" size="sm">{u.role}</Badge>
+
+                      {ai && (
+                        ai.ai_recommendation === 'approve' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#247A4D] bg-[#E5F5EB] px-2 py-0.5 rounded-full border border-[#CBD7D1]">
+                            <Sparkles className="w-3 h-3 text-[#247A4D]" /> Verified ({ai.ai_score}%)
+                          </span>
+                        ) : ai.ai_risk_level === 'high' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B42318] bg-[#FDE8E7] px-2 py-0.5 rounded-full border border-[#B42318]/30">
+                            <ShieldAlert className="w-3 h-3" /> Flagged High Risk ({ai.ai_score}%)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8A5700] bg-[#FFF0CB] px-2 py-0.5 rounded-full border border-[#CBD7D1]">
+                            <AlertTriangle className="w-3 h-3" /> Needs Review ({ai.ai_score}%)
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <p className="text-xs text-[#687775] truncate mt-0.5">
+                      {u.email}
+                      {ai?.branch_name && ` · ${ai.branch_name}`}
+                      {ai?.section_name && ` (${ai.section_name})`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {ai?.ai_reasons && ai.ai_reasons.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExpanded ? null : u.id)}
+                      className="text-xs text-[#687775] hover:text-[#202B2A] flex items-center gap-1 px-2 py-1 rounded cursor-pointer"
+                    >
+                      <span>AI Insights</span>
+                      {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    isLoading={actingOn === u.id}
+                    onClick={() => actSingle(u.id, 'approve')}
+                    className="h-7 text-xs px-2.5"
+                    icon={<Check className="w-3.5 h-3.5" />}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actingOn === u.id}
+                    onClick={() => actSingle(u.id, 'reject')}
+                    className="h-7 text-xs px-2.5 text-[#B42318] hover:bg-[#FDE8E7]"
+                    icon={<X className="w-3.5 h-3.5" />}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              </div>
+
+              {/* Expandable AI Reasoning breakdown */}
+              {isExpanded && ai?.ai_reasons && (
+                <div className="mt-2 pt-2 border-t border-[#E1E8E4] bg-[#F8FAF7] p-2.5 rounded-lg text-xs space-y-1">
+                  <p className="font-semibold text-[#202B2A] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#0F5B57]" /> Automated Screening Assessment:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-[#687775] pl-1">
+                    {ai.ai_reasons.map((r, idx) => (
+                      <li key={idx}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-/**
- * Self-serve institution management for a teacher delegated as a college administrator (see
- * college_service.assign_college_admin on the backend). Only reachable/useful for the small
- * number of teachers a platform admin has granted this to — `myColleges()` returns an empty list
- * for everyone else, which the surrounding nav uses to decide whether to show this page at all.
- */
+const InstitutionSettingsSection: React.FC<{ collegeId: string }> = ({ collegeId }) => {
+  const [settings, setSettings] = useState<CollegeSettings | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [allowedDomainsText, setAllowedDomainsText] = useState('')
+
+  const load = async () => {
+    setIsLoading(true)
+    try {
+      const data = await institutionAdminApi.getCollegeSettings(collegeId)
+      setSettings(data)
+      setAllowedDomainsText((data.allowed_email_domains || []).join(', '))
+    } catch (err: any) {
+      setError(err.message || 'Could not load institution settings.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collegeId])
+
+  const handleSave = async () => {
+    if (!settings) return
+    setIsSaving(true)
+    setError(null)
+    setSaveSuccess(false)
+    try {
+      const domains = allowedDomainsText
+        .split(',')
+        .map((d) => d.trim().replace(/^@/, ''))
+        .filter(Boolean)
+      const updated = await institutionAdminApi.updateCollegeSettings(collegeId, {
+        institution_type: settings.institution_type,
+        approval_mode: settings.approval_mode,
+        allowed_email_domains: domains,
+        features: settings.features,
+      })
+      setSettings(updated)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Could not save settings.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const toggleFeature = (key: keyof CollegeSettings['features']) => {
+    if (!settings) return
+    setSettings({
+      ...settings,
+      features: {
+        ...settings.features,
+        [key]: !settings.features[key],
+      },
+    })
+  }
+
+  if (isLoading || !settings) {
+    return <div className="text-xs text-[#687775] py-2">Loading institution settings...</div>
+  }
+
+  return (
+    <div className="border-t border-[#E1E8E4] pt-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sliders className="w-4 h-4 text-[#0F5B57]" />
+          <p className="text-xs font-bold text-[#687775] uppercase tracking-wider">
+            Institution Configuration & Feature Controls
+          </p>
+        </div>
+        {saveSuccess && (
+          <span className="text-xs font-semibold text-[#247A4D] bg-[#E5F5EB] px-2 py-0.5 rounded border border-[#CBD7D1]">
+            ✓ Settings Saved
+          </span>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-[#B42318]">{error}</p>}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[#F8FAF7] border border-[#E1E8E4] rounded-xl text-xs">
+        {/* Institution Type */}
+        <div className="space-y-1">
+          <label className="font-semibold text-[#202B2A] block">Institution Classification</label>
+          <select
+            value={settings.institution_type}
+            onChange={(e) => setSettings({ ...settings, institution_type: e.target.value })}
+            className="w-full bg-[#FFFFFF] border border-[#CBD7D1] rounded-lg px-3 py-1.5 text-xs text-[#202B2A] focus:outline-none focus:ring-1 focus:ring-[#0F5B57]"
+          >
+            <option value="engineering">Engineering / Technology College</option>
+            <option value="polytechnic">Polytechnic / Vocational Institute</option>
+            <option value="school">High School / Rural Academy</option>
+            <option value="coaching">Independent Coaching Institute</option>
+            <option value="general">General University / Higher Ed</option>
+          </select>
+          <p className="text-[11px] text-[#687775]">Adapts classroom nomenclature and default cohort structures.</p>
+        </div>
+
+        {/* Approval Policy */}
+        <div className="space-y-1">
+          <label className="font-semibold text-[#202B2A] block">Member Onboarding Policy</label>
+          <select
+            value={settings.approval_mode}
+            onChange={(e) => setSettings({ ...settings, approval_mode: e.target.value as any })}
+            className="w-full bg-[#FFFFFF] border border-[#CBD7D1] rounded-lg px-3 py-1.5 text-xs text-[#202B2A] focus:outline-none focus:ring-1 focus:ring-[#0F5B57]"
+          >
+            <option value="manual_admin">Strict Review (Admin approves every applicant)</option>
+            <option value="ai_auto_approve">AI Assisted (Auto-admit verified low-risk, review others)</option>
+            <option value="instant_code">Open Enrollment (Instant admission with valid College Code)</option>
+          </select>
+          <p className="text-[11px] text-[#687775]">Controls how new students and teachers are verified.</p>
+        </div>
+
+        {/* Email Whitelist */}
+        <div className="md:col-span-2 space-y-1">
+          <label className="font-semibold text-[#202B2A] block">Authorized Email Domain Whitelist</label>
+          <Input
+            value={allowedDomainsText}
+            onChange={(e) => setAllowedDomainsText(e.target.value)}
+            placeholder="e.g. kmit.in, ruralcollege.edu.in (leave empty to permit all verified emails)"
+            className="text-xs h-8"
+          />
+          <p className="text-[11px] text-[#687775]">Comma-separated domain suffixes. Applicants with matching domains receive top AI confidence scores.</p>
+        </div>
+
+        {/* Feature Toggles Grid */}
+        <div className="md:col-span-2 space-y-2 pt-2 border-t border-[#E1E8E4]">
+          <label className="font-semibold text-[#202B2A] block">Enabled Platform Modules</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {[
+              { key: 'whiteboard_enabled' as const, label: 'Interactive Whiteboard' },
+              { key: 'ai_summaries_enabled' as const, label: 'AI Lecture Summaries' },
+              { key: 'offline_bundles_enabled' as const, label: 'Single-Stream .ZIP Bundles' },
+              { key: 'low_bandwidth_default' as const, label: 'Audio-Only Default on 2G/3G' },
+              { key: 'whatsapp_alerts_enabled' as const, label: 'WhatsApp Class Reminders' },
+            ].map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-2 p-2 bg-[#FFFFFF] border border-[#CBD7D1] rounded-lg cursor-pointer hover:bg-[#F1F5F2]">
+                <input
+                  type="checkbox"
+                  checked={Boolean(settings.features?.[key])}
+                  onChange={() => toggleFeature(key)}
+                  className="rounded text-[#0F5B57] focus:ring-[#0F5B57] h-3.5 w-3.5 cursor-pointer"
+                />
+                <span className="text-xs text-[#202B2A] font-medium">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Save button */}
+        <div className="md:col-span-2 flex justify-end pt-2">
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={handleSave}
+            isLoading={isSaving}
+            className="text-xs h-8 px-4"
+          >
+            Save Configuration
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export const TeacherInstitutionAdminPage: React.FC = () => {
   const [colleges, setColleges] = useState<College[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -585,6 +1039,9 @@ export const TeacherInstitutionAdminPage: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null)
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const isNative = platformAdapter.isNative()
   const [notice, setNotice] = useState<string | null>(null)
   const [structureCollege, setStructureCollege] = useState<College | null>(null)
   const [deletionRequests, setDeletionRequests] = useState<Record<string, CollegeDeletionRequest | null>>({})
@@ -697,6 +1154,14 @@ export const TeacherInstitutionAdminPage: React.FC = () => {
                     <p className="text-xs font-mono text-[#0F5B57] mt-1">{college.code}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      icon={isNative ? <RefreshCw className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                      onClick={() => (isNative ? setIsUpdateOpen(true) : setIsDownloadOpen(true))}
+                    >
+                      {isNative ? 'App Updates (v0.1.0)' : 'Download Client App'}
+                    </Button>
                     <Button size="sm" variant="outline" icon={<Pencil className="w-4 h-4" />} onClick={() => startEdit(college)}>
                       Edit Details
                     </Button>
@@ -750,6 +1215,8 @@ export const TeacherInstitutionAdminPage: React.FC = () => {
 
                 <PendingRegistrationsSection collegeId={college.id} onChange={() => setRefreshTick((t) => t + 1)} />
 
+                <InstitutionSettingsSection collegeId={college.id} />
+
                 <RosterImportSection collegeId={college.id} />
 
                 <BillingSection college={college} />
@@ -767,6 +1234,8 @@ export const TeacherInstitutionAdminPage: React.FC = () => {
         onSessionExpired={() => setStructureCollege(null)}
         api={institutionAdminApi}
       />
+      <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
+      <AppUpdateModal isOpen={isUpdateOpen} onClose={() => setIsUpdateOpen(false)} />
     </PageContainer>
   )
 }

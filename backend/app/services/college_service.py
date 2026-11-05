@@ -9,6 +9,7 @@ Code guarantees:
     relationships keep pointing at the college id.
 """
 
+import json
 import re
 import secrets
 
@@ -19,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationFailedError
 from app.core.security import hash_password, verify_password
 from app.db.base import utcnow
+from app.db.models.roster import CollegeRosterEntry
 from app.db.models.college import (
     College,
     CollegeAdministrator,
@@ -27,6 +29,7 @@ from app.db.models.college import (
     CollegeRegistrationRequest,
     UserBranchAssignment,
     UserCollegeSection,
+    CollegeSetting,
 )
 from app.db.models.enums import CollegeDeletionRequestStatus, CollegeRegistrationRequestStatus, CollegeStatus, UserRole, UserStatus
 from app.db.models.user import User
@@ -725,6 +728,240 @@ def reject_registration(db: Session, college_admin_id: str, college_id: str, use
     db.refresh(user)
     audit_service.record(db, actor_id=college_admin_id, action="registration_rejected", resource_type="user", resource_id=user.id)
     return user
+
+
+def bulk_approve_registrations(db: Session, college_admin_id: str, college_id: str, user_ids: list[str]) -> list[str]:
+    stmt = (
+        select(User)
+        .where(User.college_id == college_id, User.status == UserStatus.pending, User.id.in_(user_ids))
+    )
+    users = list(db.execute(stmt).scalars())
+    approved_ids = []
+    for user in users:
+        user.status = UserStatus.active
+        approved_ids.append(user.id)
+        audit_service.record(db, actor_id=college_admin_id, action="registration_approved", resource_type="user", resource_id=user.id)
+    db.commit()
+    return approved_ids
+
+
+def bulk_reject_registrations(db: Session, college_admin_id: str, college_id: str, user_ids: list[str], *, reason: str | None = None) -> list[str]:
+    stmt = (
+        select(User)
+        .where(User.college_id == college_id, User.status == UserStatus.pending, User.id.in_(user_ids))
+    )
+    users = list(db.execute(stmt).scalars())
+    rejected_ids = []
+    for user in users:
+        user.status = UserStatus.rejected
+        rejected_ids.append(user.id)
+        audit_service.record(db, actor_id=college_admin_id, action="registration_rejected", resource_type="user", resource_id=user.id)
+    db.commit()
+    return rejected_ids
+
+
+DISPOSABLE_EMAIL_DOMAINS = {
+    "mailinator.com", "tempmail.com", "guerrillamail.com", "10minutemail.com",
+    "throwawaymail.com", "temp-mail.org", "yopmail.com", "trashmail.com",
+    "sharklasers.com", "dispostable.com", "getairmail.com", "fakemailgenerator.com",
+    "fakeinbox.com", "trashmail.net", "generator.email"
+}
+
+
+def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
+    pending_users = list_pending_registrations(db, college_id)
+    settings = get_college_settings(db, college_id)
+    allowed_domains = [d.strip().lower() for d in settings.get("allowed_email_domains", []) if d.strip()]
+
+    # Fetch sections and branches for context
+    user_ids = [u.id for u in pending_users]
+    section_map = {}
+    branch_map = {}
+    if user_ids:
+        # Sections
+        sec_stmt = (
+            select(UserCollegeSection.user_id, CollegeSection.name.label("section_name"), CollegeBranch.name.label("branch_name"))
+            .join(CollegeSection, UserCollegeSection.college_section_id == CollegeSection.id)
+            .join(CollegeBranch, CollegeSection.branch_id == CollegeBranch.id)
+            .where(UserCollegeSection.user_id.in_(user_ids))
+        )
+        for row in db.execute(sec_stmt):
+            section_map[row.user_id] = row.section_name
+            branch_map[row.user_id] = row.branch_name
+
+        # Branch wide
+        br_stmt = (
+            select(UserBranchAssignment.user_id, CollegeBranch.name.label("branch_name"))
+            .join(CollegeBranch, UserBranchAssignment.branch_id == CollegeBranch.id)
+            .where(UserBranchAssignment.user_id.in_(user_ids))
+        )
+        for row in db.execute(br_stmt):
+            if row.user_id not in branch_map:
+                branch_map[row.user_id] = row.branch_name
+                section_map[row.user_id] = "All Sections"
+
+    # Roster check
+    emails = [u.email.lower() for u in pending_users]
+    roster_emails = set()
+    if emails:
+        roster_stmt = select(CollegeRosterEntry.email).where(CollegeRosterEntry.college_id == college_id, CollegeRosterEntry.email.in_(emails))
+        roster_emails = {r.lower() for r in db.execute(roster_stmt).scalars()}
+
+    screened = []
+    for user in pending_users:
+        email = user.email.lower().strip()
+        domain = email.split("@")[-1] if "@" in email else ""
+        reasons = []
+        score = 70
+        roster_matched = email in roster_emails
+
+        if domain in DISPOSABLE_EMAIL_DOMAINS:
+            score = 15
+            reasons.append("Identified disposable or temporary email domain. Flagged as high risk.")
+        else:
+            if allowed_domains and any(domain == ad or domain.endswith("." + ad) or ad.endswith(domain) for ad in allowed_domains):
+                score += 25
+                reasons.append(f"Domain '@{domain}' matches institution's official authorized email domain whitelist.")
+            elif any(domain.endswith(sfx) for sfx in [".edu", ".edu.in", ".ac.in", ".res.in"]):
+                score += 20
+                reasons.append("Verified academic top-level institutional domain (.edu / .ac.in).")
+            elif domain in {"gmail.com", "outlook.com", "yahoo.com", "icloud.com", "proton.me", "hotmail.com"}:
+                score += 10
+                reasons.append(f"Verified consumer email service provider ({domain}) with valid delivery profile.")
+
+            parts = [p for p in user.full_name.split() if len(p) >= 2]
+            if len(parts) >= 2 and not any(w in user.full_name.lower() for w in ["test", "asdf", "demo", "fake", "none"]):
+                score += 10
+                reasons.append("Full student/teacher name complies with verified multi-part identity standards.")
+            else:
+                score -= 15
+                reasons.append("Short, incomplete, or single-token name format. Manual verification suggested.")
+
+            if roster_matched:
+                score += 20
+                reasons.append("Exact match confirmed against institution-uploaded pre-approved roster.")
+
+            sec_name = section_map.get(user.id)
+            br_name = branch_map.get(user.id)
+            if sec_name or br_name:
+                reasons.append(f"Validly mapped to department '{br_name or 'General'}' and cohort '{sec_name or 'Active'}'.")
+            else:
+                score -= 10
+                reasons.append("No specific branch or section cohort selected during onboarding.")
+
+        final_score = min(100, max(0, score))
+        if final_score >= 85:
+            risk_level = "low"
+            recommendation = "approve"
+        elif final_score >= 60:
+            risk_level = "medium"
+            recommendation = "review"
+        else:
+            risk_level = "high"
+            recommendation = "reject"
+
+        screened.append({
+            "user_id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user.role,
+            "branch_name": branch_map.get(user.id),
+            "section_name": section_map.get(user.id),
+            "ai_score": final_score,
+            "ai_recommendation": recommendation,
+            "ai_risk_level": risk_level,
+            "ai_reasons": reasons,
+            "roster_matched": roster_matched,
+        })
+
+    return screened
+
+
+def ai_auto_approve_registrations(db: Session, college_admin_id: str, college_id: str) -> dict:
+    screened = ai_screen_registrations(db, college_id)
+    to_approve = [s["user_id"] for s in screened if s["ai_recommendation"] == "approve"]
+    approved_ids = []
+    if to_approve:
+        approved_ids = bulk_approve_registrations(db, college_admin_id, college_id, to_approve)
+    return {
+        "approved_count": len(approved_ids),
+        "remaining_count": len(screened) - len(approved_ids),
+        "approved_user_ids": approved_ids,
+        "message": f"AI Screening completed: automatically approved {len(approved_ids)} verified low-risk registrations.",
+    }
+
+
+DEFAULT_COLLEGE_FEATURES = {
+    "whiteboard_enabled": True,
+    "ai_summaries_enabled": True,
+    "offline_bundles_enabled": True,
+    "low_bandwidth_default": False,
+    "whatsapp_alerts_enabled": True,
+}
+
+
+def get_college_settings(db: Session, college_id: str) -> dict:
+    setting = db.execute(select(CollegeSetting).where(CollegeSetting.college_id == college_id)).scalar_one_or_none()
+    if not setting:
+        return {
+            "college_id": college_id,
+            "institution_type": "engineering",
+            "approval_mode": "manual_admin",
+            "allowed_email_domains": [],
+            "features": DEFAULT_COLLEGE_FEATURES.copy(),
+        }
+
+    try:
+        domains = json.loads(setting.allowed_email_domains_json or "[]")
+    except Exception:
+        domains = []
+    try:
+        features = json.loads(setting.features_json or "{}")
+    except Exception:
+        features = {}
+
+    merged_features = DEFAULT_COLLEGE_FEATURES.copy()
+    merged_features.update(features)
+
+    return {
+        "college_id": college_id,
+        "institution_type": setting.institution_type or "engineering",
+        "approval_mode": setting.approval_mode or "manual_admin",
+        "allowed_email_domains": domains,
+        "features": merged_features,
+    }
+
+
+def update_college_settings(db: Session, college_admin_id: str, college_id: str, updates: dict) -> dict:
+    setting = db.execute(select(CollegeSetting).where(CollegeSetting.college_id == college_id)).scalar_one_or_none()
+    if not setting:
+        setting = CollegeSetting(
+            college_id=college_id,
+            institution_type="engineering",
+            approval_mode="manual_admin",
+            allowed_email_domains_json="[]",
+            features_json=json.dumps(DEFAULT_COLLEGE_FEATURES),
+        )
+        db.add(setting)
+
+    if "institution_type" in updates and updates["institution_type"] is not None:
+        setting.institution_type = str(updates["institution_type"])
+    if "approval_mode" in updates and updates["approval_mode"] is not None:
+        setting.approval_mode = str(updates["approval_mode"])
+    if "allowed_email_domains" in updates and updates["allowed_email_domains"] is not None:
+        setting.allowed_email_domains_json = json.dumps(updates["allowed_email_domains"])
+    if "features" in updates and updates["features"] is not None:
+        try:
+            curr = json.loads(setting.features_json or "{}")
+        except Exception:
+            curr = DEFAULT_COLLEGE_FEATURES.copy()
+        curr.update(updates["features"])
+        setting.features_json = json.dumps(curr)
+
+    db.commit()
+    db.refresh(setting)
+    audit_service.record(db, actor_id=college_admin_id, action="college_settings_updated", resource_type="college", resource_id=college_id)
+    return get_college_settings(db, college_id)
 
 
 # ---- the college admin's student/teacher roster --------------------------------------------

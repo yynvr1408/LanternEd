@@ -33,7 +33,9 @@
     "institutionAccount": "ଅନୁଷ୍ଠାନ ଖାତା",
     "institutionAccountDesc": "ଆପଣଙ୍କ ଅନୁଷ୍ଠାନକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ ଏବଂ ଏହାର ଶାଖା, ବିଭାଗ ଏବଂ ପଞ୍ଜିକରଣଗୁଡ଼ିକୁ ପରିଚାଳନା କରନ୍ତୁ",
     "alreadyRegistered": "ପୂର୍ବରୁ ପଞ୍ଜିକୃତ?",
-    "signInHere": "ଏଠାରେ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ"
+    "signInHere": "ଏଠାରେ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ",
+    "collegeAdminPortal": "କଲେଜ ପ୍ରଶାସକ ପୋର୍ଟାଲ",
+    "collegeAdminPortalDesc": "ପଞ୍ଜୀକରଣ ଯାଞ୍ଚ କରନ୍ତୁ, କଲେଜ ସେଟିଂସ ସଜାନ୍ତୁ, ଶାଖା ପରିଚାଳନା କରନ୍ତୁ"
   },
   "language": {
     "switchLabel": "ଭାଷା"

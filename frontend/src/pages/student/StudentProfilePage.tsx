@@ -8,6 +8,10 @@ import { Card, CardHeader, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { StorageMeter } from '../../components/download/StorageMeter'
+import { Download, RefreshCw } from 'lucide-react'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
+import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 import { PrivacyControls } from '../../components/profile/PrivacyControls'
 import { WhatsAppSettings } from '../../components/profile/WhatsAppSettings'
 
@@ -17,6 +21,9 @@ export const StudentProfilePage: React.FC = () => {
   const { pendingCount } = useSync()
 
   const [audioOnlyPref, setAudioOnlyPref] = useState(false)
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const isNative = platformAdapter.isNative()
 
   return (
     <PageContainer
@@ -90,6 +97,52 @@ export const StudentProfilePage: React.FC = () => {
 
         <PrivacyControls />
 
+        {/* Application Updates & Native Shell Section */}
+        <Card>
+          <CardHeader className="py-3 px-5 font-bold text-sm text-[#202B2A] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-[#0F5B57]" />
+              <span>LanternEd Application & Updates</span>
+            </div>
+            <Badge variant="secondary" size="sm">
+              v0.1.0
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div>
+              <p className="font-semibold text-[#202B2A]">
+                {isNative ? 'Native Application Installed' : 'Browser Web Application'}
+              </p>
+              <p className="text-xs text-[#687775] mt-0.5">
+                {isNative
+                  ? 'Running on hardware-accelerated desktop/mobile shell with offline campus LAN mode.'
+                  : 'Install the native app for offline lesson revision and low-bandwidth live classes.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isNative ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  onClick={() => setIsUpdateOpen(true)}
+                >
+                  Check for Updates
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Download className="w-3.5 h-3.5" />}
+                  onClick={() => setIsDownloadOpen(true)}
+                >
+                  Download App
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Logout Button */}
         <div className="pt-2">
           <Button
@@ -105,6 +158,8 @@ export const StudentProfilePage: React.FC = () => {
           </p>
         </div>
       </div>
+      <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
+      <AppUpdateModal isOpen={isUpdateOpen} onClose={() => setIsUpdateOpen(false)} />
     </PageContainer>
   )
 }

@@ -339,3 +339,60 @@ async def set_mic_permission(db: Session, teacher: User, cls: Class, student_id:
         resource_type="class",
         resource_id=cls.id,
     )
+
+
+def build_class_bundle(db: Session, user: User, cls: Class) -> Path:
+    """Creates a single-stream offline bundle for a class containing its summary,
+    available recordings, and metadata."""
+    assert_can_view_class(db, user, cls)
+    from app.services import recording_service
+    recordings = recording_service.list_recordings_for_class(db, cls)
+    available_rec = next(
+        (r for r in recordings if r.status == RecordingStatus.available and (r.is_published or user.role == UserRole.teacher)),
+        None,
+    )
+    if available_rec:
+        return recording_service.build_recording_bundle(db, user, available_rec)
+
+    import json
+    import tempfile
+    import zipfile
+    from pathlib import Path
+    from app.db.models.summary import LectureSummary
+    from app.db.models.enums import SummaryStatus
+
+    course = course_service.get_course_or_404(db, cls.course_id)
+    summary = db.execute(
+        select(LectureSummary).where(LectureSummary.class_id == cls.id).order_by(LectureSummary.created_at.desc())
+    ).scalars().first()
+    if summary and user.role != UserRole.teacher and summary.status != SummaryStatus.completed:
+        summary = None
+
+    tmp_zip = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    tmp_path = Path(tmp_zip.name)
+    tmp_zip.close()
+
+    try:
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            metadata = {
+                "class_id": cls.id,
+                "class_title": cls.title,
+                "course_id": course.id,
+                "course_title": course.title,
+                "scheduled_start": cls.scheduled_start.isoformat() if cls.scheduled_start else None,
+                "scheduled_end": cls.scheduled_end.isoformat() if cls.scheduled_end else None,
+            }
+            zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+
+            if summary and summary.content_json:
+                zf.writestr("summary.json", json.dumps(summary.content_json, indent=2))
+                md_lines = [f"# {cls.title} - Class Summary", f"**Course:** {course.title}", ""]
+                overview = summary.content_json.get("overview")
+                if overview:
+                    md_lines.extend(["## Overview", overview, ""])
+                zf.writestr("summary.md", "\n".join(md_lines))
+        return tmp_path
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise

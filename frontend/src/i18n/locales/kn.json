@@ -33,7 +33,9 @@
     "institutionAccount": "ಸಂಸ್ಥೆ ಖಾತೆ",
     "institutionAccountDesc": "ನಿಮ್ಮ ಸಂಸ್ಥೆಯನ್ನು ನೋಂದಾಯಿಸಿ ಮತ್ತು ಅದರ ಶಾಖೆಗಳು, ವಿಭಾಗಗಳು ಮತ್ತು ನೋಂದಣಿಗಳನ್ನು ನಿರ್ವಹಿಸಿ",
     "alreadyRegistered": "ಈಗಾಗಲೇ ನೋಂದಾಯಿಸಿದ್ದೀರಾ?",
-    "signInHere": "ಇಲ್ಲಿ ಸೈನ್ ಇನ್ ಮಾಡಿ"
+    "signInHere": "ಇಲ್ಲಿ ಸೈನ್ ಇನ್ ಮಾಡಿ",
+    "collegeAdminPortal": "ಕಾಲೇಜು ನಿರ್ವಾಹಕ ಪೋರ್ಟಲ್",
+    "collegeAdminPortalDesc": "ನೋಂದಣಿಗಳನ್ನು ಪರಿಶೀಲಿಸಿ, ಕಾಲೇಜು ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ, ಶಾಖೆಗಳನ್ನು ನಿರ್ವಹಿಸಿ"
   },
   "language": {
     "switchLabel": "ಭಾಷೆ"

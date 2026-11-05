@@ -143,6 +143,39 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   }
 }
 
+export async function apiBlobRequest(endpoint: string, options: ApiRequestOptions = {}): Promise<Blob> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...init } = options
+  const controller = new AbortController()
+  options.signal?.addEventListener('abort', () => controller.abort())
+  let timedOut = false
+  const timer = timeoutMs > 0 ? setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs) : undefined
+
+  try {
+    const response = await fetch(apiUrl(endpoint), {
+      ...init,
+      credentials: 'include',
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new ApiError(
+        messageFrom(body, `HTTP Error ${response.status}`),
+        response.status,
+        false,
+        body?.error?.code
+      )
+    }
+    return await response.blob()
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err
+    if (timedOut) throw new ApiError('Request timed out while downloading file bundle.', 0, true)
+    throw new ApiError('Unable to connect to LanternEd server. Operating in offline mode.', 0, true)
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+
 // =============================================================================
 // BACKEND (v1) -> VIEW MODEL MAPPERS
 // =============================================================================
@@ -578,6 +611,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ position_seconds: positionSeconds, completed }),
     }),
+  downloadRecordingBundle: (recordingId: string) => apiBlobRequest(`/recordings/${recordingId}/bundle`),
+  downloadClassBundle: (classId: string) => apiBlobRequest(`/classes/${classId}/bundle`),
   togglePublishRecording: async (recordingId: string) => {
     const current = await apiRequest<Raw>(`/recordings/${recordingId}`)
     const updated = await apiRequest<Raw>(`/recordings/${recordingId}/publish`, {

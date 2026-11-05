@@ -28,6 +28,11 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import { SummaryReviewModal } from '../../components/summary/SummaryReviewModal'
+import { LiveSyncIndicator } from '../../components/common/LiveSyncIndicator'
+import { Download, RefreshCw } from 'lucide-react'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
+import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth()
@@ -37,11 +42,17 @@ export const TeacherDashboard: React.FC = () => {
   const [summaries, setSummaries] = useState<Summary[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null)
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const isNative = platformAdapter.isNative()
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [lastSynced, setLastSynced] = useState<Date>(new Date())
+  const [isQuietRefreshing, setIsQuietRefreshing] = useState(false)
 
-  const loadData = async () => {
-    setIsLoading(true)
+  const loadData = async (quiet = false) => {
+    if (quiet) setIsQuietRefreshing(true)
+    else setIsLoading(true)
     try {
       const [coursesData, classesData, summariesData, assignmentsData] = await Promise.allSettled([
         courseService.getCourses(),
@@ -54,13 +65,22 @@ export const TeacherDashboard: React.FC = () => {
       if (classesData.status === 'fulfilled') setClasses(classesData.value)
       if (summariesData.status === 'fulfilled') setSummaries(summariesData.value)
       if (assignmentsData.status === 'fulfilled') setAssignments(assignmentsData.value)
+      setLastSynced(new Date())
     } finally {
       setIsLoading(false)
+      setIsQuietRefreshing(false)
     }
   }
 
   useEffect(() => {
     loadData()
+    const interval = setInterval(() => void loadData(true), 30000)
+    const onFocus = () => void loadData(true)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [])
 
   const handleStartClass = async (classId: string) => {
@@ -87,9 +107,16 @@ export const TeacherDashboard: React.FC = () => {
       {/* Header Banner & Quick Action Bar */}
       <div className="mb-6 p-6 bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>
-          <span className="text-xs font-bold text-[#0F5B57] bg-[#DDF3EA] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block mb-1.5 border border-[#CBD7D1]">
-            Teacher Console
-          </span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-xs font-bold text-[#0F5B57] bg-[#DDF3EA] px-2.5 py-0.5 rounded-full uppercase tracking-wider inline-block border border-[#CBD7D1]">
+              Teacher Console
+            </span>
+            <LiveSyncIndicator
+              lastUpdated={lastSynced}
+              onRefresh={() => loadData(true)}
+              isRefreshing={isQuietRefreshing}
+            />
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">
             Welcome, {user?.full_name}
           </h1>
@@ -115,6 +142,25 @@ export const TeacherDashboard: React.FC = () => {
               Upload Material
             </Button>
           </Link>
+          {isNative ? (
+            <Button
+              size="sm"
+              variant="outline"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={() => setIsUpdateOpen(true)}
+            >
+              App Updates (v0.1.0)
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              icon={<Download className="w-3.5 h-3.5" />}
+              onClick={() => setIsDownloadOpen(true)}
+            >
+              Desktop & Mobile App
+            </Button>
+          )}
         </div>
       </div>
 
@@ -264,6 +310,8 @@ export const TeacherDashboard: React.FC = () => {
         }}
         onSuccess={() => loadData()}
       />
+      <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
+      <AppUpdateModal isOpen={isUpdateOpen} onClose={() => setIsUpdateOpen(false)} />
     </PageContainer>
   )
 }

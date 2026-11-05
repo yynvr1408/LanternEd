@@ -17,6 +17,20 @@ class Settings(BaseSettings):
             return cls.model_fields[info.field_name].default
         return value
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_database_url(cls, value: str) -> str:
+        """Neon, Supabase, and Render often provide 'postgres://' or 'postgresql://' URLs.
+        SQLAlchemy requires psycopg2 driver specification: 'postgresql+psycopg2://'."""
+        if isinstance(value, str):
+            clean = value.strip()
+            if clean.startswith("postgres://"):
+                return clean.replace("postgres://", "postgresql+psycopg2://", 1)
+            if clean.startswith("postgresql://") and not clean.startswith("postgresql+"):
+                return clean.replace("postgresql://", "postgresql+psycopg2://", 1)
+            return clean
+        return value
+
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
     frontend_origin: str = "http://localhost:5173"
@@ -104,6 +118,7 @@ class Settings(BaseSettings):
     # auth_service.request_registration_otp/verify_registration_otp). True in real use; tests
     # that don't exercise this flow switch it off centrally (see tests/conftest.py).
     require_registration_otp: bool = True
+    college_registration_requires_approval: bool = True
 
     # Recording policy: recording is always an explicit, per-class teacher action; this is the
     # institution-wide kill switch. Recordings stay private until a teacher publishes them.

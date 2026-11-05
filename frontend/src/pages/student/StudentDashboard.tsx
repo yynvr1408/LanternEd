@@ -38,6 +38,11 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { LiveSyncIndicator } from '../../components/common/LiveSyncIndicator'
+import { Download } from 'lucide-react'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
+import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth()
@@ -47,18 +52,24 @@ export const StudentDashboard: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([])
   const [classes, setClasses] = useState<ClassRoom[]>([])
   const [recordings, setRecordings] = useState<Recording[]>([])
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const isNative = platformAdapter.isNative()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [downloads, setDownloads] = useState<DownloadedResource[]>([])
   const [drafts, setDrafts] = useState<Record<string, AssignmentDraft>>({})
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [collegeTeachers, setCollegeTeachers] = useState<CollegeTeacher[]>([])
   const [teachersStatus, setTeachersStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [lastSynced, setLastSynced] = useState<Date>(new Date())
+  const [isQuietRefreshing, setIsQuietRefreshing] = useState(false)
 
   useEffect(() => {
     let isMounted = true
 
-    async function loadDashboard() {
-      setIsLoading(true)
+    async function loadDashboard(quiet = false) {
+      if (quiet) setIsQuietRefreshing(true)
+      else setIsLoading(true)
       try {
         const [coursesData, classesData, recordingsData, assignmentsData, downloadsData, teachersData] = await Promise.allSettled([
           courseService.getCourses(),
@@ -94,14 +105,24 @@ export const StudentDashboard: React.FC = () => {
         }
       } catch (err) {
         console.error('Dashboard load error:', err)
+        if (isMounted) setLastSynced(new Date())
       } finally {
-        if (isMounted) setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+          setIsQuietRefreshing(false)
+        }
       }
     }
 
+    ;(window as any).__refreshStudentDashboard = () => void loadDashboard(true)
     loadDashboard()
+    const interval = setInterval(() => void loadDashboard(true), 30000)
+    const onFocus = () => void loadDashboard(true)
+    window.addEventListener('focus', onFocus)
     return () => {
       isMounted = false
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
     }
   }, [])
 
@@ -111,6 +132,38 @@ export const StudentDashboard: React.FC = () => {
 
   return (
     <PageContainer maxWidth="2xl">
+      {/* Native App Banner (Web: Download App; Native: In-App Updates) */}
+      <div className="mb-6 p-4 rounded-2xl bg-[#FFFFFF] border border-[#E1E8E4] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center shrink-0">
+            {isNative ? <RefreshCw className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold text-[#202B2A]">
+                {isNative ? 'LanternEd Native Application v0.1.0' : 'LanternEd Desktop & Mobile Apps'}
+              </h3>
+              <span className="text-[10px] font-semibold bg-[#DDF3EA] text-[#0F5B57] px-2 py-0.2 rounded-full">
+                {isNative ? 'Installed Shell' : 'Windows • Mac • Android'}
+              </span>
+            </div>
+            <p className="text-[11px] text-[#687775] mt-0.5">
+              {isNative
+                ? 'Local hardware acceleration and zero-internet Campus LAN active.'
+                : 'Study offline with zero mobile data buffering and join high-speed Campus Wi-Fi classes.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => (isNative ? setIsUpdateOpen(true) : setIsDownloadOpen(true))}
+          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-semibold transition-colors cursor-pointer text-center shrink-0 shadow-xs"
+        >
+          {isNative ? 'Check for Updates' : 'Download Native App'}
+        </button>
+      </div>
+
       {/* Welcome & Connectivity State Banner */}
       <div className="mb-6 p-5 sm:p-6 bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>
@@ -459,6 +512,8 @@ export const StudentDashboard: React.FC = () => {
           </Link>
         </section>
       </div>
+      <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
+      <AppUpdateModal isOpen={isUpdateOpen} onClose={() => setIsUpdateOpen(false)} />
     </PageContainer>
   )
 }

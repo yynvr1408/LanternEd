@@ -33,7 +33,9 @@
     "institutionAccount": "機関アカウント",
     "institutionAccountDesc": "機関を登録し、その学部・セクション・登録を管理する",
     "alreadyRegistered": "すでに登録済みですか?",
-    "signInHere": "こちらからサインイン"
+    "signInHere": "こちらからサインイン",
+    "collegeAdminPortal": "カレッジ管理者ポータル",
+    "collegeAdminPortalDesc": "登録の確認、大学設定の構成、学部の管理"
   },
   "language": {
     "switchLabel": "言語"

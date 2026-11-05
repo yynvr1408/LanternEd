@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "fileName": "LanternEd-0.1.0-universal.dmg",
+  "installerType": "dmg",
+  "downloadUrl": "/api/v1/releases/download/macos",
+  "fileSizeMb": 0.0,
+  "sha256": "1a703984ecfcdc263c2cacac0d1e759b9f3372fe9315563c2941f931af38e464",
+  "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
+  "arch": "Universal (Apple Silicon & Intel)"
+}

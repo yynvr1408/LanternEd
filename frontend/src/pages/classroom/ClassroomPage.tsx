@@ -53,6 +53,8 @@ import { useScreenShares } from '../../hooks/useScreenShares'
 import { useBackgroundBlur } from '../../hooks/useBackgroundBlur'
 import { SummaryViewer } from '../../components/summary/SummaryViewer'
 import { Sheet, Badge, Button, LoadingState, ErrorState } from '../../components/ui'
+import { lanClassroomService } from '../../services/lanClassroomService'
+import type { LanClassroomSession } from '../../services/platformAdapter'
 
 /**
  * Low-bandwidth-first room config. LiveKit's own defaults are tuned for a general video-call
@@ -180,6 +182,27 @@ const ClassroomStage: React.FC<{
   const [videoHidden, setVideoHidden] = useState(false)
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [connectionStateStr, setConnectionStateStr] = useState<string>('connected')
+  const [lanSession, setLanSession] = useState<LanClassroomSession | null>(() =>
+    lanClassroomService.getActiveSession()
+  )
+
+  const handleToggleLanMode = async () => {
+    if (lanSession?.isRunning) {
+      await lanClassroomService.stopSession(classroom.id)
+      setLanSession(null)
+    } else {
+      try {
+        const s = await lanClassroomService.startSession(
+          classroom.id,
+          classroom.title,
+          classroom.teacher_name || 'Teacher'
+        )
+        setLanSession(s)
+      } catch (err) {
+        console.warn('Failed to start LAN session:', err)
+      }
+    }
+  }
 
   // Teacher-only roster panel: who has joined (name/email) and a way to remove a student.
   const [isParticipantsPanelOpen, setIsParticipantsPanelOpen] = useState(false)
@@ -429,7 +452,16 @@ const ClassroomStage: React.FC<{
 
   const handleToggleMic = async () => {
     if (localParticipant) {
-      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)
+      const next = !isMicrophoneEnabled
+      if (next) {
+        await localParticipant.setMicrophoneEnabled(true, undefined, {
+          audioPreset: AudioPresets.speech,
+          dtx: true,
+          red: true,
+        })
+      } else {
+        await localParticipant.setMicrophoneEnabled(false)
+      }
     }
   }
 
@@ -482,6 +514,28 @@ const ClassroomStage: React.FC<{
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {isTeacher && (
+            <button
+              type="button"
+              onClick={handleToggleLanMode}
+              title={
+                lanSession?.isRunning
+                  ? `LAN Campus Mode Active: ${lanSession.wsUrl} (Code: ${lanSession.accessCode})`
+                  : 'Start Campus LAN Mode (Zero-Internet Local Wi-Fi)'
+              }
+              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                lanSession?.isRunning
+                  ? 'bg-[#0F5B57] text-[#7EE2B8] border-[#7EE2B8]'
+                  : 'bg-[#202B2A] text-[#84908D] hover:text-[#CBD7D1] border-[#374947]'
+              }`}
+            >
+              <Wifi className={`w-3.5 h-3.5 ${lanSession?.isRunning ? 'text-[#7EE2B8]' : 'text-[#84908D]'}`} />
+              <span className="hidden md:inline">
+                {lanSession?.isRunning ? `LAN: ${lanSession.accessCode}` : 'Campus LAN'}
+              </span>
+            </button>
+          )}
+
           {isTeacher ? (
             <button
               type="button"
@@ -504,6 +558,25 @@ const ClassroomStage: React.FC<{
           </Badge>
         </div>
       </div>
+
+      {/* Campus LAN Mode Active Banner */}
+      {lanSession?.isRunning && (
+        <div className="bg-[#0F5B57]/20 border-b border-[#0F5B57] px-4 py-1.5 flex items-center justify-between text-xs text-[#7EE2B8]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#7EE2B8] animate-ping" />
+            <span>
+              <strong>Campus LAN Mode Active:</strong> Streaming over school Wi-Fi without internet egress. Access Code: <strong>{lanSession.accessCode}</strong> ({lanSession.wsUrl})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleLanMode}
+            className="text-xs text-[#CBD7D1] hover:text-[#FFFFFF] underline cursor-pointer"
+          >
+            Disable LAN Mode
+          </button>
+        </div>
+      )}
 
       {/* Pending "request to speak" notifications (teacher only) */}
       {isTeacher && speakRequests.length > 0 && (

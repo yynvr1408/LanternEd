@@ -21,6 +21,23 @@ dist/
 backend/media/
 backend/uploads/
 
+# Rust / Tauri Desktop Builds
+frontend/src-tauri/target/
+
+# Android / Gradle Mobile Builds
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/local.properties
+frontend/android/.idea/
+frontend/android/captures/
+
+# iOS Mobile Builds
+frontend/ios/App/build/
+frontend/ios/App/Pods/
+frontend/ios/App/.symlinks/
+*.xcuserdata
+
 # OS
 .DS_Store
 Thumbs.db
@@ -29,11 +46,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code: personal/local overrides, never shared
+# Claude / Tool artifacts
 .claude/
 .claude/settings.local.json
 
-# Scratch / non-repo artifacts (slide deck, template working files)
+# Scratch / non-repo artifacts
 *.pptx
 template_src/
 qa1/
@@ -43,8 +60,7 @@ qa2/
 playwright-report/
 test-results/
 
-
-# Load-test logins (shared password)
+# Load-test logins
 ops/loadtest/users.csv
 loadtest-users.csv
 

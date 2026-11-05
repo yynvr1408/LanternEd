@@ -16,8 +16,10 @@ import {
   RefreshCw,
   FileText,
   Sparkles,
+  Package,
 } from 'lucide-react'
 import { api } from '../../services/apiClient'
+import { downloadManager } from '../../services/downloadManager'
 import {
   Card,
   Badge,
@@ -35,6 +37,18 @@ export const TeacherRecordedLessonsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [reuseModalRecording, setReuseModalRecording] = useState<Recording | null>(null)
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>([])
+  const [downloadingBundleId, setDownloadingBundleId] = useState<string | null>(null)
+
+  const handleDownloadBundle = async (recording: Recording) => {
+    try {
+      setDownloadingBundleId(recording.id)
+      await downloadManager.downloadLessonBundle(recording.id, `${recording.title || 'lesson'}-bundle.zip`)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download lesson bundle')
+    } finally {
+      setDownloadingBundleId(null)
+    }
+  }
 
   const {
     data: recordings,
@@ -235,6 +249,19 @@ export const TeacherRecordedLessonsPage: React.FC = () => {
                           <Eye className="w-3.5 h-3.5 mr-1" /> Publish
                         </>
                       )}
+                    </Button>
+
+                    {/* Bundle Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadBundle(recording)}
+                      disabled={isProcessing || downloadingBundleId === recording.id}
+                      className="text-xs h-8"
+                      title="Download complete lesson package as a compressed ZIP file (media + summary + transcript)"
+                    >
+                      <Package className="w-3.5 h-3.5 mr-1 text-[#0F5B57]" />
+                      {downloadingBundleId === recording.id ? 'Bundling...' : 'Bundle (.zip)'}
                     </Button>
 
                     {/* View & Play */}

@@ -33,7 +33,9 @@
     "institutionAccount": "సంస్థ ఖాతా",
     "institutionAccountDesc": "మీ సంస్థను నమోదు చేసి దాని శాఖలు, విభాగాలు మరియు నమోదులను నిర్వహించండి",
     "alreadyRegistered": "ఇప్పటికే నమోదు చేసుకున్నారా?",
-    "signInHere": "ఇక్కడ సైన్ ఇన్ చేయండి"
+    "signInHere": "ఇక్కడ సైన్ ఇన్ చేయండి",
+    "collegeAdminPortal": "కళాశాల అడ్మిన్ పోర్టల్",
+    "collegeAdminPortalDesc": "రిజిస్ట్రేషన్‌లను ధృవీకరించండి, కళాశాల సెట్టింగ్‌లను కాన్ఫిగర్ చేయండి, శాఖలను నిర్వహించండి"
   },
   "language": {
     "switchLabel": "భాష"

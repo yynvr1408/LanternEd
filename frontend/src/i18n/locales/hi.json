@@ -33,7 +33,9 @@
     "institutionAccount": "संस्थान खाता",
     "institutionAccountDesc": "अपने संस्थान को पंजीकृत करें और इसकी शाखाओं, अनुभागों और पंजीकरणों का प्रबंधन करें",
     "alreadyRegistered": "पहले से रजिस्टर्ड हैं?",
-    "signInHere": "यहां साइन इन करें"
+    "signInHere": "यहां साइन इन करें",
+    "collegeAdminPortal": "कॉलेज एडमिन पोर्टल",
+    "collegeAdminPortalDesc": "पंजीकरण सत्यापित करें, कॉलेज सेटिंग्स कॉन्फ़िगर करें, शाखाएं प्रबंधित करें"
   },
   "language": {
     "switchLabel": "भाषा"

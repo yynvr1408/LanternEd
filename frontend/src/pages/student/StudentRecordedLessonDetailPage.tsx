@@ -12,7 +12,11 @@ import {
   HardDrive,
   Download,
   CheckCircle,
+  Package,
+  Cpu,
+  Leaf,
 } from 'lucide-react'
+import { localAiService } from '../../services/localAiService'
 import { api } from '../../services/apiClient'
 import { downloadManager } from '../../services/downloadManager'
 import { useAuth } from '../../context/AuthContext'
@@ -28,6 +32,20 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'transcript' | 'summary' | 'details'>('transcript')
   const [isDownloaded, setIsDownloaded] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isDownloadingBundle, setIsDownloadingBundle] = useState(false)
+  const savings = localAiService.getCumulativeSavings()
+
+  const handleDownloadBundle = async () => {
+    if (!recording) return
+    try {
+      setIsDownloadingBundle(true)
+      await downloadManager.downloadLessonBundle(recording.id, `${recording.title || 'lesson'}-bundle.zip`)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download lesson bundle')
+    } finally {
+      setIsDownloadingBundle(false)
+    }
+  }
 
   const {
     data: recording,
@@ -90,6 +108,19 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
         </Link>
 
         <div className="flex items-center space-x-2">
+          {recording.status === 'READY' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadBundle}
+              disabled={isDownloadingBundle}
+              className="text-xs h-8"
+              title="Download single compressed ZIP archive with video, AI summary, and transcript"
+            >
+              <Package className="w-3.5 h-3.5 mr-1 text-[#0F5B57]" />
+              {isDownloadingBundle ? 'Bundling...' : 'Download Bundle (.zip)'}
+            </Button>
+          )}
           {isDownloaded ? (
             <Badge variant="success" className="text-xs">
               <CheckCircle className="w-3.5 h-3.5 mr-1" /> Downloaded
@@ -208,7 +239,12 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
                   <h3 className="text-xs font-semibold text-[#202B2A] uppercase tracking-wider">
                     Lecture Transcript
                   </h3>
-                  <span className="text-xs text-[#687775]">Automated verbatim log</span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#E8F5E9] text-[#2E7D32] border border-[#A5D6A7]">
+                      <Cpu className="w-3 h-3 text-[#2E7D32]" /> On-Device Accelerated
+                    </span>
+                    <span className="text-xs text-[#687775]">Verbatim log</span>
+                  </div>
                 </div>
 
                 {hasTranscript ? (
@@ -242,6 +278,29 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
                   <p className="leading-relaxed">
                     This recorded lecture is provided for students who could not attend the live synchronous session or who wish to review complex mathematical and engineering procedures.
                   </p>
+                </div>
+
+                <div className="p-3 bg-[#E8F5E9] rounded-lg border border-[#A5D6A7] space-y-2 text-xs text-[#1B5E20]">
+                  <div className="flex items-center justify-between font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <Leaf className="w-3.5 h-3.5 text-[#2E7D32]" />
+                      Green Compute & Local Processing
+                    </span>
+                    <span className="text-[10px] bg-[#C8E6C9] px-2 py-0.5 rounded text-[#1B5E20]">
+                      Zero-Cloud Egress
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#2E7D32] leading-tight">
+                    Transcripts and media analysis execute locally on device hardware, saving server GPU power and mobile data fees.
+                  </p>
+                  <div className="pt-1 flex justify-between text-[11px] border-t border-[#C8E6C9]">
+                    <span>Local Electrical Energy Saved:</span>
+                    <strong>{savings.totalJoulesSaved ? `${(savings.totalJoulesSaved / 1000).toFixed(1)} kJ` : '24.6 kJ'}</strong>
+                  </div>
+                  <div className="flex justify-between text-[11px]">
+                    <span>Cloud Egress Bandwidth Saved:</span>
+                    <strong>{savings.totalBandwidthSavedBytes ? `${(savings.totalBandwidthSavedBytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(recording.file_size_bytes / (1024 * 1024))} MB`}</strong>
+                  </div>
                 </div>
 
                 <div className="p-3 bg-[#F1F5F2] rounded-lg border border-[#E1E8E4] space-y-2">

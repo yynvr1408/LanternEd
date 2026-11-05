@@ -33,7 +33,9 @@
     "institutionAccount": "Conta da instituição",
     "institutionAccountDesc": "Registre sua instituição e gerencie suas filiais, seções e inscrições",
     "alreadyRegistered": "Já tem uma conta?",
-    "signInHere": "Entre aqui"
+    "signInHere": "Entre aqui",
+    "collegeAdminPortal": "Portal do Administrador da Faculdade",
+    "collegeAdminPortalDesc": "Verifique registros, defina configurações da faculdade e gerencie turmas"
   },
   "language": {
     "switchLabel": "Idioma"

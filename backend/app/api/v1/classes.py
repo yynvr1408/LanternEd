@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.permissions import require_role
@@ -173,3 +173,19 @@ def download_recording(recording_id: str, user: User = Depends(get_current_user)
     recording = recording_service.get_recording_or_404(db, recording_id)
     info = recording_service.playback_info(db, user, recording)
     return RedirectResponse(url=info["url"])
+
+
+@router.get("/{class_id}/bundle")
+def download_class_bundle(
+    class_id: str,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download a self-contained offline lesson bundle (.zip) for a class containing its summary,
+    available recordings, and metadata."""
+    cls = classroom_service.get_class_or_404(db, class_id)
+    bundle_path = classroom_service.build_class_bundle(db, user, cls)
+    background_tasks.add_task(bundle_path.unlink, missing_ok=True)
+    filename = f"class-{cls.id}-bundle.zip"
+    return FileResponse(bundle_path, media_type="application/zip", filename=filename)

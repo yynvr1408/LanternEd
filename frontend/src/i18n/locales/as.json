@@ -33,7 +33,9 @@
     "institutionAccount": "প্ৰতিষ্ঠান একাউণ্ট",
     "institutionAccountDesc": "আপোনাৰ প্ৰতিষ্ঠান পঞ্জীয়ন কৰক আৰু ইয়াৰ শাখা, বিভাগ আৰু পঞ্জীয়ন পৰিচালনা কৰক",
     "alreadyRegistered": "ইতিমধ্যে পঞ্জীয়নভুক্ত?",
-    "signInHere": "ইয়াত সাইন ইন কৰক"
+    "signInHere": "ইয়াত সাইন ইন কৰক",
+    "collegeAdminPortal": "কলেজ এডমিন পৰ্টেল",
+    "collegeAdminPortalDesc": "পঞ্জীয়ন পৰীক্ষা কৰক, কলেজ ছেটিংছ কনফিগাৰ কৰক, শাখা পৰিচালনা কৰক"
   },
   "language": {
     "switchLabel": "ভাষা"

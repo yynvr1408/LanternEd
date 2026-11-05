@@ -33,7 +33,9 @@
     "institutionAccount": "ਸੰਸਥਾ ਖਾਤਾ",
     "institutionAccountDesc": "ਆਪਣੀ ਸੰਸਥਾ ਰਜਿਸਟਰ ਕਰੋ ਅਤੇ ਇਸ ਦੀਆਂ ਸ਼ਾਖਾਵਾਂ, ਭਾਗਾਂ ਅਤੇ ਰਜਿਸਟ੍ਰੇਸ਼ਨਾਂ ਦਾ ਪ੍ਰਬੰਧਨ ਕਰੋ",
     "alreadyRegistered": "ਪਹਿਲਾਂ ਹੀ ਰਜਿਸਟਰਡ ਹੋ?",
-    "signInHere": "ਇੱਥੇ ਸਾਈਨ ਇਨ ਕਰੋ"
+    "signInHere": "ਇੱਥੇ ਸਾਈਨ ਇਨ ਕਰੋ",
+    "collegeAdminPortal": "ਕਾਲਜ ਐਡਮਿਨ ਪੋਰਟਲ",
+    "collegeAdminPortalDesc": "ਰਜਿਸਟ੍ਰੇਸ਼ਨਾਂ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ, ਕਾਲਜ ਸੈਟਿੰਗਾਂ ਕੌਂਫਿਗਰ ਕਰੋ, ਸ਼ਾਖਾਵਾਂ ਦਾ ਪ੍ਰਬੰਧ ਕਰੋ"
   },
   "language": {
     "switchLabel": "ਭਾਸ਼ਾ"

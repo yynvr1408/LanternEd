@@ -11,6 +11,7 @@ from app.db.models.college import (
     CollegeDeletionRequest,
     CollegeRegistrationRequest,
     CollegeSection,
+    CollegeSetting,
     UserBranchAssignment,
     UserCollegeSection,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "CollegeCodeHistory",
     "CollegeBranch",
     "CollegeSection",
+    "CollegeSetting",
     "CollegeRegistrationRequest",
     "CollegeDeletionRequest",
     "UserBranchAssignment",

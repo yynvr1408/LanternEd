@@ -25,9 +25,10 @@ export function useBackgroundBlur(room: Room | undefined, cameraOn: boolean, wan
       setActive(false)
       return
     }
+    const trackId = pub?.trackSid || track.mediaStreamTrack?.id || 'camera'
     try {
       if (wanted) {
-        if (appliedTo.current === track.sid) return
+        if (appliedTo.current === trackId) return
         const lib = await loadChunk(() => import('@livekit/track-processors'))
         if (!lib.supportsBackgroundProcessors()) {
           setSupported(false)
@@ -36,7 +37,7 @@ export function useBackgroundBlur(room: Room | undefined, cameraOn: boolean, wan
         }
         processorRef.current = processorRef.current ?? lib.BackgroundProcessor({ mode: 'background-blur', blurRadius: 12 })
         await track.setProcessor(processorRef.current)
-        appliedTo.current = track.sid ?? null
+        appliedTo.current = trackId
         setActive(true)
         setError(null)
       } else if (appliedTo.current) {

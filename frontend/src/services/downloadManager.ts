@@ -387,4 +387,28 @@ export const downloadManager = {
     if (!item?.blob) throw new DownloadError('UNAVAILABLE', 'This recording is not saved on this device yet.')
     saveBlobToDevice(item.blob, suggestFilename(item.title, item.mimeType || item.blob.type))
   },
+
+  // ---------------------------------------------------------------- lesson bundles (.zip)
+
+  /**
+   * Downloads an internally-compressed single-stream `.zip` bundle for a recorded lesson
+   * containing metadata, structured JSON summary, human-readable Markdown summary,
+   * full lecture transcript, and media asset without needing multiple round-trips.
+   * Saves the `.zip` archive directly to the student's device.
+   */
+  async downloadLessonBundle(recordingId: string, filename?: string): Promise<void> {
+    const blob = await api.downloadRecordingBundle(recordingId)
+    const name = filename || `lesson-${recordingId}-bundle.zip`
+    saveBlobToDevice(blob, name.endsWith('.zip') ? name : `${name}.zip`)
+  },
+
+  /**
+   * Downloads a `.zip` bundle of all artifacts for a class session.
+   */
+  async downloadClassBundle(classId: string, filename?: string): Promise<void> {
+    const blob = await api.downloadClassBundle(classId)
+    const name = filename || `class-${classId}-bundle.zip`
+    saveBlobToDevice(blob, name.endsWith('.zip') ? name : `${name}.zip`)
+  },
 }
+

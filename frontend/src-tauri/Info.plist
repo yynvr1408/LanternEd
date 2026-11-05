@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCameraUsageDescription</key>
+    <string>LanternEd requires camera access to allow teachers and students to participate in live video classrooms.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>LanternEd requires microphone access to enable live voice interaction and on-device lecture recording.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>LanternEd requires local network permissions to discover campus Wi-Fi peers for zero-internet classroom streaming.</string>
+</dict>
+</plist>

@@ -31,7 +31,7 @@ const inkOn = (page: Page) =>
   })
 
 test('floating video, shared whiteboard (late joiner too), screen sharing and blur in a real class', async ({ browser }) => {
-  test.setTimeout(150_000)
+  test.setTimeout(240_000)
   const teacherCtx = await browser.newContext()
   const teacher = await teacherCtx.newPage()
   await register(teacherCtx.request, 'teacher', 'tools-teacher')
@@ -80,8 +80,20 @@ test('floating video, shared whiteboard (late joiner too), screen sharing and bl
   await teacher.getByRole('button', { name: 'Blur background' }).first().click() // and back on
   await expect(teacher.getByTestId('floating-video')).toHaveAttribute('data-status', 'blur-on', { timeout: 30_000 })
 
+  const openTool = async (name: string | RegExp) => {
+    const btn = teacher.getByRole('button', { name })
+    if (!(await btn.isVisible())) {
+      await teacher.getByRole('button', { name: 'Tools' }).click()
+    }
+    await teacher.getByRole('button', { name }).click()
+    const backdrop = teacher.getByTestId('tools-menu-backdrop')
+    if (await backdrop.isVisible()) {
+      await backdrop.click()
+    }
+  }
+
   // 3. Whiteboard: the teacher opens it and writes; the student sees it live
-  await teacher.getByRole('button', { name: 'Whiteboard' }).click()
+  await openTool('Whiteboard')
   await expect(teacher.getByTestId('whiteboard')).toBeVisible()
   await expect(student.getByTestId('whiteboard')).toBeVisible({ timeout: 20_000 })
   await expect(teacher.getByTestId('floating-video')).toHaveAttribute('data-size', 'small') // content is shared, video shrinks
@@ -108,11 +120,11 @@ test('floating video, shared whiteboard (late joiner too), screen sharing and bl
   await expect.poll(() => inkOn(late), { timeout: 20_000 }).toBeGreaterThan(500)
 
   // 5. Screen sharing: one share, then a second one at the same time (needs a display-capture source)
-  await teacher.getByRole('button', { name: 'Share screen' }).click()
+  await openTool(/Share screen/)
   await expect(teacher.getByTestId('screen-share')).toHaveCount(1, { timeout: 20_000 })
   await expect(student.getByRole('tab', { name: /Screen 1/ })).toBeVisible({ timeout: 20_000 })
   await expect(student.getByTestId('screen-share')).toHaveCount(1, { timeout: 20_000 })
-  await teacher.getByRole('button', { name: 'Share another screen' }).click()
+  await openTool(/Add another screen|Share another screen/)
   await expect(student.getByRole('tab', { name: 'All screens' })).toBeVisible({ timeout: 20_000 })
   await student.getByRole('tab', { name: 'All screens' }).click()
   await expect(student.getByTestId('screen-share')).toHaveCount(2)

@@ -33,7 +33,9 @@
     "institutionAccount": "Аккаунт учреждения",
     "institutionAccountDesc": "Зарегистрируйте своё учреждение и управляйте его филиалами, секциями и заявками на регистрацию",
     "alreadyRegistered": "Уже зарегистрированы?",
-    "signInHere": "Войти здесь"
+    "signInHere": "Войти здесь",
+    "collegeAdminPortal": "Портал администратора колледжа",
+    "collegeAdminPortalDesc": "Проверка регистраций, настройка параметров колледжа, управление отделениями"
   },
   "language": {
     "switchLabel": "Язык"

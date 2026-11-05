@@ -1,0 +1,47 @@
+{
+  "version": "0.1.0",
+  "releaseDate": "2026-11-05T12:00:00Z",
+  "releaseNotes": "LanternEd v0.1.0 initial cross-platform release with offline bundle syncing, on-device Whisper transcription, and zero-internet campus LAN mode.",
+  "platforms": {
+    "windows": {
+      "version": "0.1.0",
+      "fileName": "LanternEd-Setup-0.1.0.exe",
+      "installerType": "exe",
+      "downloadUrl": "/api/v1/releases/download/windows",
+      "fileSizeMb": 0.0,
+      "sha256": "c951053278473bfbc5e1b425822f665062463788e215f9d56e1f0de2a3deb253",
+      "minOsVersion": "Windows 10 / 11 (64-bit)",
+      "arch": "x64"
+    },
+    "macos": {
+      "version": "0.1.0",
+      "fileName": "LanternEd-0.1.0-universal.dmg",
+      "installerType": "dmg",
+      "downloadUrl": "/api/v1/releases/download/macos",
+      "fileSizeMb": 0.0,
+      "sha256": "1a703984ecfcdc263c2cacac0d1e759b9f3372fe9315563c2941f931af38e464",
+      "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
+      "arch": "Universal (Apple Silicon & Intel)"
+    },
+    "android": {
+      "version": "0.1.0",
+      "fileName": "LanternEd-v0.1.0.apk",
+      "installerType": "apk",
+      "downloadUrl": "/api/v1/releases/download/android",
+      "fileSizeMb": 0.0,
+      "sha256": "c00fe95f74800dd209f0e9e08d72c0fa53b3071efed9123127a75d58d7d5885c",
+      "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
+      "arch": "arm64-v8a, armeabi-v7a"
+    },
+    "ios": {
+      "version": "0.1.0",
+      "fileName": "LanternEd-v0.1.0.ipa",
+      "installerType": "ipa",
+      "downloadUrl": "/api/v1/releases/download/ios",
+      "fileSizeMb": 0.0,
+      "sha256": "ba6eac048ca9f23374759052b4de80cc2792127fa48a6eaba30b68cbb975d35d",
+      "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
+      "arch": "arm64"
+    }
+  }
+}

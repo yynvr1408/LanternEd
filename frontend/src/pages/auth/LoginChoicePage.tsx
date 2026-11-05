@@ -1,17 +1,27 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GraduationCap, BookOpen, ArrowRight } from 'lucide-react'
+import { GraduationCap, BookOpen, Building2, ArrowRight, ShieldCheck, Download } from 'lucide-react'
 import { Logo } from '../../components/ui/Logo'
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
 
 /**
- * Landing step before either role's login form. Keeps /login/student and /login/teacher as
- * genuinely separate pages (distinct copy, distinct demo account, and a role check on submit)
- * rather than a single generic form that happens to work for both roles.
+ * Landing portal selection before role-specific login forms.
+ * Surfaces the 3 accessible application portals:
+ * 1. Student Portal (/login/student) -> Student Dashboard
+ * 2. Teacher Portal (/login/teacher) -> Teacher Console
+ * 3. College Admin Portal (/login/college-admin) -> College Admin Dashboard
+ *
+ * Super-Admin (Platform Console) is restricted to secure web management portals
+ * and is not accessible or reflected from installed applications.
  */
 export const LoginChoicePage: React.FC = () => {
   const { t } = useTranslation()
+  const isNative = platformAdapter.isNative()
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-[#F8FAF7] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-lg px-4">
@@ -27,6 +37,7 @@ export const LoginChoicePage: React.FC = () => {
         <p className="text-center text-sm font-semibold text-[#202B2A] mb-4">{t('auth.howSigningIn')}</p>
 
         <div className="flex flex-col gap-3">
+          {/* 1. Student Portal */}
           <Link
             to="/login/student"
             className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
@@ -41,6 +52,7 @@ export const LoginChoicePage: React.FC = () => {
             <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
           </Link>
 
+          {/* 2. Teacher Portal */}
           <Link
             to="/login/teacher"
             className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
@@ -54,7 +66,62 @@ export const LoginChoicePage: React.FC = () => {
             </div>
             <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
           </Link>
+
+          {/* 3. College Admin Portal */}
+          <Link
+            to="/login/college-admin"
+            className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
+          >
+            <div className="w-11 h-11 shrink-0 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center">
+              <Building2 className="w-6 h-6" />
+            </div>
+            <div className="flex-1 text-left">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-[#202B2A]">{t('auth.collegeAdminPortal')}</h2>
+                <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#DDF3EA] text-[#0F5B57] px-2 py-0.5 rounded-full">
+                  Admin
+                </span>
+              </div>
+              <p className="text-xs text-[#687775]">{t('auth.collegeAdminPortalDesc')}</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
+          </Link>
         </div>
+
+        {/* Native App Downloads Banner */}
+        <div className="mt-5 p-4 rounded-2xl bg-[#FFFFFF] border border-[#E1E8E4] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center shrink-0">
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[#202B2A]">LanternEd Native Apps</h3>
+              <p className="text-[11px] text-[#687775]">Offline campus study for Windows, Mac, Android & iOS</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsDownloadOpen(true)}
+            className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-semibold transition-colors cursor-pointer text-center shrink-0 shadow-xs"
+          >
+            Download App
+          </button>
+        </div>
+
+        {/* Web-Only Platform Management Link (Hidden on native apps) */}
+        {!isNative && (
+          <div className="mt-8 text-center border-t border-[#E1E8E4] pt-4">
+            <Link
+              to="/platform-console"
+              className="text-xs text-[#84908D] hover:text-[#0F5B57] transition-colors inline-flex items-center gap-1.5"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Platform Administration (Web Portal)</span>
+            </Link>
+          </div>
+        )}
+
+        <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
       </div>
     </div>
   )

@@ -231,6 +231,35 @@ describe('offline summaries and recordings', () => {
     await db.clearPrivateUserData({ includeDownloads: true })
     expect([await db.downloadedResources.count(), await db.downloadedSummaries.count(), await db.downloadJobs.count(), await db.downloadParts.count()]).toEqual([0, 0, 0, 0])
   })
+
+  it('downloadLessonBundle fetches binary zip and triggers native file save', async () => {
+    const clicks: HTMLAnchorElement[] = []
+    const realClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function () {
+      clicks.push(this)
+    }
+
+    const fakeBlob = new Blob(['PK\x03\x04fake-zip-data'], { type: 'application/zip' })
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+      if (String(url).includes('/recordings/rec-bundle-1/bundle')) {
+        return {
+          ok: true,
+          status: 200,
+          blob: async () => fakeBlob,
+        } as any
+      }
+      return { ok: false, status: 404 } as any
+    })
+
+    try {
+      await downloadManager.downloadLessonBundle('rec-bundle-1', 'solar-energy-bundle.zip')
+      expect(clicks).toHaveLength(1)
+      expect(clicks[0].download).toBe('solar-energy-bundle.zip')
+    } finally {
+      HTMLAnchorElement.prototype.click = realClick
+      fetchSpy.mockRestore()
+    }
+  })
 })
 
 describe('storage reporting', () => {

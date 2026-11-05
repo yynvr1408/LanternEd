@@ -160,6 +160,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
   }
 
   const isTeacher = role === 'teacher'
+  const requiresOtp = import.meta.env.VITE_REQUIRE_REGISTRATION_OTP !== 'false'
   // College, its code, branch and section are mandatory for both roles — an administrator must
   // set up at least one college before anyone can register.
   const collegesUnavailable = colleges.status === 'error'
@@ -181,6 +182,34 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     setFieldErrors(errs)
     setError(null)
     if (Object.keys(errs).length > 0) return
+
+    if (!requiresOtp) {
+      setIsLoading(true)
+      try {
+        const allSections = isTeacher && sectionId === ALL_SECTIONS
+        const selection = collegeId
+          ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() }
+          : undefined
+        const result = await register(email.trim(), fullName.trim(), password, role, undefined, selection)
+        if (isRegistrationPending(result)) {
+          setStep('pending')
+          return
+        }
+        navigate(result.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', { replace: true })
+      } catch (err: any) {
+        const field = SERVER_FIELD[err?.code as string]
+        if (field) {
+          setFieldErrors({ [field]: err.message })
+        } else {
+          setError(
+            err?.isNetworkError ? 'Cannot reach the server. Check your connection and try again.' : err?.message || 'Registration failed.'
+          )
+        }
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
 
     setIsLoading(true)
     try {
@@ -603,10 +632,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
               type="submit"
               fullWidth
               isLoading={isLoading}
-              icon={<UserPlus className="w-4 h-4" />}
+              icon={requiresOtp ? <Mail className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
               className="mt-3"
             >
-              Send Verification Code
+              {requiresOtp ? 'Send Verification Code' : 'Register'}
             </Button>
           </form>
         </div>

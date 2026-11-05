@@ -64,6 +64,8 @@ export default defineConfig({
         TEACHER_COLLEGE_REQUIRED: 'false',
         STUDENT_COLLEGE_REQUIRED: 'false',
         TEACHER_INVITE_CODE: '',
+        REQUIRE_REGISTRATION_OTP: 'false',
+        COLLEGE_REGISTRATION_REQUIRES_APPROVAL: 'false',
         LIVEKIT_URL,
         LIVEKIT_API_KEY,
         LIVEKIT_API_SECRET,
@@ -74,7 +76,7 @@ export default defineConfig({
       url: `http://localhost:${FRONTEND_PORT}`,
       reuseExistingServer: false,
       timeout: 180_000,
-      env: { VITE_API_BASE_URL: `http://localhost:${BACKEND_PORT}`, VITE_E2E_TEST_HOOKS: 'true' },
+      env: { VITE_API_BASE_URL: `http://localhost:${BACKEND_PORT}`, VITE_REQUIRE_REGISTRATION_OTP: 'false', VITE_E2E_TEST_HOOKS: 'true' },
     },
   ],
 })

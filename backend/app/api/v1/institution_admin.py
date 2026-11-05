@@ -35,6 +35,12 @@ from app.schemas.admin import (
     BillingSummaryOut,
     MyAdminRoleRequestOut,
     PendingUserOut,
+    BulkRegistrationsAction,
+    BulkActionResult,
+    AiScreenedApplicantOut,
+    AiAutoApproveResult,
+    CollegeSettingsOut,
+    CollegeSettingsUpdate,
     RosterImportOut,
     RosterPageOut,
 )
@@ -211,6 +217,81 @@ def reject_registration(
     college = college_service.get_college_or_404(db, college_id)
     college_service.assert_can_manage_college(db, user, college)
     return college_service.reject_registration(db, user.id, college_id, user_id, reason=payload.reason)
+
+
+@router.post("/colleges/{college_id}/registrations/bulk-approve", response_model=BulkActionResult)
+def bulk_approve_registrations(
+    college_id: str, payload: BulkRegistrationsAction, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    approved_ids = college_service.bulk_approve_registrations(db, user.id, college_id, payload.user_ids)
+    return BulkActionResult(
+        success_count=len(approved_ids),
+        user_ids=approved_ids,
+        message=f"Successfully approved {len(approved_ids)} member registrations.",
+    )
+
+
+@router.post("/colleges/{college_id}/registrations/bulk-reject", response_model=BulkActionResult)
+def bulk_reject_registrations(
+    college_id: str, payload: BulkRegistrationsAction, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    rejected_ids = college_service.bulk_reject_registrations(db, user.id, college_id, payload.user_ids, reason=payload.reason)
+    return BulkActionResult(
+        success_count=len(rejected_ids),
+        user_ids=rejected_ids,
+        message=f"Successfully rejected {len(rejected_ids)} member registrations.",
+    )
+
+
+@router.get("/colleges/{college_id}/registrations/ai-screen", response_model=list[AiScreenedApplicantOut])
+def ai_screen_registrations(
+    college_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    return college_service.ai_screen_registrations(db, college_id)
+
+
+@router.post("/colleges/{college_id}/registrations/ai-auto-approve", response_model=AiAutoApproveResult)
+def ai_auto_approve_registrations(
+    college_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    return college_service.ai_auto_approve_registrations(db, user.id, college_id)
+
+
+# ---- dynamic institution settings and features --------------------------------------------------
+
+
+@router.get("/colleges/{college_id}/settings", response_model=CollegeSettingsOut)
+def get_institution_settings(
+    college_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    return college_service.get_college_settings(db, college_id)
+
+
+@router.patch("/colleges/{college_id}/settings", response_model=CollegeSettingsOut)
+def update_institution_settings(
+    college_id: str, payload: CollegeSettingsUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
+    _require_teacher(user)
+    college = college_service.get_college_or_404(db, college_id)
+    college_service.assert_can_manage_college(db, user, college)
+    return college_service.update_college_settings(
+        db, user.id, college_id, payload.model_dump(exclude_unset=True)
+    )
 
 
 # ---- the student/teacher roster: everyone already admitted (active or suspended) ----------------

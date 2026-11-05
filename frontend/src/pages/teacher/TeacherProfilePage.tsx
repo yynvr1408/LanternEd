@@ -1,7 +1,10 @@
-import React from 'react'
-import { User, Mail, Shield, LogOut, CheckCircle2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { User, Mail, Shield, LogOut, CheckCircle2, Download, RefreshCw } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNetworkStatus } from '../../context/NetworkContext'
+import { platformAdapter } from '../../services/platformAdapter'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
+import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 import { PrivacyControls } from '../../components/profile/PrivacyControls'
 import { WhatsAppSettings } from '../../components/profile/WhatsAppSettings'
 import { AdminRoleRequest } from '../../components/profile/AdminRoleRequest'
@@ -13,6 +16,9 @@ import { Button } from '../../components/ui/Button'
 export const TeacherProfilePage: React.FC = () => {
   const { user, logout } = useAuth()
   const { isOnline, quality, latencyMs } = useNetworkStatus()
+  const isNative = platformAdapter.isNative()
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
 
   return (
     <PageContainer
@@ -89,6 +95,52 @@ export const TeacherProfilePage: React.FC = () => {
 
         <PrivacyControls />
 
+        {/* Application Updates & Native Shell Section */}
+        <Card>
+          <CardHeader className="py-3 px-5 font-bold text-sm text-[#202B2A] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-[#0F5B57]" />
+              <span>LanternEd Instructor Desktop & Mobile Apps</span>
+            </div>
+            <Badge variant="secondary" size="sm">
+              v0.1.0
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div>
+              <p className="font-semibold text-[#202B2A]">
+                {isNative ? 'Native Application Installed' : 'Browser Web Application'}
+              </p>
+              <p className="text-xs text-[#687775] mt-0.5">
+                {isNative
+                  ? 'Running on high-performance native desktop/mobile client. Live lecture capture with hardware acceleration.'
+                  : 'Install the native app for offline lesson preparation, direct WebRTC streaming, and instant notifications.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isNative ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<RefreshCw className="w-3.5 h-3.5" />}
+                  onClick={() => setIsUpdateOpen(true)}
+                >
+                  Check for Updates
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Download className="w-3.5 h-3.5" />}
+                  onClick={() => setIsDownloadOpen(true)}
+                >
+                  Download App
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="pt-2">
           <Button
             variant="outline"
@@ -100,6 +152,17 @@ export const TeacherProfilePage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      <AppDownloadModal
+        isOpen={isDownloadOpen}
+        onClose={() => setIsDownloadOpen(false)}
+
+      />
+
+      <AppUpdateModal
+        isOpen={isUpdateOpen}
+        onClose={() => setIsUpdateOpen(false)}
+      />
     </PageContainer>
   )
 }

@@ -33,7 +33,9 @@
     "institutionAccount": "Institution Account",
     "institutionAccountDesc": "Register your institution and manage its branches, sections and registrations",
     "alreadyRegistered": "Already registered?",
-    "signInHere": "Sign in here"
+    "signInHere": "Sign in here",
+    "collegeAdminPortal": "College Admin Portal",
+    "collegeAdminPortalDesc": "Verify registrations, configure college settings, manage branches"
   },
   "language": {
     "switchLabel": "Language"

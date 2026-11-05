@@ -6,6 +6,7 @@ classes.py; both call the same recording_service, so there is one implementation
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
@@ -127,3 +128,19 @@ def delete_recording(recording_id: str, user: User = Depends(get_current_user), 
     recording_service.delete_recording(db, user, recording)
     return None
 
+
+
+@router.get("/{recording_id}/bundle")
+def download_recording_bundle(
+    recording_id: str,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download a self-contained offline lesson bundle (.zip) containing summary, transcript,
+    metadata, and lecture media."""
+    recording = recording_service.get_recording_or_404(db, recording_id)
+    bundle_path = recording_service.build_recording_bundle(db, user, recording)
+    background_tasks.add_task(bundle_path.unlink, missing_ok=True)
+    filename = f"lesson-{recording.class_id}-bundle.zip"
+    return FileResponse(bundle_path, media_type="application/zip", filename=filename)

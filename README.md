@@ -1,11 +1,19 @@
 # LanternEd
 
-**An offline-first, low-bandwidth learning platform for any institution where connectivity is unreliable — rural or urban, any country: live classes that adapt to weak connections, recorded lessons, AI-assisted study notes, downloadable materials, and assignments that can be written and submitted without a connection.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Backend Tests](https://img.shields.io/badge/pytest-634%20passed-brightgreen.svg)](backend/)
+[![Frontend Tests](https://img.shields.io/badge/vitest-263%20passed-brightgreen.svg)](frontend/)
+[![Platforms](https://img.shields.io/badge/Native%20Apps-Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-teal.svg)](releases/)
 
-LanternEd gives a college everything it needs to teach students who have unreliable, expensive or slow internet and few devices: teachers run live classes (with a floating video window, a shared whiteboard, screen sharing and a blurred background), record them, and publish lessons with transcripts and AI summaries they approve; students join live, catch up from recordings, download material for offline study and submit work even when the network drops. Colleges, branches and sections are set up by an administrator, and registration is tied to a college code.
+**An offline-first, low-bandwidth cross-platform learning ecosystem for institutions where connectivity is unreliable — live low-bitrate classes, recorded lessons, on-device AI transcription, campus peer-to-peer LAN mode, and offline assignment submissions.**
 
-* **Live app:** frontend <https://edu-village-nine.vercel.app> · backend API <https://eduvillage-api.onrender.com> (`/health`, `/docs`)
-* **Documentation:** [Admin panel](docs/ADMIN_PANEL.md) · [Classroom and course tools](docs/CLASSROOM_AND_COURSE_TOOLS.md) · [API reference](docs/API_CONTRACTS.md) · [Database schema](docs/DATABASE_SCHEMA.md) · [Backend setup](docs/BACKEND_SETUP.md) · [Backend overview](docs/BACKEND_AUDIT.md) · [Requirements matrix](docs/BACKEND_REQUIREMENTS_MATRIX.md) · [Verification status](docs/FINAL_AUDIT.md) · [Recording pipeline](docs/RECORDING_VERIFICATION.md) · [Multi-college support](docs/MULTI_INSTITUTION_AUDIT.md) · [Codebase structure](docs/DEDUPLICATION_REPORT.md) · [Scalability architecture](docs/SCALABILITY_ARCHITECTURE.md) · [Infrastructure cost model](docs/INFRASTRUCTURE_COST_MODEL.md) · [Upgrade roadmap](docs/DEPLOYMENT_UPGRADE_ROADMAP.md) · [Evaluation answers](docs/SCALABILITY_EVALUATION_ANSWERS.md) · [Capacity test plan](docs/CAPACITY_TEST_PLAN.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Frontend guide](frontend/README.md) · [Operations runbook](docs/OPERATIONS.md) · [Launch kit](docs/launch/README.md)
+LanternEd gives institutions everything required to educate students over congested, high-packet-loss, or offline environments: teachers run live classes (with floating video, collaborative whiteboard, background blur, and low-bitrate DTX voice optimization), record lessons, and publish AI summaries; students join live, catch up from offline media packs, and submit work even when offline.
+
+### Repositories & Distribution
+* **Main Source Monorepo:** `LanternEd` — Complete full-stack codebase (FastAPI backend, React 19 PWA, Tauri 2.0 desktop shell, Capacitor 6 mobile shell, automated test suites, CI/CD).
+* **Official Native App Releases:** `LanternEd-App-Releases` — Dedicated public release repository containing packaged installers for **Windows** (`.exe`), **macOS** (`.dmg`), **Android** (`.apk`), and **iOS** (`.ipa`), cryptographically signed with SHA-256 manifests.
+* **Live Web App:** <https://lanterned.vercel.app> · **Backend API:** <https://lanterned-api.onrender.com> (`/health`, `/docs`)
+* **Documentation:** [Release Management Guide](releases/README.md) · [Admin panel](docs/ADMIN_PANEL.md) · [Classroom and course tools](docs/CLASSROOM_AND_COURSE_TOOLS.md) · [API reference](docs/API_CONTRACTS.md) · [Database schema](docs/DATABASE_SCHEMA.md) · [Backend setup](docs/BACKEND_SETUP.md) · [Backend overview](docs/BACKEND_AUDIT.md) · [Requirements matrix](docs/BACKEND_REQUIREMENTS_MATRIX.md) · [Verification status](docs/FINAL_AUDIT.md) · [Recording pipeline](docs/RECORDING_VERIFICATION.md) · [Multi-college support](docs/MULTI_INSTITUTION_AUDIT.md) · [Codebase structure](docs/DEDUPLICATION_REPORT.md) · [Scalability architecture](docs/SCALABILITY_ARCHITECTURE.md) · [Infrastructure cost model](docs/INFRASTRUCTURE_COST_MODEL.md) · [Upgrade roadmap](docs/DEPLOYMENT_UPGRADE_ROADMAP.md) · [Evaluation answers](docs/SCALABILITY_EVALUATION_ANSWERS.md) · [Capacity test plan](docs/CAPACITY_TEST_PLAN.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Frontend guide](frontend/README.md) · [Operations runbook](docs/OPERATIONS.md) · [Launch kit](docs/launch/README.md)
 
 ## Table of contents
 
@@ -87,15 +95,31 @@ A step-by-step tour of the product, in the order a college would use it. (Self-r
 | Offline and PWA | Installable app, precached shell, IndexedDB drafts, queue and downloads, resumable ranged downloads, real storage meter |
 | Audit | Append-only audit events for security-relevant actions |
 
-## 4. Roles and permissions
+## 4. Four-Tier Dashboards & Access Isolation
 
-| Role | Can | Cannot |
-|---|---|---|
-| Student | Browse the catalogue, enrol, join classes they are authorised for (section or branch audience), watch published recordings, submit assignments with files, use offline features | Create courses or classes; see another branch's branch-wide classes; use any admin endpoint |
-| Teacher | Create courses, cohorts, classes, resources and assignments; record; review summaries; import curricula; address the cohorts within their assigned section or branch | Teach outside their assignment's scope; register as administrator; use admin endpoints |
-| Administrator | Manage colleges, codes, branches and sections at `/platform-console`; delegate teachers as institution administrators | Use the student and teacher API (and vice versa) |
+LanternEd provides 4 discrete operational dashboards with dedicated ingress portals:
 
-Authorisation is decided in backend services from the server-side session; a client-supplied role, college, branch or section is always validated. College codes identify a college for registration and grant no privilege. A small number of teachers may additionally be delegated by the administrator as an **institution administrator** for one college — they gain access to that college's own branches and sections at `/teacher/institution`, but college creation and activation stay administrator-only, and the delegation is revocable at any time.
+```mermaid
+flowchart TD
+    User([User Ingress]) --> Choice[Login Choice Portal]
+    Choice -->|Student Portal| S_Dash["Student Dashboard (/app/dashboard)<br/>• Web + Native Desktop/Mobile"]
+    Choice -->|Teacher Portal| T_Dash["Teacher Dashboard (/teacher/dashboard)<br/>• Web + Native Desktop/Mobile"]
+    Choice -->|College Admin Portal| CA_Dash["College Admin Dashboard (/institution/dashboard)<br/>• Web + Native Desktop/Mobile"]
+    Choice -.->|Super-Admin Link| SA_Check{"Native Shell Check"}
+    SA_Check -->|Web Browser| SA_Dash["Super-Admin Console (/platform-console)<br/>• Full Platform & Multi-Tenant Oversight"]
+    SA_Check -->|Tauri / Capacitor App| Blocked["ACCESS BARRED<br/>Web Console Access Required"]
+```
+
+| Dashboard | Dedicated Portal | Web Access | Native App Access | Scope & Capabilities |
+| :--- | :--- | :---: | :---: | :--- |
+| **1. Student** | `/login/student` | Yes | **Yes** | Browse catalog, join low-bandwidth classes, download offline bundles, AI summaries, submit assignments with file attachments. |
+| **2. Teacher** | `/login/teacher` | Yes | **Yes** | Broadcast live classes (DTX/RED voice), create courses, grade submissions, review AI summaries, manage syllabus. |
+| **3. College Admin** | `/login/college-admin` | Yes | **Yes** | Approve/reject registrations, manage college codes, create branches and sections, department analytics. |
+| **4. Super Admin** | `/platform-console` | Yes | **BLOCKED** | Provision colleges, inspect server logs, manage global quotas, platform infrastructure. |
+
+> [!CAUTION]
+> **Super-Admin Native Isolation Barrier:**
+> To maintain zero-trust isolation and prevent unauthorized access or credential theft on shared local desktop/mobile machines, `/platform-console` is strictly barred inside native client applications (`platformAdapter.isNative() == true`). Authorized operators must use an authenticated web browser session.
 
 ## 5. Technology stack
 
@@ -221,6 +245,45 @@ npm run dev                           # http://localhost:5173
 ```
 
 The default database is SQLite; set `DATABASE_URL` for PostgreSQL or run `docker compose up` in `backend/`. Use a separate development database, never the production one. Without EmailJS settings outside production, OTPs are returned in the API response and shown by the UI, so every flow works locally. More detail: [docs/BACKEND_SETUP.md](docs/BACKEND_SETUP.md), [frontend/README.md](frontend/README.md).
+
+### Cloud Services & Database Setup
+
+#### 1. Neon Serverless PostgreSQL Setup
+Neon connection strings are automatically normalized to `postgresql+psycopg2://` at startup:
+```bash
+# In backend/.env:
+DATABASE_URL=postgresql://user:password@ep-name.neon.tech/neondb?sslmode=require
+
+# Test connectivity and apply Alembic migrations:
+python scripts/test_neon_connection.py --migrate
+```
+
+#### 2. Cloudflare R2 Object Storage Setup
+Configure Cloudflare R2 credentials for lesson recordings and offline media bundles:
+```bash
+# In backend/.env:
+STORAGE_BACKEND=s3
+OBJECT_STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+OBJECT_STORAGE_BUCKET=lanterned-storage
+OBJECT_STORAGE_ACCESS_KEY=<YOUR_R2_ACCESS_KEY_ID>
+OBJECT_STORAGE_SECRET_KEY=<YOUR_R2_SECRET_ACCESS_KEY>
+OBJECT_STORAGE_REGION=auto
+
+# Verify bucket read, write, and presigned URL generation:
+python scripts/test_r2_connection.py
+```
+
+### Native App Release Management & Public Repo Sync
+
+Packaged installers for Windows, macOS, Android, and iOS are maintained in `releases/` and synchronized to the standalone `LanternEd-App-Releases` distribution repository:
+
+```bash
+# 1. Verify integrity of all 4 release binaries against manifest.json:
+python scripts/package_release.py --action verify
+
+# 2. Synchronize and export to the public LanternEd-App-Releases repository:
+python scripts/sync_to_app_releases_repo.py --target-dir ../LanternEd-App-Releases
+```
 
 ## 10. Environment variables
 

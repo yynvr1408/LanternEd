@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { AlertCircle, Clock, LogIn, ShieldCheck } from 'lucide-react'
+import { AlertCircle, Clock, LogIn, ShieldCheck, Download } from 'lucide-react'
+import { AppDownloadModal } from '../../components/common/AppDownloadModal'
 import { useAuth } from '../../context/AuthContext'
 import { isOtpChallenge, type LoginOtpChallenge } from '../../services/authService'
 import type { User } from '../../types'
+import { institutionAdminApi } from '../../services/institutionAdminApi'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { FormField } from '../../components/ui/FormField'
@@ -13,7 +15,7 @@ import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher'
 export interface LoginPageProps {
   /** Set by the /login/student and /login/teacher routes to theme the form and enforce that the
    * account signing in actually has that role. Left unset, this renders the original generic form. */
-  portal?: 'student' | 'teacher'
+  portal?: 'student' | 'teacher' | 'college-admin'
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
@@ -25,6 +27,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false)
 
   const from = (location.state as any)?.from?.pathname || '/'
 
@@ -41,6 +44,38 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
   }, [resendCooldown])
 
   const finishSignIn = async (user: User) => {
+    if (portal === 'college-admin') {
+      if (user.role !== 'teacher') {
+        await logout()
+        setChallenge(null)
+        setPassword('')
+        setError('This portal is reserved for designated College Administrators. Please use your Student login portal.')
+        return
+      }
+      try {
+        const colleges = await institutionAdminApi.myColleges()
+        if (!colleges || colleges.length === 0) {
+          await logout()
+          setChallenge(null)
+          setPassword('')
+          setError('This account does not have College Administrator delegation. Please use the Teacher login portal.')
+          return
+        }
+        if (from && from !== '/' && !from.startsWith('/login')) {
+          navigate(from, { replace: true })
+        } else {
+          navigate('/institution/dashboard', { replace: true })
+        }
+        return
+      } catch {
+        await logout()
+        setChallenge(null)
+        setPassword('')
+        setError('Failed to verify college administrator delegation. Please check your connection and try again.')
+        return
+      }
+    }
+
     if (portal && user.role !== portal) {
       await logout()
       setChallenge(null)
@@ -50,7 +85,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
       )
       return
     }
-    if (from && from !== '/') {
+    if (from && from !== '/' && !from.startsWith('/login')) {
       navigate(from, { replace: true })
     } else {
       navigate(user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', {
@@ -153,7 +188,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
               to="/login"
               className="text-xs font-semibold text-[#687775] hover:text-[#0F5B57] inline-flex items-center gap-1"
             >
-              ← Not a {portal === 'teacher' ? 'teacher' : 'student'}? Switch portal
+              ← Not a {portal === 'college-admin' ? 'college administrator' : portal === 'teacher' ? 'teacher' : 'student'}? Switch portal
             </Link>
           </div>
         )}
@@ -161,7 +196,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
         {/* Card */}
         <div className="bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl p-6 sm:p-8 shadow-xs">
           <h2 className="text-lg font-bold text-[#202B2A] mb-5">
-            {portal === 'teacher' ? 'Teacher Sign In' : portal === 'student' ? 'Student Sign In' : 'Sign In to Your Account'}
+            {portal === 'college-admin'
+              ? 'College Administrator Sign In'
+              : portal === 'teacher'
+              ? 'Teacher Sign In'
+              : portal === 'student'
+              ? 'Student Sign In'
+              : 'Sign In to Your Account'}
           </h2>
 
           {error && (
@@ -307,6 +348,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
             Register here
           </Link>
         </p>
+
+        {/* Native App download link in footer */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setIsDownloadOpen(true)}
+            className="text-xs text-[#687775] hover:text-[#0F5B57] font-medium inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-[#0F5B57]" />
+            <span>Download LanternEd for Windows, Mac & Android</span>
+          </button>
+        </div>
+
+        <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
       </div>
     </div>
   )
