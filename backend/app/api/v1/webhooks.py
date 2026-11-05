@@ -4,7 +4,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from render import RenderAsync
+try:
+    from render import RenderAsync
+except ImportError:
+    RenderAsync = None
 
 from app.config import get_settings
 from app.db.models.classroom import ClassRecording
@@ -58,7 +61,7 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks, d
                 select(ClassRecording).where(ClassRecording.egress_id == info.egress_id)
             ).scalar_one_or_none()
 
-            if settings.render_api_key and recording and recording.storage_key:
+            if settings.render_api_key and recording and recording.storage_key and RenderAsync is not None:
                 try:
                     render_client = RenderAsync(token=settings.render_api_key)
                     run = await render_client.workflows.start_task(

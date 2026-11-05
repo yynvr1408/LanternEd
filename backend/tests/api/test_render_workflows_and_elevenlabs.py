@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import elevenlabs.client as el_client
+
 import pytest
 from app.db.models.classroom import ClassRecording
 from app.db.models.enums import RecordingStatus, SummaryStatus
@@ -54,7 +56,7 @@ def test_elevenlabs_synthesize_success(monkeypatch, tmp_path):
     mock_client = MagicMock()
     mock_client.text_to_speech.convert.return_value = [b"fake-mp3-chunk-1", b"fake-mp3-chunk-2"]
 
-    with patch("elevenlabs.client.ElevenLabs", return_value=mock_client):
+    with patch.object(el_client, "ElevenLabs", return_value=mock_client):
         result = elevenlabs_service.synthesize_lecture_recap("Important concepts discussed today.", out_file)
         assert result == str(out_file)
         assert out_file.exists()
@@ -68,7 +70,7 @@ def test_elevenlabs_synthesize_error_handled_gracefully(monkeypatch, tmp_path):
     mock_client = MagicMock()
     mock_client.text_to_speech.convert.side_effect = RuntimeError("Quota exceeded (429)")
 
-    with patch("elevenlabs.client.ElevenLabs", return_value=mock_client):
+    with patch.object(el_client, "ElevenLabs", return_value=mock_client):
         result = elevenlabs_service.synthesize_lecture_recap("Important concepts discussed today.", out_file)
         assert result is None
 

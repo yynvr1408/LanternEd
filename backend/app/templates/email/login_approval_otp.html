@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approve your new LanternED sign-in</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f3f4f6; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Banner (Amber Accent) -->
+          <tr>
+            <td style="background-color: #0F5B57; padding: 28px 32px; text-align: left;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; text-decoration: none;">Lantern<span style="color: #6EE7B7;">ED</span></span>
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; background-color: #D97706; color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 4px 10px; border-radius: 9999px;">Security Alert</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td style="padding: 36px 32px 28px 32px;">
+              <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #111827; line-height: 1.3;">
+                Approve new device sign-in
+              </h1>
+              <p style="margin: 0 0 20px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                Someone is attempting to sign in to your LanternED account from a new browser or device. To verify and approve this login session, enter the confirmation code below on the new device:
+              </p>
+
+              <!-- OTP Code Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
+                <tr>
+                  <td align="center" style="background-color: #fffbeb; border: 2px dashed #D97706; border-radius: 8px; padding: 20px 16px;">
+                    <div style="font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 36px; font-weight: 800; color: #B45309; letter-spacing: 8px; margin-left: 8px;">
+                      {{otp}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Alert Warning Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 14px 16px; margin-bottom: 24px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #991b1b;">
+                      🛡️ Was this not you?
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #b91c1c; line-height: 1.5;">
+                      If you did not initiate this sign-in attempt, someone may have obtained your credentials. We strongly advise that you change your password immediately.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                This approval code expires automatically in <strong>{{ttl_minutes}} minutes</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 32px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; color: #9ca3af;">
+                LanternED • Device Identity & Account Protection
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #9ca3af;">
+                Automated security notification triggered by new device detection.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

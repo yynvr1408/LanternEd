@@ -17,6 +17,7 @@ reset authorization, or any template payload — only a generic, sanitized failu
 """
 
 import logging
+from pathlib import Path
 
 import httpx
 
@@ -27,6 +28,34 @@ settings = get_settings()
 
 EMAILJS_API_URL = "https://api.emailjs.com/api/v1.0/email/send"
 RESEND_API_URL = "https://api.resend.com/emails"
+
+_TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates" / "email"
+
+_TEMPLATE_FILES = {
+    "registration": "registration_otp.html",
+    "reset": "password_reset_otp.html",
+    "login": "login_approval_otp.html",
+    "deletion": "college_deletion_otp.html",
+}
+
+
+def render_otp_html(kind: str, otp: str, ttl_minutes: int) -> str:
+    template_filename = _TEMPLATE_FILES.get(kind)
+    if template_filename:
+        template_path = _TEMPLATES_DIR / template_filename
+        if template_path.is_file():
+            try:
+                raw = template_path.read_text(encoding="utf-8")
+                return raw.replace("{{otp}}", otp).replace("{{ttl_minutes}}", str(ttl_minutes))
+            except Exception:
+                logger.exception("Failed to load email template %s", template_filename)
+
+    return (
+        f"<p>{_INTRO[kind]}</p><p style=\"font-size:28px;letter-spacing:6px;font-weight:700\">{otp}</p>"
+        f"<p>It expires in {ttl_minutes} minutes. If you did not ask for this, you can ignore this email: "
+        "nothing has changed on your account.</p>"
+    )
+
 
 _SUBJECTS = {
     "reset": "Your LanternED password reset code",
@@ -49,11 +78,7 @@ def _send_resend(*, to_email: str, kind: str, otp: str, ttl_minutes: int) -> boo
         f"{_INTRO[kind]}\n\nYour code: {otp}\n\nIt expires in {ttl_minutes} minutes. "
         "If you did not ask for this, you can ignore this email: nothing has changed on your account."
     )
-    html = (
-        f"<p>{_INTRO[kind]}</p><p style=\"font-size:28px;letter-spacing:6px;font-weight:700\">{otp}</p>"
-        f"<p>It expires in {ttl_minutes} minutes. If you did not ask for this, you can ignore this email: "
-        "nothing has changed on your account.</p>"
-    )
+    html = render_otp_html(kind, otp, ttl_minutes)
     try:
         response = httpx.post(
             RESEND_API_URL,
