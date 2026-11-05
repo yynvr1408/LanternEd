@@ -154,28 +154,30 @@ export const LoginChoicePage: React.FC = () => {
             </Link>
           </div>
 
-          {/* Native App Downloads Banner */}
-          <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-white via-[#F7FAF8] to-[#EEF6F2] border border-[#D5E5DE] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#0F5B57] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Download className="w-5 h-5" />
+          {/* Native App Downloads Card */}
+          <div className="mt-2 bg-white hover:bg-[#FAFDFB] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs transition-all duration-200 text-left">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className="w-12 h-12 shrink-0 rounded-xl bg-[#EAF6F0] text-[#0F5B57] flex items-center justify-center shadow-xs">
+                <Download className="w-6 h-6" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs sm:text-sm font-bold text-[#202B2A]">LanternEd Native Apps</h3>
-                  <span className="text-[10px] font-semibold bg-[#EAF6F0] text-[#0F5B57] px-2 py-0.5 rounded-full border border-[#CDE5DA]">
-                    Desktop & Mobile
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-[#202B2A] whitespace-nowrap">
+                    LanternEd Native Apps
+                  </h3>
+                  <span className="text-[10px] font-semibold bg-[#EAF6F0] text-[#0F5B57] px-2.5 py-0.5 rounded-full border border-[#CDE5DA] whitespace-nowrap shrink-0">
+                    Desktop &amp; Mobile
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-[#687775] mt-0.5">
-                  Offline study for Windows, macOS, Android & iOS
+                <p className="text-xs text-[#687775] mt-0.5">
+                  Offline campus study for Windows, macOS, Android &amp; iOS
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setIsDownloadOpen(true)}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-semibold transition-all cursor-pointer text-center shrink-0 shadow-xs hover:shadow-sm"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-bold transition-all cursor-pointer text-center shrink-0 shadow-xs hover:shadow-sm whitespace-nowrap"
             >
               Download App
             </button>
