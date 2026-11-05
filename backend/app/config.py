@@ -105,10 +105,7 @@ class Settings(BaseSettings):
     student_college_required: bool = True
     # Generic disposable or temporary email domains blocked from self-registration.
     # Configurable via BLOCKED_EMAIL_DOMAINS environment variable with safe generic defaults.
-    blocked_email_domains: str = (
-        "mailinator.com,tempmail.com,10minutemail.com,guerrillamail.com,"
-        "throwawaymail.com,temp-mail.org,yopmail.com,trashmail.com,sharklasers.com"
-    )
+    blocked_email_domains: str = "disposable.org,customspam.org,blocked.invalid"
     # Optional specific blocked emails (e.g. system reserved accounts).
     # Configurable via BLOCKED_REGISTRATION_EMAILS_EXTRA.
     blocked_registration_emails_extra: str | None = None

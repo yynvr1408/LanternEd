@@ -9,7 +9,7 @@ def test_releases_manifest_and_update_check():
     r = client.get("/api/v1/releases/manifest")
     assert r.status_code == 200
     data = r.json()
-    assert data["version"] == "0.1.0"
+    assert data["version"] == "0.1.1"
     assert "windows" in data["platforms"]
     assert "macos" in data["platforms"]
     assert "android" in data["platforms"]
@@ -19,10 +19,10 @@ def test_releases_manifest_and_update_check():
     r_win = client.get("/api/v1/releases/latest?platform=windows")
     assert r_win.status_code == 200
     assert r_win.json()["platform"] == "windows"
-    assert r_win.json()["details"]["fileName"] == "LanternEd-Setup-0.1.0.exe"
+    assert r_win.json()["details"]["fileName"] == "LanternEd-Setup-0.1.1.exe"
 
     # 3. Check for update: already up to date
-    r_check_curr = client.get("/api/v1/releases/check-update?current_version=0.1.0&platform=windows")
+    r_check_curr = client.get("/api/v1/releases/check-update?current_version=0.1.1&platform=windows")
     assert r_check_curr.status_code == 200
     assert r_check_curr.json()["has_update"] is False
 
@@ -35,5 +35,5 @@ def test_releases_manifest_and_update_check():
     # 5. Download binary
     r_dl = client.get("/api/v1/releases/download/windows")
     assert r_dl.status_code == 200
-    assert "LanternEd-Setup-0.1.0.exe" in r_dl.headers.get("content-disposition", "")
+    assert "LanternEd-Setup-0.1.1.exe" in r_dl.headers.get("content-disposition", "")
     assert len(r_dl.content) > 0

@@ -130,10 +130,15 @@ def test_request_changes_regenerates_through_a_new_job(teacher, live_class, db_s
 
 
 def test_stt_not_configured_fails_honestly_without_a_fake_summary(
-    mock_recording_pipeline, fake_storage, teacher, published_course, db_session
+    mock_recording_pipeline, fake_storage, teacher, published_course, db_session, monkeypatch
 ):
     from app.db.models.summary import BackgroundJob, LectureSummary
     from app.integrations import speech_to_text
+    from app.services import media_processing
+
+    monkeypatch.setattr(media_processing, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(media_processing, "probe_duration_seconds", lambda path: 120.0)
+    monkeypatch.setattr(media_processing, "extract_speech_audio", lambda src, dst: (dst.write_bytes(b"mock-audio"), dst)[1])
 
     speech_to_text.settings.speech_to_text_api_key = None
     tclient, _ = teacher
@@ -165,6 +170,11 @@ def test_recording_transcription_with_mocked_provider_links_source_and_recording
 ):
     from app.db.models.summary import LectureSummary, LectureTranscript
     from app.integrations import speech_to_text
+    from app.services import media_processing
+
+    monkeypatch.setattr(media_processing, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(media_processing, "probe_duration_seconds", lambda path: 120.0)
+    monkeypatch.setattr(media_processing, "extract_speech_audio", lambda src, dst: (dst.write_bytes(b"mock-audio"), dst)[1])
 
     monkeypatch.setattr(speech_to_text.settings, "speech_to_text_api_key", "test-key")  # a provider key must exist
     monkeypatch.setattr(speech_to_text, "transcribe", lambda path: TRANSCRIPT)
@@ -328,6 +338,11 @@ def test_summary_waits_for_every_chunk_retries_and_is_only_published_when_comple
     from app import worker
     from app.db.models.summary import BackgroundJob, LectureSummary, LectureTranscript
     from app.integrations import speech_to_text
+    from app.services import media_processing
+
+    monkeypatch.setattr(media_processing, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(media_processing, "probe_duration_seconds", lambda path: 120.0)
+    monkeypatch.setattr(media_processing, "extract_speech_audio", lambda src, dst: (dst.write_bytes(b"mock-audio"), dst)[1])
     from app.services import transcription_service
 
     monkeypatch.setattr(speech_to_text.settings, "speech_to_text_api_key", "test-key")
@@ -384,6 +399,11 @@ def test_a_recording_that_keeps_failing_ends_as_failed_never_as_a_finished_summa
     from app import worker
     from app.db.models.summary import BackgroundJob, LectureSummary
     from app.integrations import speech_to_text
+    from app.services import media_processing
+
+    monkeypatch.setattr(media_processing, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(media_processing, "probe_duration_seconds", lambda path: 120.0)
+    monkeypatch.setattr(media_processing, "extract_speech_audio", lambda src, dst: (dst.write_bytes(b"mock-audio"), dst)[1])
     from app.services import transcription_service
 
     monkeypatch.setattr(speech_to_text.settings, "speech_to_text_api_key", "test-key")
@@ -415,6 +435,11 @@ def test_corrupt_recording_media_is_a_permanent_failure_with_a_clear_code(
 ):
     from app.db.models.summary import BackgroundJob
     from app.integrations import speech_to_text
+    from app.services import media_processing
+
+    monkeypatch.setattr(media_processing, "find_ffmpeg", lambda: "ffmpeg")
+    monkeypatch.setattr(media_processing, "probe_duration_seconds", lambda path: 120.0)
+    monkeypatch.setattr(media_processing, "extract_speech_audio", lambda src, dst: (dst.write_bytes(b"mock-audio"), dst)[1])
 
     monkeypatch.setattr(speech_to_text.settings, "speech_to_text_api_key", "test-key")
     fake_storage.media_file = None  # fetch_to_path now writes bytes that are not media

@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -26,14 +27,19 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Single Alembic head
         run: |
+          set -eo pipefail
           heads=$(alembic heads | wc -l)
           test "$heads" -eq 1 || (echo "Multiple Alembic heads: merge them" && alembic heads && exit 1)
       - name: Run Backend Tests
+        env:
+          APP_ENV: testing
         run: |
+          set -eo pipefail
           pytest -v --tb=short 2>&1 | tee test_results.log
       - name: Report Failures to Step Summary
         if: failure()
         run: |
+          set -eo pipefail
           echo "### Pytest Failure Details" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           grep -E "(FAILED|ERROR)" -A 15 test_results.log | head -n 100 >> $GITHUB_STEP_SUMMARY || true
@@ -53,7 +59,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npm test
+      - run: npm test -- --run
       - run: npm run build
 
   dependency-audit:

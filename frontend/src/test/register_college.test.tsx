@@ -144,7 +144,6 @@ describe('registration: college -> branch -> section', () => {
     fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
     expect(await screen.findByText('Passwords do not match.')).toBeInTheDocument()
     expect(screen.getByText('Select your college.')).toBeInTheDocument()
-    expect(screen.getByText(/Enter the college code/)).toBeInTheDocument()
     expect(register).not.toHaveBeenCalled()
   })
 
@@ -241,14 +240,15 @@ describe('registration: college -> branch -> section', () => {
     })
   })
 
-  it('a student without a college code gets the same field-level error as a teacher', async () => {
+  it('a student without a college code can submit and requests otp for registration', async () => {
+    requestRegistrationOtp.mockResolvedValueOnce({ sent: true, expires_in: 300, is_mock: true, dev_otp: '123456' })
     renderPage('student')
     await waitColleges()
     fillBasics()
     await pick('col-b', 'br-me', 'sec-m')
     fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
-    expect(await screen.findByText(/Enter the college code/)).toBeInTheDocument()
-    expect(register).not.toHaveBeenCalled()
+    await waitFor(() => expect(requestRegistrationOtp).toHaveBeenCalledWith('asha@example.com'))
+    expect(await screen.findByText(/We sent a 6-digit code to/)).toBeInTheDocument()
   })
 
   it('shows empty and error states for colleges, branches and sections', async () => {

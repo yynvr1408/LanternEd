@@ -90,7 +90,7 @@ def _send_resend(*, to_email: str, kind: str, otp: str, ttl_minutes: int) -> boo
         logger.exception("Could not reach Resend.")
         return False
     if response.status_code >= 400:
-        logger.error("Resend rejected a send (status=%s): %s", response.status_code, response.text)
+        logger.error("Resend rejected a send (status=%s)", response.status_code)
         return False
     return True
 

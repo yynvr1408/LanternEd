@@ -786,7 +786,7 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
     allowed_domains = [d.strip().lower() for d in settings.get("allowed_email_domains", []) if d.strip()]
 
     # Fetch sections and branches for context
-    user_ids = [u.id for u in pending_users]
+    user_ids = [u["id"] if isinstance(u, dict) else u.id for u in pending_users]
     section_map = {}
     branch_map = {}
     if user_ids:
@@ -813,7 +813,7 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
                 section_map[row.user_id] = "All Sections"
 
     # Roster check
-    emails = [u.email.lower() for u in pending_users]
+    emails = [(u["email"] if isinstance(u, dict) else u.email).lower() for u in pending_users]
     roster_emails = set()
     if emails:
         roster_stmt = select(CollegeRosterEntry.email).where(CollegeRosterEntry.college_id == college_id, CollegeRosterEntry.email.in_(emails))
@@ -821,7 +821,10 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
 
     screened = []
     for user in pending_users:
-        email = user.email.lower().strip()
+        u_id = user["id"] if isinstance(user, dict) else user.id
+        u_name = user["full_name"] if isinstance(user, dict) else user.full_name
+        email = (user["email"] if isinstance(user, dict) else user.email).lower().strip()
+        role = user["role"] if isinstance(user, dict) else user.role
         domain = email.split("@")[-1] if "@" in email else ""
         reasons = []
         score = 70
@@ -841,8 +844,8 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
                 score += 10
                 reasons.append(f"Verified consumer email service provider ({domain}) with valid delivery profile.")
 
-            parts = [p for p in user.full_name.split() if len(p) >= 2]
-            if len(parts) >= 2 and not any(w in user.full_name.lower() for w in ["test", "asdf", "demo", "fake", "none"]):
+            parts = [p for p in u_name.split() if len(p) >= 2]
+            if len(parts) >= 2 and not any(w in u_name.lower() for w in ["test", "asdf", "demo", "fake", "none"]):
                 score += 10
                 reasons.append("Full student/teacher name complies with verified multi-part identity standards.")
             else:
@@ -853,8 +856,8 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
                 score += 20
                 reasons.append("Exact match confirmed against institution-uploaded pre-approved roster.")
 
-            sec_name = section_map.get(user.id)
-            br_name = branch_map.get(user.id)
+            sec_name = user.get("section_name") if isinstance(user, dict) else section_map.get(u_id)
+            br_name = user.get("branch_name") if isinstance(user, dict) else branch_map.get(u_id)
             if sec_name or br_name:
                 reasons.append(f"Validly mapped to department '{br_name or 'General'}' and cohort '{sec_name or 'Active'}'.")
             else:
@@ -873,12 +876,12 @@ def ai_screen_registrations(db: Session, college_id: str) -> list[dict]:
             recommendation = "reject"
 
         screened.append({
-            "user_id": user.id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "role": user.role,
-            "branch_name": branch_map.get(user.id),
-            "section_name": section_map.get(user.id),
+            "user_id": u_id,
+            "full_name": u_name,
+            "email": email,
+            "role": role,
+            "branch_name": br_name,
+            "section_name": sec_name,
             "ai_score": final_score,
             "ai_recommendation": recommendation,
             "ai_risk_level": risk_level,

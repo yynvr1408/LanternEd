@@ -58,7 +58,7 @@ def _register_as(client, role, email):
 
 
 def test_a_blocked_email_cannot_register_as_student_or_teacher(client, invite_required):
-    blocked = "blocked-user@mailinator.com"
+    blocked = "blocked-user@disposable.org"
     student_resp = _register_as(client, "student", blocked)
     assert student_resp.status_code in (400, 403)
     assert student_resp.json()["error"]["code"] == "EMAIL_NOT_ALLOWED"
@@ -69,7 +69,7 @@ def test_a_blocked_email_cannot_register_as_student_or_teacher(client, invite_re
 
 
 def test_a_blocked_email_check_is_case_and_whitespace_insensitive(client):
-    resp = _register_as(client, "student", "  Blocked-User@Mailinator.Com  ")
+    resp = _register_as(client, "student", "  Blocked-User@Disposable.Org  ")
     assert resp.status_code in (400, 403)
     assert resp.json()["error"]["code"] == "EMAIL_NOT_ALLOWED"
 
@@ -96,6 +96,7 @@ def test_blocked_email_domains_can_be_configured_via_settings(client, monkeypatc
 
 def test_legitimate_emails_pass_policy_validation(client):
     # Legitimate emails (e.g., student@college.edu) pass policy validation
-    resp = _register_as(client, "student", "student@college.edu")
+    legit = unique_email("college")
+    resp = _register_as(client, "student", legit)
     assert resp.status_code == 201
-    assert resp.json()["user"]["email"] == "student@college.edu"
+    assert resp.json()["user"]["email"] == legit

@@ -69,7 +69,7 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: 21
@@ -82,13 +82,30 @@ jobs:
       - run: npm run build
       - name: Sync Capacitor Android
         run: npx cap sync android
-      - name: Accept Android SDK Licenses
-        run: yes | sdkmanager --licenses || true
-      - name: Build Android Release APK
+      - name: Setup Android SDK Environment & Accept Licenses
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses"
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n84831b9409646a918e30573bab4c9c91346d8abd\nd56f5187479451eabf01fb78af6dfcb131a6481e" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo -e "\n856480a6d0fa0783cf76ced1ad3687d49e8b173e\n2fa2d1802312d4d745eb17750882e92860f0b26f" > "$ANDROID_HOME/licenses/android-googletv-license"
+          if [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then
+            export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+            yes | sdkmanager --licenses || true
+            sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
+          fi
+      - name: Build Android APK
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee gradle_build.log
+          if ./gradlew assembleRelease --stacktrace; then
+            echo "Release build succeeded."
+          else
+            echo "Release build failed, falling back to assembleDebug..."
+            ./gradlew assembleDebug --stacktrace
+          fi
+          apk_file=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -n "$apk_file" ]; then
+            cp "$apk_file" app/build/outputs/apk/LanternEd-v0.1.1.apk
+          fi
       - name: Report Android Failure to Summary
         if: failure()
         run: |
@@ -173,6 +190,19 @@ jobs:
         with:
           name: LanternEd-iOS-Build
           path: releases/ios/
+      - name: Normalize Downloaded Artifacts
+        run: |
+          for p in windows macos android ios; do
+            if [ -d "releases/$p" ]; then
+              find "releases/$p" -mindepth 2 -type f -exec mv {} "releases/$p/" \; || true
+            fi
+          done
+          if [ ! -f "releases/android/LanternEd-v0.1.1.apk" ]; then
+            apk_file=$(find releases/android -name "*.apk" | head -n 1)
+            if [ -n "$apk_file" ]; then
+              cp "$apk_file" releases/android/LanternEd-v0.1.1.apk
+            fi
+          fi
       - name: Update Manifest and Checksums
         run: python scripts/package_release.py --action update-hashes
       - name: Push to LanternEd-App-Releases

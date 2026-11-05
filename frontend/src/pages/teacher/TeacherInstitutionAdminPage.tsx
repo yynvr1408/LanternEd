@@ -570,6 +570,13 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
   }
 
   if (colleges === null) {
+    if (error) {
+      return (
+        <PageContainer maxWidth="2xl">
+          <ErrorState message={error} onRetry={loadColleges} />
+        </PageContainer>
+      )
+    }
     return (
       <PageContainer maxWidth="2xl">
         <LoadingState message="Loading your institution console..." />

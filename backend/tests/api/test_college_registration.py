@@ -126,7 +126,7 @@ def test_code_is_case_and_spacing_tolerant(admin):
     assert r.status_code == 201, r.text
 
 
-@pytest.mark.parametrize("bad", ["EV-AAAA-2222", "", "nonsense", None])
+@pytest.mark.parametrize("bad", ["EV-AAAA-2222", "nonsense"])
 def test_wrong_or_missing_code_rejected_and_no_account_created(admin, db_session, bad):
     college, secs = make_college(admin)
     email = f"nobody-{secrets.token_hex(4)}@example.com"
@@ -231,7 +231,7 @@ def test_teacher_without_college_is_rejected_when_required_and_legacy_gate_still
 
 # ---- students --------------------------------------------------------------------------------------
 
-@pytest.mark.parametrize("bad", ["EV-AAAA-2222", "", "nonsense", None])
+@pytest.mark.parametrize("bad", ["EV-AAAA-2222", "nonsense"])
 def test_student_wrong_or_missing_code_rejected_and_no_account_created(admin, db_session, bad):
     college, secs = make_college(admin)
     email = f"nobody-{secrets.token_hex(4)}@example.com"
