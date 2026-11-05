@@ -95,7 +95,7 @@ def test_workflow_task_elevenlabs_voiceover_and_save(db_session):
     from app.db.models.user import User
     from app.db.models.enums import UserRole
 
-    teacher_user = User(id="tch-123", email="t123@example.com", full_name="Teacher 123", role=UserRole.teacher, hashed_password="pw")
+    teacher_user = User(id="tch-123", email="t123@example.com", full_name="Teacher 123", role=UserRole.teacher, password_hash="pw")
     course = Course(id="crs-123", teacher_id="tch-123", title="Course 123")
     cls_row = Class(id="cls-123", course_id="crs-123", teacher_id="tch-123", title="Class 123", scheduled_start=datetime.now(timezone.utc))
     db_session.add_all([teacher_user, course, cls_row])
