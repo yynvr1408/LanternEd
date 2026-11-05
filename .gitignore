@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env / secrets
+.env
+.env.local
+
+# Local DB / media
+*.sqlite3
+*.db
+backend/media/
+backend/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code: personal/local overrides, never shared
+.claude/
+.claude/settings.local.json
+
+# Scratch / non-repo artifacts (slide deck, template working files)
+*.pptx
+template_src/
+qa1/
+qa2/
+
+# Test outputs
+playwright-report/
+test-results/
+
+
+# Load-test logins (shared password)
+ops/loadtest/users.csv
+loadtest-users.csv
+
+*.whl

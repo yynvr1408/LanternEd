@@ -1,0 +1,124 @@
+services:
+  - type: web
+    name: eduvillage-api
+    runtime: docker
+    # No rootDir: dockerfilePath/dockerContext are both given relative to the repo root instead,
+    # since Render resolves dockerContext relative to rootDir (when set) but dockerfilePath
+    # relative to the repo root regardless — mixing the two caused a bad "backend/backend" path.
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    healthCheckPath: /health
+    # No preDeployCommand: Render's free tier doesn't support it. Migrations instead run as part
+    # of the container's own startup command (see backend/Dockerfile's CMD) — idempotent, so this
+    # is safe to run on every boot, including every free-tier cold start after spin-down.
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: API_V1_PREFIX
+        value: /api/v1
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: COURSE_CATALOG_SCOPE
+        value: college # several colleges share this API: a published course is open only to its own college
+      - key: SESSION_COOKIE_SAMESITE
+        value: none
+      - key: FRONTEND_ORIGIN
+        sync: false # set to the deployed frontend URL, e.g. https://eduvillage.vercel.app
+      # Per-IP rate limits key on the connecting address. Behind Render's proxy that is the proxy, so every user
+      # would share one bucket until uvicorn is told to trust X-Forwarded-For. Set this in the dashboard (e.g. "*",
+      # since Render's edge is the only way in) after confirming from two networks that the client IPs differ.
+      - key: FORWARDED_ALLOW_IPS
+        sync: false
+      - key: DATABASE_URL
+        sync: false # Neon connection string (free 1GB tier), must include ?sslmode=require
+      - key: TEACHER_INVITE_CODE
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false # set in the Render dashboard, never in this file
+      - key: ADMIN_PASSWORD
+        sync: false # set in the Render dashboard, never in this file
+      - key: STORAGE_BACKEND
+        value: s3
+      - key: OBJECT_STORAGE_ENDPOINT
+        sync: false # e.g. https://<accountid>.r2.cloudflarestorage.com
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_ACCESS_KEY
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_KEY
+        sync: false
+      - key: OBJECT_STORAGE_REGION
+        value: auto
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: LLM_API_KEY
+        sync: false # a Groq API key (gsk_...) — real, verified working against openai/gpt-oss-120b
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: SPEECH_TO_TEXT_API_KEY
+        sync: false # same Groq key as LLM_API_KEY — without the two vars below it silently falls
+        # back to real OpenAI's endpoint/model defaults, which rejects a Groq key outright
+      - key: SPEECH_TO_TEXT_MODEL
+        value: whisper-large-v3-turbo
+      - key: SPEECH_TO_TEXT_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: EMAILJS_SERVICE_ID
+        sync: false
+      - key: EMAILJS_TEMPLATE_ID
+        sync: false # password-reset OTP wording: "{{otp}} is your LanternEd password reset code"
+      - key: EMAILJS_LOGIN_TEMPLATE_ID
+        sync: false # optional: a separate template for the new-device-login-approval OTP (falls
+        # back to EMAILJS_TEMPLATE_ID if left unset)
+      - key: EMAILJS_REGISTRATION_TEMPLATE_ID
+        sync: false # optional: a separate template ("Verify Your LanternEd Email Address") for
+        # the registration email-verification OTP (falls back to EMAILJS_TEMPLATE_ID if unset)
+      - key: EMAILJS_REGISTRATION_SERVICE_ID
+        sync: false # optional: all three REGISTRATION_* vars together route registration OTP
+        # through a wholly separate EmailJS account (free-tier template-count workaround)
+      - key: EMAILJS_REGISTRATION_PUBLIC_KEY
+        sync: false
+      - key: EMAILJS_REGISTRATION_PRIVATE_KEY
+        sync: false
+      - key: EMAILJS_PUBLIC_KEY
+        sync: false
+      - key: EMAILJS_PRIVATE_KEY
+        sync: false # EmailJS dashboard: Account -> Security -> "Private Key"
+      # Transactional email through Resend (recommended for launch; takes precedence over EmailJS when both are set)
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false # an address on a domain verified in Resend, e.g. LanternEd <no-reply@yourdomain.in>
+      - key: SENTRY_DSN
+        sync: false # error tracking; leave unset to disable
+      # Optional: online payments (Razorpay), WhatsApp alerts, recording retention. See docs/OPERATIONS.md.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: EMBEDDED_WORKER
+        value: "true" # runs the worker pass inside the API (WhatsApp, retention, job recovery) - see the note at the bottom
+      - key: RECORDING_RETENTION_DAYS
+        sync: false # e.g. 180: recording media older than this is deleted by the worker; empty = keep
+
+# Background worker: EMBEDDED_WORKER=true runs the worker pass inside the API, so no second service is required.
+# On Render's free web service that only happens while the service is awake (it sleeps after ~15 minutes idle); a
+# paid, always-on instance (or a separate Background Worker) makes it continuous. Without any worker these do NOTHING:
+#   - delivering WhatsApp messages (they queue but are never sent)
+#   - enforcing RECORDING_RETENTION_DAYS and pruning old notifications / rate-limit rows
+#   - recovering a job stuck mid-"processing" after a crash, and retrying transient failures
+# To add it, create a second Render service of type "Background Worker" from the same repo/Dockerfile with the start
+# command `python -m app.worker` and the same environment variables as the API (a paid plan, from about $7/month).
+# Until then you can run `python -m app.worker --once` from a one-off Shell.

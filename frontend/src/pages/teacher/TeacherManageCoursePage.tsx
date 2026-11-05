@@ -1,0 +1,615 @@
+import React, { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Plus,
+  BookOpen,
+  FileText,
+  Users,
+  CheckCircle2,
+  FolderOpen,
+  AlertCircle,
+  Pencil,
+  Trash2,
+  Archive,
+  FileUp,
+  RotateCcw,
+  Download,
+} from 'lucide-react'
+import { courseService } from '../../services/courseService'
+import { reportsApi } from '../../services/reportsApi'
+import type { Course, CourseEnrollment, Lesson } from '../../types'
+import { PageContainer } from '../../components/layout/PageContainer'
+import { SyllabusImportDialog } from '../../components/course/SyllabusImportDialog'
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Badge,
+  Button,
+  Dialog,
+  FormField,
+  Input,
+  Textarea,
+  LoadingState,
+  ErrorState,
+} from '../../components/ui'
+
+export const TeacherManageCoursePage: React.FC = () => {
+  const { courseId } = useParams<{ courseId: string }>()
+  const navigate = useNavigate()
+
+  const [course, setCourse] = useState<Course | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const [reportError, setReportError] = useState<string | null>(null)
+  const [reportBusy, setReportBusy] = useState<'attendance' | 'gradebook' | null>(null)
+  const downloadReport = async (kind: 'attendance' | 'gradebook') => {
+    if (!courseId) return
+    setReportBusy(kind)
+    setReportError(null)
+    try {
+      await (kind === 'attendance' ? reportsApi.downloadAttendanceCsv(courseId) : reportsApi.downloadGradebookCsv(courseId))
+    } catch (err: any) {
+      setReportError(err.message || 'Could not download the report.')
+    } finally {
+      setReportBusy(null)
+    }
+  }
+
+  // Roster (enrolled students)
+  const [roster, setRoster] = useState<CourseEnrollment[]>([])
+  const [rosterStatus, setRosterStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+
+  // Add Lesson Modal state
+  const [isAddLessonOpen, setIsAddLessonOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [importNotice, setImportNotice] = useState<string | null>(null)
+  const [lessonTitle, setLessonTitle] = useState('')
+  const [lessonDescription, setLessonDescription] = useState('')
+  const [lessonContent, setLessonContent] = useState('')
+  const [isSavingLesson, setIsSavingLesson] = useState(false)
+  const [lessonError, setLessonError] = useState<string | null>(null)
+
+  // Edit Course Modal state
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  // Archive / restore state
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false)
+  const [isArchiving, setIsArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+
+  // Delete confirmation state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const loadData = async () => {
+    if (!courseId) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const c = await courseService.getCourseById(courseId)
+      setCourse(c)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load course')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadRoster = async () => {
+    if (!courseId) return
+    setRosterStatus('loading')
+    try {
+      setRoster(await courseService.getEnrollments(courseId))
+      setRosterStatus('ready')
+    } catch {
+      setRosterStatus('error')
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+    loadRoster()
+  }, [courseId])
+
+  const handleAddLesson = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!lessonTitle.trim()) {
+      setLessonError('Lesson title is required.')
+      return
+    }
+
+    if (!courseId) return
+    setIsSavingLesson(true)
+    setLessonError(null)
+
+    try {
+      await courseService.createLesson(courseId, {
+        title: lessonTitle,
+        description: lessonDescription,
+        order_index: (course?.lessons?.length || 0) + 1,
+        content: lessonContent,
+        offline_ready: true,
+      })
+      setIsAddLessonOpen(false)
+      setLessonTitle('')
+      setLessonDescription('')
+      setLessonContent('')
+      loadData()
+    } catch (err: any) {
+      setLessonError(err.message || 'Failed to save lesson.')
+    } finally {
+      setIsSavingLesson(false)
+    }
+  }
+
+  const openEdit = () => {
+    if (!course) return
+    setEditTitle(course.title)
+    setEditDescription(course.description || '')
+    setEditError(null)
+    setIsEditOpen(true)
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!courseId) return
+    if (!editTitle.trim()) {
+      setEditError('Course title is required.')
+      return
+    }
+    setIsSavingEdit(true)
+    setEditError(null)
+    try {
+      await courseService.updateCourse(courseId, { title: editTitle.trim(), description: editDescription.trim() })
+      setIsEditOpen(false)
+      loadData()
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to save changes.')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
+  const handleArchive = async () => {
+    if (!courseId) return
+    setIsArchiving(true)
+    setArchiveError(null)
+    try {
+      await courseService.archiveCourse(courseId)
+      setIsArchiveConfirmOpen(false)
+      await loadData()
+    } catch (err: any) {
+      setArchiveError(err.message || 'Failed to archive this course.')
+    } finally {
+      setIsArchiving(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!courseId) return
+    setIsArchiving(true)
+    setArchiveError(null)
+    try {
+      await courseService.restoreCourse(courseId)
+      await loadData()
+    } catch (err: any) {
+      setArchiveError(err.message || 'Failed to restore this course.')
+    } finally {
+      setIsArchiving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!courseId) return
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      // The backend only ever honors force=true once a course is already archived — on an
+      // active course it's ignored and the normal smart archive-or-delete logic still applies.
+      // Always passing it is safe: the server, not this cached client state, decides.
+      const result = await courseService.deleteCourse(courseId, true)
+      navigate('/teacher/courses', {
+        state: {
+          flashMessage: result.deleted
+            ? 'Course permanently deleted.'
+            : 'This course already has enrollments, lessons or other activity, so it was archived instead of deleted — nothing was lost.',
+        },
+      })
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete this course.')
+      setIsDeleting(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <LoadingState message="Loading course curriculum and enrolled students..." />
+      </PageContainer>
+    )
+  }
+
+  if (error || !course) {
+    return (
+      <PageContainer>
+        <div className="mb-4">
+          <Link
+            to="/teacher/courses"
+            className="text-xs font-semibold text-[#687775] hover:text-[#0F5B57] inline-flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Courses
+          </Link>
+        </div>
+        <ErrorState title="Course Not Found" message={error || 'Unable to retrieve course.'} />
+      </PageContainer>
+    )
+  }
+
+  return (
+    <PageContainer>
+      <div className="mb-4">
+        <Link
+          to="/teacher/courses"
+          className="text-xs font-semibold text-[#687775] hover:text-[#0F5B57] inline-flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Courses
+        </Link>
+      </div>
+
+      {/* Header Info */}
+      <div className="p-6 bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant="outline" className="font-mono">
+              {course.code}
+            </Badge>
+            <Badge variant="secondary" size="sm">
+              {course.lessons?.length || 0} Lessons
+            </Badge>
+            {course.status === 'archived' && (
+              <Badge variant="warning" size="sm">
+                Archived
+              </Badge>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">
+            {course.title}
+          </h1>
+          <p className="text-xs text-[#687775] mt-1 max-w-2xl">{course.description}</p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button size="sm" variant="outline" onClick={openEdit} icon={<Pencil className="w-3.5 h-3.5" />}>
+            Edit Course
+          </Button>
+          {course.status === 'archived' ? (
+            <>
+              <Button size="sm" variant="outline" onClick={handleRestore} isLoading={isArchiving} icon={<RotateCcw className="w-3.5 h-3.5" />}>
+                Restore Course
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setDeleteError(null)
+                  setIsDeleteConfirmOpen(true)
+                }}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Permanently Delete
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setArchiveError(null)
+                setIsArchiveConfirmOpen(true)
+              }}
+              icon={<Archive className="w-3.5 h-3.5" />}
+            >
+              Archive Course
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => setIsImportOpen(true)} icon={<FileUp className="w-3.5 h-3.5" />}>
+            Import Syllabus
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => setIsAddLessonOpen(true)}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            Add New Lesson
+          </Button>
+        </div>
+      </div>
+
+      {/* Lessons List */}
+      <section className="mb-8">
+        <h2 className="text-base font-bold text-[#202B2A] mb-3 flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-[#0F5B57]" /> Curriculum Lessons
+        </h2>
+
+        {(!course.lessons || course.lessons.length === 0) ? (
+          <div className="p-8 border border-dashed border-[#CBD7D1] bg-[#F8FAF7] rounded-xl text-center text-xs text-[#687775]">
+            No lessons created yet. Click 'Add New Lesson' to author curriculum notes.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {course.lessons.map((lesson, idx) => (
+              <div
+                key={lesson.id}
+                className="p-4 bg-[#FFFFFF] border border-[#E1E8E4] rounded-xl flex items-center justify-between gap-4 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-[#687775] font-semibold">{idx + 1}.</span>
+                    <span className="font-bold text-[#202B2A] text-sm">{lesson.title}</span>
+                    <Badge variant="secondary" size="sm" className="text-xs">
+                      Offline Ready
+                    </Badge>
+                  </div>
+                  {lesson.description && (
+                    <p className="text-[#687775] line-clamp-1">{lesson.description}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-[#687775]">
+                    {lesson.content ? `${lesson.content.length} chars` : 'Empty'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Course Roster */}
+      <section className="mb-8">
+        <h2 className="text-base font-bold text-[#202B2A] mb-3 flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#0F5B57]" /> Enrolled Students
+          {rosterStatus === 'ready' && (
+            <Badge variant="secondary" size="sm">
+              {roster.length}
+            </Badge>
+          )}
+        </h2>
+
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <Button size="sm" variant="outline" isLoading={reportBusy === 'attendance'} onClick={() => downloadReport('attendance')} icon={<Download className="w-3.5 h-3.5" />}>
+            Attendance (CSV)
+          </Button>
+          <Button size="sm" variant="outline" isLoading={reportBusy === 'gradebook'} onClick={() => downloadReport('gradebook')} icon={<Download className="w-3.5 h-3.5" />}>
+            Gradebook (CSV)
+          </Button>
+          {reportError && <span role="alert" className="text-xs text-[#B42318]">{reportError}</span>}
+        </div>
+
+        {rosterStatus === 'loading' ? (
+          <LoadingState message="Loading the course roster..." />
+        ) : rosterStatus === 'error' ? (
+          <ErrorState message="Could not load the course roster." onRetry={loadRoster} />
+        ) : roster.length === 0 ? (
+          <div className="p-8 border border-dashed border-[#CBD7D1] bg-[#F8FAF7] rounded-xl text-center text-xs text-[#687775]">
+            No students enrolled yet. Once students enroll, they'll appear here.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {roster.map((e) => (
+              <div
+                key={e.id}
+                className="p-4 bg-[#FFFFFF] border border-[#E1E8E4] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-[#202B2A] truncate">{e.student_name || 'Unknown student'}</span>
+                    <Badge variant={e.status === 'active' ? 'success' : 'default'} size="sm">
+                      {e.status === 'active' ? 'Enrolled' : 'Removed'}
+                    </Badge>
+                  </div>
+                  <p className="text-[#687775] truncate">{e.student_email}</p>
+                </div>
+                <div className="flex items-center gap-2 text-[#687775] shrink-0">
+                  {e.branch && (
+                    <Badge variant="outline" size="sm">
+                      {e.branch.name}
+                      {e.section ? ` · ${e.section.name}` : ''}
+                    </Badge>
+                  )}
+                  <span>Enrolled {new Date(e.enrolled_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Add Lesson Dialog */}
+      <Dialog
+        isOpen={isAddLessonOpen}
+        onClose={() => setIsAddLessonOpen(false)}
+        title="Author Lesson"
+        description="Add a lesson with rich text notes, formulas, and offline content."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleAddLesson} className="flex flex-col gap-4 text-xs">
+          {lessonError && (
+            <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#CBD7D1] rounded-lg font-medium">
+              {lessonError}
+            </div>
+          )}
+
+          <FormField label="Lesson Title" htmlFor="lessonTitle" required>
+            <Input
+              id="lessonTitle"
+              value={lessonTitle}
+              onChange={(e) => setLessonTitle(e.target.value)}
+              placeholder="e.g. 1. Photovoltaic Cell Physics & Irradiance Variation"
+              required
+            />
+          </FormField>
+
+          <FormField label="Short Summary / Subtitle" htmlFor="lessonDesc">
+            <Input
+              id="lessonDesc"
+              value={lessonDescription}
+              onChange={(e) => setLessonDescription(e.target.value)}
+              placeholder="Core takeaways..."
+            />
+          </FormField>
+
+          <FormField label="Lesson Body (Markdown / LaTeX Supported)" htmlFor="lessonContent">
+            <Textarea
+              id="lessonContent"
+              value={lessonContent}
+              onChange={(e) => setLessonContent(e.target.value)}
+              rows={8}
+              placeholder="# Lesson Topic&#10;&#10;Key principles, diagrams, and equations..."
+            />
+          </FormField>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E1E8E4]">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddLessonOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" variant="primary" isLoading={isSavingLesson}>
+              Save Lesson
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Edit Course Dialog */}
+      <Dialog
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        title="Edit Course"
+        description="Changes are saved to this course's record; enrollments and lesson history are untouched."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleSaveEdit} className="flex flex-col gap-4 text-xs">
+          {editError && (
+            <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#CBD7D1] rounded-lg font-medium">
+              {editError}
+            </div>
+          )}
+
+          <FormField label="Course Title" htmlFor="editTitle" required>
+            <Input id="editTitle" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
+          </FormField>
+
+          <FormField label="Description" htmlFor="editDescription">
+            <Textarea
+              id="editDescription"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={4}
+            />
+          </FormField>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E1E8E4]">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" variant="primary" isLoading={isSavingEdit}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {importNotice && (
+        <div className="mb-4 p-3 bg-[#E5F5EB] text-[#247A4D] border border-[#247A4D]/30 rounded-lg text-xs font-medium" role="status">
+          {importNotice}
+        </div>
+      )}
+
+      {archiveError && course.status === 'archived' && (
+        <div className="mb-4 p-3 bg-[#FDE8E7] text-[#B42318] border border-[#CBD7D1] rounded-lg text-xs font-medium" role="alert">
+          {archiveError}
+        </div>
+      )}
+
+      <SyllabusImportDialog
+        courseId={courseId ?? ''}
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImported={(count) => {
+          setIsImportOpen(false)
+          setImportNotice(`${count} lesson${count === 1 ? '' : 's'} added to the curriculum.`)
+          void loadData()
+        }}
+      />
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog
+        isOpen={isArchiveConfirmOpen}
+        onClose={() => !isArchiving && setIsArchiveConfirmOpen(false)}
+        title="Archive This Course?"
+        description="The course leaves the catalogue and new self-enrolment. Nothing is deleted: lessons, students, assignments and recordings stay, and you can restore it at any time. You can permanently delete it afterwards if you want."
+        maxWidth="md"
+      >
+        <div className="flex flex-col gap-4 text-xs">
+          {archiveError && (
+            <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#CBD7D1] rounded-lg font-medium" role="alert">
+              {archiveError}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E1E8E4]">
+            <Button type="button" variant="ghost" size="sm" disabled={isArchiving} onClick={() => setIsArchiveConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" variant="primary" isLoading={isArchiving} onClick={handleArchive}>
+              Archive Course
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => !isDeleting && setIsDeleteConfirmOpen(false)}
+        title={course.status === 'archived' ? 'Permanently Delete This Course?' : 'Delete This Course?'}
+        description={
+          course.status === 'archived'
+            ? 'This course is already archived. Deleting it now is final — it will permanently remove the course and any lessons, enrollments, assignments or class history still attached to it. This cannot be undone.'
+            : 'If this course has no students, lessons or other activity yet, it will be permanently deleted. If it already has enrollments, lessons, assignments or classes, it will be archived instead — removed from the catalog and new self-enrollment, but nothing of value is ever destroyed.'
+        }
+        maxWidth="md"
+      >
+        <div className="flex flex-col gap-4 text-xs">
+          {deleteError && (
+            <div className="p-3 bg-[#FDE8E7] text-[#B42318] border border-[#CBD7D1] rounded-lg font-medium">
+              {deleteError}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E1E8E4]">
+            <Button type="button" variant="ghost" size="sm" disabled={isDeleting} onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" variant="primary" isLoading={isDeleting} onClick={handleDelete}>
+              {course.status === 'archived' ? 'Permanently Delete' : 'Delete Course'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </PageContainer>
+  )
+}

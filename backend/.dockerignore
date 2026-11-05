@@ -1,0 +1,14 @@
+# Keep secrets, local state and build junk out of the image (COPY . . would otherwise bake them in).
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+media/
+*.db
+*.sqlite3
+*.whl
