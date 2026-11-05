@@ -21,48 +21,26 @@ services:
         value: https://lantern-ed.vercel.app
       - key: FORWARDED_ALLOW_IPS
         value: "*"
-      - key: DATABASE_URL
-        sync: false
-      - key: ADMIN_USERNAME
-        sync: false
-      - key: ADMIN_PASSWORD
-        sync: false
       - key: STORAGE_BACKEND
         value: s3
       - key: OBJECT_STORAGE_ENDPOINT
         value: https://c68924566b8fe11a373786a0c576c981.r2.cloudflarestorage.com
       - key: OBJECT_STORAGE_BUCKET
         value: lanterned
-      - key: OBJECT_STORAGE_ACCESS_KEY
-        sync: false
-      - key: OBJECT_STORAGE_SECRET_KEY
-        sync: false
       - key: OBJECT_STORAGE_REGION
         value: auto
       - key: LIVEKIT_URL
         value: wss://lanterned-bihvydq2.livekit.cloud
-      - key: LIVEKIT_API_KEY
-        sync: false
-      - key: LIVEKIT_API_SECRET
-        sync: false
-      - key: LLM_API_KEY
-        sync: false
       - key: LLM_MODEL
         value: openai/gpt-oss-120b
       - key: LLM_BASE_URL
         value: https://api.groq.com/openai/v1
-      - key: SPEECH_TO_TEXT_API_KEY
-        sync: false
       - key: SPEECH_TO_TEXT_MODEL
         value: whisper-large-v3-turbo
       - key: SPEECH_TO_TEXT_BASE_URL
         value: https://api.groq.com/openai/v1
-      - key: RESEND_API_KEY
-        sync: false
       - key: EMAIL_FROM
         value: LanternED <onboarding@resend.dev>
-      - key: ELEVENLABS_API_KEY
-        sync: false
       - key: ELEVENLABS_VOICE_ID
         value: 21m00Tcm4TlvDq8ikWAM
       - key: ELEVENLABS_MODEL_ID
@@ -70,33 +48,26 @@ services:
       - key: EMBEDDED_WORKER
         value: "true"
 
-  - type: workflow
-    name: lanterned-audio-pipeline
-    runtime: python
-    region: singapore
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m app.workflows.post_class_pipeline
-    envVars:
+      # Secrets & Credentials (Render will prompt for these once)
       - key: DATABASE_URL
         sync: false
-      - key: OBJECT_STORAGE_BUCKET
-        value: lanterned
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: OBJECT_STORAGE_ACCESS_KEY
         sync: false
       - key: OBJECT_STORAGE_SECRET_KEY
         sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
       - key: LLM_API_KEY
         sync: false
-      - key: LLM_MODEL
-        value: openai/gpt-oss-120b
-      - key: LLM_BASE_URL
-        value: https://api.groq.com/openai/v1
       - key: SPEECH_TO_TEXT_API_KEY
         sync: false
-      - key: SPEECH_TO_TEXT_MODEL
-        value: whisper-large-v3-turbo
-      - key: SPEECH_TO_TEXT_BASE_URL
-        value: https://api.groq.com/openai/v1
+      - key: RESEND_API_KEY
+        sync: false
       - key: ELEVENLABS_API_KEY
         sync: false
