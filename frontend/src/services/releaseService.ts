@@ -80,9 +80,18 @@ export const releaseService = {
     return res.json()
   },
 
-  /** Returns the direct installer download URL for a platform. */
+  /** Returns the direct installer download URL for a platform pointing dynamically to /releases/latest. */
   getDownloadUrl(platform?: 'windows' | 'macos' | 'android' | 'ios'): string {
-    const GITHUB_RELEASES = 'https://github.com/yynvr1408/LanternEd-app-releases/releases'
-    return GITHUB_RELEASES
+    const GITHUB_RELEASES_BASE = 'https://github.com/yynvr1408/LanternEd-app-releases/releases'
+    const files: Record<string, string> = {
+      windows: `LanternEd-Setup-${APP_CURRENT_VERSION}.exe`,
+      macos: `LanternEd-${APP_CURRENT_VERSION}-universal.dmg`,
+      android: `LanternEd-v${APP_CURRENT_VERSION}.apk`,
+      ios: `LanternEd-v${APP_CURRENT_VERSION}.ipa`,
+    }
+    if (platform && files[platform]) {
+      return `${GITHUB_RELEASES_BASE}/latest/download/${files[platform]}`
+    }
+    return `${GITHUB_RELEASES_BASE}/latest`
   },
 }
