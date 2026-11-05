@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v0.1.2] — 2026-11-05
+
+### 🛡️ Security, Registration Policy & Cross-Platform CI Hardening
+
+- **Generic Registration Policy:** Removed hardcoded personal email addresses from configuration and validation routines; introduced configurable `BLOCKED_EMAIL_DOMAINS` with standard disposable provider defaults (`mailinator.com`, `tempmail.com`, etc.).
+- **Registration Test Suite Refactoring:** Updated `tests/test_registration_policy.py` with mock disposable email addresses (`blocked-user@mailinator.com`, `test-spam@disposable.org`) and verified valid college email registration (`student@college.edu`).
+- **Database Maintenance & Cleanup Utility:** Added `backend/scripts/cleanup_test_data.py` to reliably purge mock student, teacher, class, and assignment records while preserving platform admins and institution hierarchy.
+- **Native Android Build Pipeline:** Locked `compileSdkVersion` and `targetSdkVersion` to stable Android SDK 34, upgraded to Java 21 (Temurin), resolved Gradle 8 `layout.buildDirectory` syntax, and configured `signingConfigs` for automated release packaging.
+- **Cross-Platform Release Automation:** Enhanced `.github/workflows/native-build.yml` with resilient token resolution (`APP_RELEASES_TOKEN` / `APP_RELEASES_PAT` / `GITHUB_TOKEN`) and immediate artifact release triggering upon successful desktop and mobile builds.
+
+---
+
 ## [v0.1.1] — 2026-11-05
 
 ### 🚀 Institutional Hierarchy & CI Reliability Updates

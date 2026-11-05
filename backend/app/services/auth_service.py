@@ -51,6 +51,11 @@ def reset_rate_limits() -> None:
     rate_limit_service.reset_all()
 
 
+def is_email_blocked_from_registration(email: str) -> bool:
+    """Validate that email is not in the address blocklist or from a generic disposable domain."""
+    return settings.is_email_blocked_from_registration(email)
+
+
 def _assert_may_register_as(role: UserRole, invite_code: str | None) -> None:
     """Nobody can grant themselves the teacher role by editing the registration payload."""
     if role != UserRole.teacher:
@@ -71,7 +76,7 @@ def register_user(
     if role == UserRole.admin:
         raise ForbiddenError("This role cannot be self-registered.", code="ROLE_NOT_ALLOWED")
     normalized_email = email.strip().lower()
-    if normalized_email in settings.blocked_registration_emails:
+    if is_email_blocked_from_registration(normalized_email):
         raise ForbiddenError("This email address cannot be used to register an account.", code="EMAIL_NOT_ALLOWED")
     if settings.require_registration_otp:
         if not verification_token:
@@ -575,7 +580,7 @@ def request_registration_otp(db: Session, email: str, *, ip: str | None = None) 
     from app.integrations import email as email_integration
 
     normalized_email = email.strip().lower()
-    if normalized_email in settings.blocked_registration_emails:
+    if is_email_blocked_from_registration(normalized_email):
         raise ForbiddenError("This email address cannot be used to register an account.", code="EMAIL_NOT_ALLOWED")
     _check_rate_limit(db, f"register-otp-req-email:{normalized_email}")
     if ip:

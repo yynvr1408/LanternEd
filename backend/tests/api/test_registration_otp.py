@@ -114,8 +114,8 @@ def test_requesting_an_otp_for_an_already_registered_email_is_rejected(client):
 
 
 def test_blocked_email_cannot_even_request_a_registration_otp(client, monkeypatch):
-    monkeypatch.setattr(auth_service.settings, "blocked_registration_emails_extra", "blocked@lanterned.test")
-    r = client.post(f"{BASE}/register/request-otp", json={"email": "blocked@lanterned.test"})
+    monkeypatch.setattr(auth_service.settings, "blocked_registration_emails_extra", "blocked@example.com")
+    r = client.post(f"{BASE}/register/request-otp", json={"email": "blocked@example.com"})
     assert r.status_code == 403
     assert r.json()["error"]["code"] == "EMAIL_NOT_ALLOWED"
 
@@ -124,7 +124,7 @@ def test_teacher_registration_also_requires_verification(client):
     email = unique_email("regotp-teacher")
     token = _get_verified_token(client, email)
     r = client.post(f"{BASE}/register", json=_register_payload(email, role="teacher", verification_token=token))
-    assert r.status_code == 201
+    assert r.status_code == 201, r.text
     assert r.json()["user"]["role"] == "teacher"
 
 

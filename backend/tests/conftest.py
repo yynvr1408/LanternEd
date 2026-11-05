@@ -27,6 +27,7 @@ os.environ["SESSION_COOKIE_SAMESITE"] = "lax"
 os.environ["CONCURRENT_LOGIN_OTP"] = "false"
 os.environ["TEACHER_COLLEGE_REQUIRED"] = "false"
 os.environ["STUDENT_COLLEGE_REQUIRED"] = "false"
+os.environ["TEACHER_INVITE_CODE"] = ""
 # Legacy fixtures (and most of the suite) register directly without the email-OTP dance; the
 # registration-OTP rule has its own dedicated tests that switch this back on.
 os.environ["REQUIRE_REGISTRATION_OTP"] = "false"

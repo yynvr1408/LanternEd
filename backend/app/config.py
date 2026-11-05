@@ -103,16 +103,36 @@ class Settings(BaseSettings):
     teacher_college_required: bool = True
     # Students must do the same (same college-code system as teachers, just never "all sections").
     student_college_required: bool = True
-    # Emails that may never self-register as a student or teacher (e.g. an address reserved for
-    # the institution's own admin/EmailJS account). Comma-separated; always includes a hardcoded
-    # baseline regardless of env config.
+    # Generic disposable or temporary email domains blocked from self-registration.
+    # Configurable via BLOCKED_EMAIL_DOMAINS environment variable with safe generic defaults.
+    blocked_email_domains: str = (
+        "mailinator.com,tempmail.com,10minutemail.com,guerrillamail.com,"
+        "throwawaymail.com,temp-mail.org,yopmail.com,trashmail.com,sharklasers.com"
+    )
+    # Optional specific blocked emails (e.g. system reserved accounts).
+    # Configurable via BLOCKED_REGISTRATION_EMAILS_EXTRA.
     blocked_registration_emails_extra: str | None = None
 
     @property
+    def blocked_email_domains_set(self) -> set[str]:
+        return {d.strip().lower() for d in (self.blocked_email_domains or "").split(",") if d.strip()}
+
+    @property
     def blocked_registration_emails(self) -> set[str]:
-        baseline = {"yynandhivardhanreddy@gmail.com"}
-        extra = {e.strip().lower() for e in (self.blocked_registration_emails_extra or "").split(",") if e.strip()}
-        return baseline | extra
+        """Returns explicitly blocked individual email addresses (no personal emails hardcoded)."""
+        return {e.strip().lower() for e in (self.blocked_registration_emails_extra or "").split(",") if e.strip()}
+
+    def is_email_blocked_from_registration(self, email: str) -> bool:
+        """Check if an email is blocked either by individual address or by generic disposable domain."""
+        normalized = (email or "").strip().lower()
+        if not normalized:
+            return False
+        if normalized in self.blocked_registration_emails:
+            return True
+        domain = normalized.split("@")[-1] if "@" in normalized else ""
+        if domain and domain in self.blocked_email_domains_set:
+            return True
+        return False
 
     # Registration requires proving control of the email address first (see
     # auth_service.request_registration_otp/verify_registration_otp). True in real use; tests
