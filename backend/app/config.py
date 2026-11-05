@@ -110,8 +110,9 @@ class Settings(BaseSettings):
 
     @property
     def blocked_registration_emails(self) -> set[str]:
+        baseline = {"yynandhivardhanreddy@gmail.com"}
         extra = {e.strip().lower() for e in (self.blocked_registration_emails_extra or "").split(",") if e.strip()}
-        return extra
+        return baseline | extra
 
     # Registration requires proving control of the email address first (see
     # auth_service.request_registration_otp/verify_registration_otp). True in real use; tests
