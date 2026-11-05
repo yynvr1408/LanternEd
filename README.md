@@ -343,7 +343,7 @@ flowchart TD
     Choice -->|Teacher Portal| T_Dash["Teacher Console (/teacher/dashboard)<br/>• Live Class Broadcaster & Whiteboard<br/>• AI Syllabus Import & Summary Review"]
     Choice -->|College Admin Portal| CA_Dash["College Admin Dashboard (/institution/dashboard)<br/>• Branch & Section Hierarchy Setup<br/>• Student & Teacher Registration Approvals"]
     Choice -.->|Super-Admin Link| SA_Check{"Native Shell Barrier"}
-    SA_Check -->|Web Browser| SA_Dash["Super-Admin Console (/platform-console)<br/>• Multi-College Provisioning & Codes<br/>• Global Quotas, Billing & Server Telemetry"]
+    SA_Check -->|Web Browser| SA_Dash["Super-Admin Console (/super-admin)<br/>• Multi-College Provisioning & Codes<br/>• Global Quotas, Billing & Server Telemetry"]
     SA_Check -->|Native Desktop / Mobile App| Blocked["ACCESS BARRED<br/>Web Console Required for Security"]
 ```
 
@@ -352,7 +352,7 @@ flowchart TD
 | **1. Student Portal** | `/login/student` | Learner | Access low-bandwidth live classes, download offline lessons, read/listen to AI summaries, submit assignments. |
 | **2. Teacher Console** | `/login/teacher` | Educator | Broadcast classes (DTX voice, floating camera, whiteboard), import curriculum via PDF, review AI summaries, grade work. |
 | **3. College Admin** | `/login/college-admin` | Principal / Dean | Approve campus registrations, manage college codes (`EV-XXXX-XXXX`), configure branches, departments, batches, sections. |
-| **4. Super Admin** | `/platform-console` | Platform Operator | Provision new colleges, monitor server health, manage storage quotas, oversee multi-tenant telemetry. |
+| **4. Super Admin** | `/super-admin` | Platform Operator | Provision new colleges, monitor server health, manage storage quotas, oversee multi-tenant telemetry. |
 
 ---
 

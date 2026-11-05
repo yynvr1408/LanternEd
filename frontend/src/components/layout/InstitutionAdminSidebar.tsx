@@ -81,7 +81,7 @@ export const InstitutionAdminSidebar: React.FC = () => {
         )}
         {isSuperAdmin && (
           <NavLink
-            to="/platform-console"
+            to="/super-admin"
             className="flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-semibold text-[#7A3E00] bg-[#FFF8E7] hover:bg-[#FFEEC2] transition-colors"
           >
             <span className="flex items-center gap-2">

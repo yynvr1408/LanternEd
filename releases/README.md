@@ -68,7 +68,7 @@ LanternEd native applications include an embedded **Update Engine**. When connec
 ## Security & Architecture Scope
 
 - **Student, Teacher & College Admin Portals:** Fully supported on all native applications.
-- **Platform Super-Administrator Console:** Restricted to web browsers (`/platform-console`) for enterprise zero-trust security. Native client attempts to access super-admin endpoints are automatically blocked at the binary runtime level.
+- **Platform Super-Administrator Console:** Restricted to web browsers (`/super-admin`) for enterprise zero-trust security. Native client attempts to access super-admin endpoints are automatically blocked at the binary runtime level.
 
 ---
 

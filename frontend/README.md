@@ -33,7 +33,7 @@ Set `VITE_API_BASE_URL` (default `http://localhost:8000`) when the API is elsewh
 | Teacher | `/teacher/dashboard`, `courses`, `courses/new`, `courses/:id/manage`, `classes`, `classes/new`, `recorded-lessons`, `materials`, `assignments`, `summaries`, `profile`, `institution` (delegated college administrator) |
 | College Admin | `/login/college-admin` -> `/institution/dashboard` (structure, branch/section setup, student approvals) |
 | Live class | `/classroom/:classId` (students and teachers) |
-| Super-Admin | `/platform-console` (multi-college provisioning, global telemetry; blocked inside native desktop/mobile apps) |
+| Super-Admin | `/super-admin` (multi-college provisioning, global telemetry; blocked inside native desktop/mobile apps) |
 
 ## Source layout
 
@@ -71,7 +71,7 @@ The teacher's camera is a small floating window (drag, enlarge, hide) for the te
 
 ## Institution admin
 
-A teacher the administrator has delegated to manage one college sees an extra **Institution Admin** nav item and `/teacher/institution` route (`pages/teacher/TeacherInstitutionAdminPage.tsx`), reusing the same `CollegeStructureDialog` the platform `/platform-console` panel uses, pointed at `services/institutionAdminApi.ts` instead of `adminApi.ts`. Visibility is driven by `hooks/useIsInstitutionAdmin.ts`, which calls `GET /api/v1/institution-admin/colleges` and renders nothing while that list is empty — true for almost every teacher.
+A teacher the administrator has delegated to manage one college sees an extra **Institution Admin** nav item and `/teacher/institution` route (`pages/teacher/TeacherInstitutionAdminPage.tsx`), reusing the same `CollegeStructureDialog` the platform `/super-admin` panel uses, pointed at `services/institutionAdminApi.ts` instead of `adminApi.ts`. Visibility is driven by `hooks/useIsInstitutionAdmin.ts`, which calls `GET /api/v1/institution-admin/colleges` and renders nothing while that list is empty — true for almost every teacher.
 
 ## Internationalisation
 

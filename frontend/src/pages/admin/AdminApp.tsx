@@ -10,7 +10,7 @@ import { AdminDashboardPage } from './AdminDashboardPage'
 type State = { status: 'checking' } | { status: 'out' } | { status: 'in'; username: string }
 
 /**
- * /platform-console: Platform Super-Administrator Console.
+ * /super-admin: Platform Super-Administrator Console.
  * Manages global colleges, activation/suspension, billing quotas, and system telemetry.
  *
  * Strictly restricted to secure web portals — blocked and completely inaccessible
@@ -40,8 +40,8 @@ export const AdminApp: React.FC = () => {
   }, [isNative])
 
   const webConsoleUrl = window.location.origin.startsWith('http') && !window.location.origin.includes('localhost')
-    ? `${window.location.origin}/platform-console`
-    : 'https://lanterned.vercel.app/platform-console'
+    ? `${window.location.origin}/super-admin`
+    : 'https://lanterned.vercel.app/super-admin'
 
   const handleCopyLink = () => {
     void navigator.clipboard.writeText(webConsoleUrl)

@@ -91,13 +91,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="/login/student" element={<LoginPage portal="student" />} />
         <Route path="/login/teacher" element={<LoginPage portal="teacher" />} />
         <Route path="/login/college-admin" element={<LoginPage portal="college-admin" />} />
-        <Route path="/login/institution-admin" element={<Navigate to="/login/college-admin" replace />} />
         <Route path="/register" element={<RegisterChoicePage />} />
         <Route path="/register/student" element={<RegisterPage portal="student" />} />
         <Route path="/register/teacher" element={<RegisterPage portal="teacher" />} />
         <Route path="/register/college" element={<CollegeRegisterPage />} />
-        <Route path="/register/college-admin" element={<CollegeRegisterPage />} />
-        <Route path="/register/institution-admin" element={<Navigate to="/register/college" replace />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-otp" element={<VerifyOtpPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -183,10 +180,9 @@ export const AppRoutes: React.FC = () => {
           <Route path="settings" element={<TeacherInstitutionAdminPage activeTab="settings" />} />
         </Route>
 
-        {/* Admin panel: outside the student/teacher guards; access is enforced by the backend session, not the
-            URL. The path itself is just not a guessable word like "admin" — kept off public nav/links too, so
-            it isn't discoverable by Browse, only by whoever's told the URL. */}
-        <Route path="/platform-console" element={<AdminApp />} />
+        {/* Super-Admin Platform Console: Kept strictly hidden at /super-admin with no public nav links */}
+        <Route path="/super-admin" element={<AdminApp />} />
+        <Route path="/platform-console" element={<Navigate to="/super-admin" replace />} />
 
         {/* 404 Catch-All */}
         <Route path="*" element={<NotFoundPage />} />

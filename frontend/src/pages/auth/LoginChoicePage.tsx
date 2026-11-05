@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GraduationCap, BookOpen, Building2, ArrowRight, ShieldCheck, Download, Sparkles } from 'lucide-react'
+import { GraduationCap, BookOpen, Building2, ArrowRight, Download, Sparkles } from 'lucide-react'
 import { Logo } from '../../components/ui/Logo'
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher'
 import { platformAdapter } from '../../services/platformAdapter'
@@ -183,18 +183,7 @@ export const LoginChoicePage: React.FC = () => {
             </button>
           </div>
 
-          {/* Web-Only Platform Management Link (Hidden on native apps) */}
-          {!isNative && (
-            <div className="mt-6 text-center border-t border-[#E1E8E4] pt-4">
-              <Link
-                to="/platform-console"
-                className="text-xs text-[#84908D] hover:text-[#0F5B57] transition-colors inline-flex items-center gap-1.5 py-1 px-3 rounded-full hover:bg-white/60"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Platform Administration (Web Portal)</span>
-              </Link>
-            </div>
-          )}
+
 
           <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
         </div>

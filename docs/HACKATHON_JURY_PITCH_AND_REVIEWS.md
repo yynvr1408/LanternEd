@@ -41,7 +41,7 @@ Establish the institutional core: high-security multi-college hierarchy, adminis
 ### 💡 2. The Engineering Solutions Built
 
 * **Multi-College Hierarchy & Cryptographic Codes:** 
-  The Platform Admin (`/platform-console`) creates institutions and generates unique, collision-resistant codes (`EV-XXXX-XXXX` from a 32-character alphabet omitting ambiguous characters). Registration strictly requires validating college, branch, section, and the active code before any user record is committed.
+  The Platform Admin (`/super-admin`) creates institutions and generates unique, collision-resistant codes (`EV-XXXX-XXXX` from a 32-character alphabet omitting ambiguous characters). Registration strictly requires validating college, branch, section, and the active code before any user record is committed.
 * **Strict Teaching Scope Enforcement (`teaching_scope_service.py`):**
   A teacher is bound to a section or an "All Sections" branch scope. The backend cryptographically validates on every request that teachers cannot create cohorts, access student submissions, or broadcast classes outside their authorized branch or section.
 * **Dual-Session & Header Protection:**
@@ -55,7 +55,7 @@ Establish the institutional core: high-security multi-college hierarchy, adminis
 
 ### 🖥️ 3. Live Demo Flow (60–90 Seconds)
 
-1. **Admin Console:** Navigate to `/platform-console`. Log in with admin credentials. Show the overview metrics (Colleges, Active Codes).
+1. **Admin Console:** Navigate to `/super-admin`. Log in with admin credentials. Show the overview metrics (Colleges, Active Codes).
 2. **Create Institution:** Click **New College**, name it (e.g. *"Rural Polytechnic Institute"*), generate the unique code `EV-XXXX-XXXX`, and add branches (e.g., *Computer Science* -> *Section A*).
 3. **Registering under Constraint:** Open an incognito window at `/register/student`. Show dynamic fetching of active colleges and branches. Enter a wrong code -> rejected. Enter the correct code -> registered seamlessly.
 4. **Scope Proof:** Log in as a teacher assigned to Section A. Show that attempting to address Section B or another college is refused at the API level.

@@ -135,14 +135,14 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
     })
   })
 
-  describe('Super-Admin Native App Access Barrier (/platform-console)', () => {
+  describe('Super-Admin Native App Access Barrier (/super-admin)', () => {
     it('strictly blocks access inside native desktop/mobile apps and shows restricted notice', () => {
       // Simulate native app runtime (Tauri / Capacitor)
       ;(window as any).__TAURI__ = { invoke: vi.fn() }
       expect(platformAdapter.isNative()).toBe(true)
 
       render(
-        <MemoryRouter initialEntries={['/platform-console']}>
+        <MemoryRouter initialEntries={['/super-admin']}>
           <AdminApp />
         </MemoryRouter>
       )

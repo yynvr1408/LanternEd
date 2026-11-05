@@ -29,7 +29,7 @@ This update standardizes institutional onboarding hierarchy, resolves UI test co
 - **Institutional Onboarding Hierarchy:**
   - Removed direct manual college creation from the Super Admin platform console.
   - Institutional registration now canonically routes through `/register/college`.
-  - Super admins review and approve pending requests from the **"Institution Onboarding Queue"** on `/platform-console`.
+  - Super admins review and approve pending requests from the **"Institution Onboarding Queue"** on `/super-admin`.
   - Super admin approval automatically provisions the institution record and founding administrator account.
 - **Student & Faculty Searchable Campus Picker:** Added real-time search filtering on `/register` allowing students and faculty to quickly find their institution by name or city from extensive nationwide registries.
 - **Simplified Bandwidth Simulation Controller:**
