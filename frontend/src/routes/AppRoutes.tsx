@@ -39,6 +39,7 @@ const StudentAssignmentDetailPage = lazyPage(() => import('../pages/student/Stud
 const StudentDownloadsPage = lazyPage(() => import('../pages/student/StudentDownloadsPage'), 'StudentDownloadsPage')
 const OfflineViewerPage = lazyPage(() => import('../pages/student/OfflineViewerPage'), 'OfflineViewerPage')
 const StudentProfilePage = lazyPage(() => import('../pages/student/StudentProfilePage'), 'StudentProfilePage')
+const StudentExamRunnerPage = lazyPage(() => import('../pages/student/StudentExamRunnerPage'), 'StudentExamRunnerPage')
 const StudentRecordedLessonsPage = lazyPage(() => import('../pages/student/StudentRecordedLessonsPage'), 'StudentRecordedLessonsPage')
 const StudentRecordedLessonDetailPage = lazyPage(
   () => import('../pages/student/StudentRecordedLessonDetailPage'),
@@ -105,6 +106,16 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute>
               <ClassroomPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Secure Examination Runner (Dedicated Fullscreen Viewport) */}
+        <Route
+          path="/student/exams/:examId/take"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentExamRunnerPage />
             </ProtectedRoute>
           }
         />

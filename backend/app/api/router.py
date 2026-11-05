@@ -11,6 +11,8 @@ from app.api.v1 import (
     notifications,
     recordings,
     registration,
+    exams,
+    gradebook,
     releases,
     resources,
     sections,
@@ -38,3 +40,5 @@ api_router.include_router(synchronization.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(notifications.router)
 api_router.include_router(releases.router)
+api_router.include_router(gradebook.router)
+api_router.include_router(exams.router)

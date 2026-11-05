@@ -8,7 +8,9 @@ import {
   AlertCircle,
   Eye,
   Paperclip,
+  Sliders,
 } from 'lucide-react'
+import { SplitScreenEvaluatorModal } from '../../components/assignment/SplitScreenEvaluatorModal'
 import { assignmentService } from '../../services/assignmentService'
 import { courseService } from '../../services/courseService'
 import { formatDueDate } from '../../utils/dates'
@@ -46,6 +48,7 @@ export const TeacherAssignmentsPage: React.FC = () => {
   // Manual grading: per-submission score/feedback inputs and save state
   const [gradeInputs, setGradeInputs] = useState<Record<string, { score: string; feedback: string }>>({})
   const [gradeState, setGradeState] = useState<Record<string, { saving?: boolean; error?: string; saved?: boolean }>>({})
+  const [evaluatingSubmission, setEvaluatingSubmission] = useState<Submission | null>(null)
 
   const loadData = async () => {
     setIsLoading(true)
@@ -360,9 +363,14 @@ export const TeacherAssignmentsPage: React.FC = () => {
                       onChange={(e) => setGradeInputs((g) => ({ ...g, [sub.id]: { score: g[sub.id]?.score ?? '', feedback: e.target.value } }))}
                     />
                   </FormField>
-                  <Button size="sm" variant="primary" isLoading={gradeState[sub.id]?.saving} onClick={() => handleGrade(sub)}>
-                    {sub.status === 'GRADED' ? 'Update grade' : 'Save grade'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="primary" isLoading={gradeState[sub.id]?.saving} onClick={() => handleGrade(sub)}>
+                      {sub.status === 'GRADED' ? 'Update grade' : 'Save grade'}
+                    </Button>
+                    <Button size="sm" variant="outline" icon={<Sliders className="w-3.5 h-3.5 text-[#0F5B57]" />} onClick={() => setEvaluatingSubmission(sub)}>
+                      Rubric Scoring
+                    </Button>
+                  </div>
                 </div>
                 {gradeState[sub.id]?.error && <p className="text-[#B42318] font-medium">{gradeState[sub.id]?.error}</p>}
                 {gradeState[sub.id]?.saved && <p className="text-[#247A4D] font-medium">Grade saved. The student can see it now.</p>}
@@ -371,6 +379,17 @@ export const TeacherAssignmentsPage: React.FC = () => {
           )}
         </div>
       </Dialog>
+
+      <SplitScreenEvaluatorModal
+        isOpen={!!evaluatingSubmission}
+        onClose={() => setEvaluatingSubmission(null)}
+        submission={evaluatingSubmission}
+        courseId={selectedAssignment?.course_id || courseId}
+        maxScore={selectedAssignment?.max_score ?? 100}
+        onGraded={() => {
+          if (selectedAssignment) handleViewSubmissions(selectedAssignment)
+        }}
+      />
     </PageContainer>
   )
 }

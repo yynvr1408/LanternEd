@@ -1,3 +1,21 @@
+from app.db.models.gradebook import (
+    CourseGradeRecord,
+    EvaluationFeedback,
+    GradebookConfig,
+    Rubric,
+    RubricCriterion,
+)
+from app.db.models.exam import (
+    AttemptStatus,
+    Exam,
+    ExamAttempt,
+    ExamAuditLog,
+    ExamSection,
+    ExamStatus,
+    QuestionBank,
+    QuestionItem,
+    QuestionType,
+)
 from app.db.models.admin_request import CollegeAdminRequest
 from app.db.models.assignment import Assignment, AssignmentSubmission, SubmissionAttachment, SubmissionRevision
 from app.db.models.classroom import Class, ClassParticipant, ClassRecording, ClassSection, RecordingProgress, RecordingSection
@@ -71,4 +89,18 @@ __all__ = [
     "PasswordResetToken",
     "User",
     "UserSession",
+    "GradebookConfig",
+    "CourseGradeRecord",
+    "Rubric",
+    "RubricCriterion",
+    "EvaluationFeedback",
+    "QuestionBank",
+    "QuestionItem",
+    "QuestionType",
+    "Exam",
+    "ExamSection",
+    "ExamStatus",
+    "ExamAttempt",
+    "AttemptStatus",
+    "ExamAuditLog",
 ]

@@ -21,6 +21,9 @@ import { reportsApi } from '../../services/reportsApi'
 import type { Course, CourseEnrollment, Lesson } from '../../types'
 import { PageContainer } from '../../components/layout/PageContainer'
 import { SyllabusImportDialog } from '../../components/course/SyllabusImportDialog'
+import { CourseGradebookTab } from '../../components/course/CourseGradebookTab'
+import { CourseExamsTab } from '../../components/course/CourseExamsTab'
+import { Clock, Sliders } from 'lucide-react'
 import {
   Card,
   CardHeader,
@@ -61,6 +64,7 @@ export const TeacherManageCoursePage: React.FC = () => {
   // Roster (enrolled students)
   const [roster, setRoster] = useState<CourseEnrollment[]>([])
   const [rosterStatus, setRosterStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [activeCourseTab, setActiveCourseTab] = useState<'curriculum' | 'gradebook' | 'exams' | 'roster'>('curriculum')
 
   // Add Lesson Modal state
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false)
@@ -334,7 +338,75 @@ export const TeacherManageCoursePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Course Operations Tabs */}
+      <div className="flex border-b border-[#E1E8E4] mb-6 gap-2 overflow-x-auto text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setActiveCourseTab('curriculum')}
+          className={`px-4 py-2.5 border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeCourseTab === 'curriculum'
+              ? 'border-[#0F5B57] text-[#0F5B57] font-bold'
+              : 'border-transparent text-[#687775] hover:text-[#202B2A]'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Curriculum Lessons</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCourseTab('gradebook')}
+          className={`px-4 py-2.5 border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeCourseTab === 'gradebook'
+              ? 'border-[#0F5B57] text-[#0F5B57] font-bold'
+              : 'border-transparent text-[#687775] hover:text-[#202B2A]'
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
+          <span>CIA Gradebook (Weighted)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCourseTab('exams')}
+          className={`px-4 py-2.5 border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeCourseTab === 'exams'
+              ? 'border-[#0F5B57] text-[#0F5B57] font-bold'
+              : 'border-transparent text-[#687775] hover:text-[#202B2A]'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Examinations & Tests</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCourseTab('roster')}
+          className={`px-4 py-2.5 border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeCourseTab === 'roster'
+              ? 'border-[#0F5B57] text-[#0F5B57] font-bold'
+              : 'border-transparent text-[#687775] hover:text-[#202B2A]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Roster & CSV Export</span>
+        </button>
+      </div>
+
+      {activeCourseTab === 'gradebook' && courseId && (
+        <div className="mb-8">
+          <CourseGradebookTab courseId={courseId} />
+        </div>
+      )}
+
+      {activeCourseTab === 'exams' && courseId && (
+        <div className="mb-8">
+          <CourseExamsTab courseId={courseId} />
+        </div>
+      )}
+
       {/* Lessons List */}
+      {activeCourseTab === 'curriculum' && (
       <section className="mb-8">
         <h2 className="text-base font-bold text-[#202B2A] mb-3 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-[#0F5B57]" /> Curriculum Lessons
@@ -374,8 +446,10 @@ export const TeacherManageCoursePage: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
       {/* Course Roster */}
+      {activeCourseTab === 'roster' && (
       <section className="mb-8">
         <h2 className="text-base font-bold text-[#202B2A] mb-3 flex items-center gap-2">
           <Users className="w-4 h-4 text-[#0F5B57]" /> Enrolled Students
@@ -434,6 +508,7 @@ export const TeacherManageCoursePage: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
       {/* Add Lesson Dialog */}
       <Dialog

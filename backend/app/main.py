@@ -67,8 +67,15 @@ async def lifespan(_app: FastAPI):
         logger.warning("No LLM provider configured — lecture summaries will use the labeled stub provider.")
     if not settings.email_configured:
         logger.warning("No email provider configured (RESEND_API_KEY + EMAIL_FROM) — OTP emails will not be sent.")
-    from app.db.session import SessionLocal
+    from app.db.base import Base
+    from app.db.session import SessionLocal, engine
+    import app.db.models  # noqa: F401
     from app.services import admin_service
+
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        logger.exception("Table creation pass failed.")
 
     with SessionLocal() as db:
         try:

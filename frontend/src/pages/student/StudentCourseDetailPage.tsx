@@ -16,6 +16,9 @@ import { api } from '../../services/apiClient'
 import { courseService } from '../../services/courseService'
 import { classService } from '../../services/classService'
 import { assignmentService } from '../../services/assignmentService'
+import { gradebookService, type StudentGradeSummary } from '../../services/gradebookService'
+import { examService, type Exam } from '../../services/examService'
+import { Award, Clock, Shield } from 'lucide-react'
 import { downloadManager } from '../../services/downloadManager'
 import { formatDueDate } from '../../utils/dates'
 import type { Course, Lesson, ClassRoom, Assignment, Material } from '../../types'
@@ -30,6 +33,8 @@ export const StudentCourseDetailPage: React.FC = () => {
   const [classes, setClasses] = useState<ClassRoom[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
+  const [myGrade, setMyGrade] = useState<StudentGradeSummary | null>(null)
+  const [courseExams, setCourseExams] = useState<Exam[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,6 +56,10 @@ export const StudentCourseDetailPage: React.FC = () => {
         setCourse(c)
         setClasses(allCls.filter((cl) => cl.course_id === courseId))
         setAssignments(allAsg)
+
+        // Load CIA Grade & Exams
+        gradebookService.getMyGrade(courseId).then((g) => isMounted && setMyGrade(g)).catch(() => {})
+        examService.listCourseExams(courseId).then((exs) => isMounted && setCourseExams(exs)).catch(() => {})
 
         // Real materials uploaded by the course's teachers (empty until they publish some).
         const realMaterials = await api.getMaterials(courseId).catch(() => [] as Material[])
@@ -246,6 +255,75 @@ export const StudentCourseDetailPage: React.FC = () => {
                     <Link to={`/student/assignments/${a.id}`} className="mt-1">
                       <Button size="sm" variant={a.my_submission ? 'secondary' : 'outline'} fullWidth>
                         {a.my_submission ? 'Review Answer' : 'Open Draft'}
+                      </Button>
+                    </Link>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Continuous Internal Assessment (CIA) Grade Summary */}
+          {myGrade && (
+            <Card>
+              <CardHeader className="py-3 px-4 font-bold text-sm text-[#202B2A] flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-[#0F5B57]" /> Internal Grade
+                </span>
+                <span className="px-2 py-0.5 rounded font-bold text-xs bg-[#E5F5EB] text-[#247A4D]">
+                  Grade: {myGrade.letter_grade}
+                </span>
+              </CardHeader>
+              <CardContent className="p-4 space-y-2 text-xs">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[#687775]">Cumulative Score:</span>
+                  <span className="font-bold text-sm text-[#0F5B57]">{myGrade.cumulative_score}%</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[#687775]">Attendance:</span>
+                  <span className={`font-semibold ${myGrade.attendance_pct < 75 ? 'text-[#B42318]' : 'text-[#202B2A]'}`}>
+                    {myGrade.attendance_pct}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[#687775]">Tasks & Quizzes:</span>
+                  <span className="font-semibold text-[#202B2A]">
+                    {myGrade.assignments_score}% avg
+                  </span>
+                </div>
+                {myGrade.is_at_risk && (
+                  <div className="p-2 bg-[#FDE8E7] text-[#B42318] rounded font-medium text-[11px] mt-1">
+                    Academic Alert: Your cumulative score or attendance is below threshold. Contact faculty mentor.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Proctored Examinations & Quizzes */}
+          <Card>
+            <CardHeader className="py-3 px-4 font-bold text-sm text-[#202B2A] flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#0F5B57]" /> Examinations
+            </CardHeader>
+            <CardContent className="p-4 flex flex-col gap-3">
+              {courseExams.length === 0 ? (
+                <p className="text-xs text-[#687775]">No examinations published for this course.</p>
+              ) : (
+                courseExams.map((ex) => (
+                  <div key={ex.id} className="p-3 border border-[#E1E8E4] bg-[#FFFFFF] rounded-lg flex flex-col gap-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#202B2A] line-clamp-1">{ex.title}</span>
+                      <Badge variant="outline" size="sm">{ex.duration_minutes}m</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#687775] text-[11px]">
+                      <Shield className="w-3.5 h-3.5 text-[#0F5B57]" />
+                      <span>{ex.enforce_fullscreen ? 'Fullscreen Protected' : 'Standard'}</span>
+                      <span>•</span>
+                      <span>{ex.total_marks} Pts</span>
+                    </div>
+                    <Link to={`/student/exams/${ex.id}/take`} className="mt-1">
+                      <Button size="sm" variant="primary" fullWidth>
+                        Take Examination
                       </Button>
                     </Link>
                   </div>
