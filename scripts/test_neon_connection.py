@@ -27,6 +27,15 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = ROOT_DIR / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
+# Load backend/.env if running from workspace root
+env_path = BACKEND_DIR / ".env"
+if env_path.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(env_path)
+    except ImportError:
+        pass
+
 from app.config import get_settings
 from sqlalchemy import create_engine, text
 
