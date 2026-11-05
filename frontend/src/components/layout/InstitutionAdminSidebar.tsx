@@ -22,7 +22,7 @@ export const institutionNavItems = [
   { to: '/institution/teachers', label: 'Teachers Directory', icon: GraduationCap },
   { to: '/institution/students', label: 'Students Directory', icon: Users },
   { to: '/institution/approvals', label: 'Pending Approvals', icon: ShieldCheck },
-  { to: '/institution/settings', label: 'College Settings', icon: Sliders },
+  { to: '/institution/settings', label: 'Settings', icon: Sliders },
 ] as const
 
 export const InstitutionAdminSidebar: React.FC = () => {

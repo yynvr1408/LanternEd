@@ -1520,7 +1520,7 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
       {currentTab === 'settings' && activeCollege && (
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader><h3 className="text-base font-bold text-[#202B2A]">Institution Operational Settings</h3></CardHeader>
+            <CardHeader><h3 className="text-base font-bold text-[#202B2A]">Settings</h3></CardHeader>
             <CardContent className="p-5">
               <p className="text-xs text-[#687775] mb-4">
                 Configure self-registration rules, verified email domains, and platform feature flags for this campus.

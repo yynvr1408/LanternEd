@@ -30,7 +30,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
 
   const isInstitutionRoute = location.pathname.startsWith('/institution')
   const displayedRole = isInstitutionRoute
-    ? 'College Admin'
+    ? 'Institution Admin'
     : user?.role === 'admin'
     ? 'Super Admin'
     : user?.role === 'teacher'
