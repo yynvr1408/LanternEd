@@ -2,16 +2,10 @@ services:
   - type: web
     name: lanterned-api
     runtime: docker
-    # No rootDir: dockerfilePath/dockerContext are both given relative to the repo root instead,
-    # since Render resolves dockerContext relative to rootDir (when set) but dockerfilePath
-    # relative to the repo root regardless — mixing the two caused a bad "backend/backend" path.
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     plan: free
     healthCheckPath: /health
-    # No preDeployCommand: Render's free tier doesn't support it. Migrations instead run as part
-    # of the container's own startup command (see backend/Dockerfile's CMD) — idempotent, so this
-    # is safe to run on every boot, including every free-tier cold start after spin-down.
     envVars:
       - key: APP_ENV
         value: production
@@ -20,30 +14,25 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: COURSE_CATALOG_SCOPE
-        value: college # several colleges share this API: a published course is open only to its own college
+        value: college
       - key: SESSION_COOKIE_SAMESITE
         value: none
       - key: FRONTEND_ORIGIN
         value: https://lantern-ed.vercel.app
-      # Per-IP rate limits key on the connecting address. Behind Render's proxy that is the proxy, so every user
-      # would share one bucket until uvicorn is told to trust X-Forwarded-For. Set this in the dashboard (e.g. "*",
-      # since Render's edge is the only way in) after confirming from two networks that the client IPs differ.
       - key: FORWARDED_ALLOW_IPS
-        sync: false
+        value: "*"
       - key: DATABASE_URL
-        sync: false # Neon connection string (free 1GB tier), must include ?sslmode=require
-      - key: TEACHER_INVITE_CODE
         sync: false
       - key: ADMIN_USERNAME
-        sync: false # set in the Render dashboard, never in this file
+        sync: false
       - key: ADMIN_PASSWORD
-        sync: false # set in the Render dashboard, never in this file
+        sync: false
       - key: STORAGE_BACKEND
         value: s3
       - key: OBJECT_STORAGE_ENDPOINT
-        sync: false # e.g. https://<accountid>.r2.cloudflarestorage.com
+        value: https://c68924566b8fe11a373786a0c576c981.r2.cloudflarestorage.com
       - key: OBJECT_STORAGE_BUCKET
-        sync: false
+        value: lanterned
       - key: OBJECT_STORAGE_ACCESS_KEY
         sync: false
       - key: OBJECT_STORAGE_SECRET_KEY
@@ -51,53 +40,35 @@ services:
       - key: OBJECT_STORAGE_REGION
         value: auto
       - key: LIVEKIT_URL
-        sync: false
+        value: wss://lanterned-bihvydq2.livekit.cloud
       - key: LIVEKIT_API_KEY
         sync: false
       - key: LIVEKIT_API_SECRET
         sync: false
       - key: LLM_API_KEY
-        sync: false # a Groq API key (gsk_...) — real, verified working against openai/gpt-oss-120b
+        sync: false
       - key: LLM_MODEL
         value: openai/gpt-oss-120b
       - key: LLM_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: SPEECH_TO_TEXT_API_KEY
-        sync: false # same Groq key as LLM_API_KEY — without the two vars below it silently falls
-        # back to real OpenAI's endpoint/model defaults, which rejects a Groq key outright
+        sync: false
       - key: SPEECH_TO_TEXT_MODEL
         value: whisper-large-v3-turbo
       - key: SPEECH_TO_TEXT_BASE_URL
         value: https://api.groq.com/openai/v1
-      # Transactional email through Resend (delivers all 4 OTP operations)
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
         value: LanternED <onboarding@resend.dev>
-      # ElevenLabs audio recap voiceover
       - key: ELEVENLABS_API_KEY
         sync: false
       - key: ELEVENLABS_VOICE_ID
         value: 21m00Tcm4TlvDq8ikWAM
       - key: ELEVENLABS_MODEL_ID
         value: eleven_turbo_v2_5
-      - key: SENTRY_DSN
-        sync: false # error tracking; leave unset to disable
-      # Optional: online payments (Razorpay), WhatsApp alerts, recording retention. See docs/OPERATIONS.md.
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-      - key: RAZORPAY_WEBHOOK_SECRET
-        sync: false
-      - key: WHATSAPP_PHONE_NUMBER_ID
-        sync: false
-      - key: WHATSAPP_ACCESS_TOKEN
-        sync: false
       - key: EMBEDDED_WORKER
-        value: "true" # runs the worker pass inside the API (WhatsApp, retention, job recovery) - see the note at the bottom
-      - key: RECORDING_RETENTION_DAYS
-        sync: false # e.g. 180: recording media older than this is deleted by the worker; empty = keep
+        value: "true"
 
   - type: workflow
     name: lanterned-audio-pipeline
@@ -110,7 +81,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: OBJECT_STORAGE_BUCKET
-        sync: false
+        value: lanterned
       - key: OBJECT_STORAGE_ACCESS_KEY
         sync: false
       - key: OBJECT_STORAGE_SECRET_KEY
@@ -129,13 +100,3 @@ services:
         value: https://api.groq.com/openai/v1
       - key: ELEVENLABS_API_KEY
         sync: false
-
-# Background worker: EMBEDDED_WORKER=true runs the worker pass inside the API, so no second service is required.
-# On Render's free web service that only happens while the service is awake (it sleeps after ~15 minutes idle); a
-# paid, always-on instance (or a separate Background Worker) makes it continuous. Without any worker these do NOTHING:
-#   - delivering WhatsApp messages (they queue but are never sent)
-#   - enforcing RECORDING_RETENTION_DAYS and pruning old notifications / rate-limit rows
-#   - recovering a job stuck mid-"processing" after a crash, and retrying transient failures
-# To add it, create a second Render service of type "Background Worker" from the same repo/Dockerfile with the start
-# command `python -m app.worker` and the same environment variables as the API (a paid plan, from about $7/month).
-# Until then you can run `python -m app.worker --once` from a one-off Shell.
