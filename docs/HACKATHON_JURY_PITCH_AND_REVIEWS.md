@@ -268,7 +268,7 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 
 ### 🖥️ 3. Live Demo Flow (90 Seconds)
 
-1. **Live Production URLs:** Open the deployed app on Vercel (`https://edu-village-nine.vercel.app`) talking to the live Render API (`https://eduvillage-api.onrender.com/health`).
+1. **Live Production URLs:** Open the deployed app on Vercel (`https://lanterned.vercel.app`) talking to the live Render API (`https://lanterned-api.onrender.com/health`).
 2. **Zero-Latency Language Switching:** Click the language switcher in the navbar. Switch to **Hindi**, then **Telugu**, then **Arabic**. Note that Arabic automatically flips layout to Right-to-Left (RTL). Inspect DevTools Network tab: **0 network requests made!**
 3. **PWA Installability:** Show Chrome install prompt ("Install LanternED as App").
 4. **Cost Model & Economics:** Open `docs/cost_model.py` simulation results showing low cost per student.

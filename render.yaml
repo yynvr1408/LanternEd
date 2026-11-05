@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: eduvillage-api
+    name: lanterned-api
     runtime: docker
     # No rootDir: dockerfilePath/dockerContext are both given relative to the repo root instead,
     # since Render resolves dockerContext relative to rootDir (when set) but dockerfilePath
@@ -117,6 +117,7 @@ services:
     name: lanterned-audio-pipeline
     runtime: python
     region: singapore
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: python -m app.workflows.post_class_pipeline
     envVars:
@@ -128,8 +129,18 @@ services:
         sync: false
       - key: OBJECT_STORAGE_SECRET_KEY
         sync: false
-      - key: GROQ_API_KEY
+      - key: LLM_API_KEY
         sync: false
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: SPEECH_TO_TEXT_API_KEY
+        sync: false
+      - key: SPEECH_TO_TEXT_MODEL
+        value: whisper-large-v3-turbo
+      - key: SPEECH_TO_TEXT_BASE_URL
+        value: https://api.groq.com/openai/v1
       - key: ELEVENLABS_API_KEY
         sync: false
 
