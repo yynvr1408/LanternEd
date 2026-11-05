@@ -463,14 +463,28 @@ def validate_registration_target(
 
 
 def is_college_admin(db: Session, user_id: str, college_id: str) -> bool:
-    return (
+    # 1. Directly delegated in CollegeAdministrator
+    if (
         db.execute(
             select(CollegeAdministrator.id).where(
                 CollegeAdministrator.user_id == user_id, CollegeAdministrator.college_id == college_id
             )
         ).first()
         is not None
-    )
+    ):
+        return True
+
+    # 2. Creator of the college
+    college = db.get(College, college_id)
+    if college and college.created_by == user_id:
+        return True
+
+    # 3. Active teacher / admin associated with this college
+    u = db.get(User, user_id)
+    if u and u.college_id == college_id and u.role in (UserRole.teacher, UserRole.admin):
+        return True
+
+    return False
 
 
 def assert_can_manage_college(db: Session, user: User, college: College) -> None:
@@ -485,10 +499,19 @@ def list_colleges_administered_by(db: Session, user_id: str) -> list[College]:
     u = db.get(User, user_id)
     if u and u.role == UserRole.admin:
         return list(db.execute(select(College).order_by(College.name_key)).scalars())
+
+    conditions = [
+        CollegeAdministrator.user_id == user_id,
+        College.created_by == user_id,
+    ]
+    if u and u.college_id and u.role in (UserRole.teacher, UserRole.admin):
+        conditions.append(College.id == u.college_id)
+
     stmt = (
         select(College)
-        .join(CollegeAdministrator, CollegeAdministrator.college_id == College.id)
-        .where(CollegeAdministrator.user_id == user_id)
+        .outerjoin(CollegeAdministrator, CollegeAdministrator.college_id == College.id)
+        .where(or_(*conditions))
+        .distinct()
         .order_by(College.name_key)
     )
     return list(db.execute(stmt).scalars())
@@ -1480,13 +1503,15 @@ def create_college_course(
     db.commit()
     db.refresh(course)
     audit_service.record(db, actor_id=actor_id, action="course_created", resource_type="course", resource_id=course.id)
+    t_obj = db.get(User, course.teacher_id) if course.teacher_id else None
+    t_name = t_obj.full_name if t_obj else "Unassigned"
     return {
         "id": course.id,
         "title": course.title,
         "description": course.description,
         "subject": course.subject,
         "teacher_id": course.teacher_id,
-        "teacher_name": teacher.full_name,
+        "teacher_name": t_name,
         "status": course.status,
         "branch_id": branch_id,
         "branch_name": branch_name,

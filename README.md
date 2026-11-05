@@ -1,7 +1,7 @@
 # 🏮 LanternED: Autonomous, Low-Bandwidth LMS & Proctored Examination Ecosystem
 
 [![CI/CD Build](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen?logo=githubactions)](https://github.com/yynvr1408/LanternEd/actions)
-[![Release Version](https://img.shields.io/badge/Release-v2.0.0-blue?logo=semanticrelease)](https://github.com/yynvr1408/LanternEd/releases/latest)
+[![Release Version](https://img.shields.io/badge/Release-v2.0.0-blue?logo=semanticrelease)](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 [![Live Web App](https://img.shields.io/badge/Vercel-Live%20Frontend-black?logo=vercel)](https://lantern-ed.vercel.app)
 [![Live API](https://img.shields.io/badge/Render-Live%20API-46E3B7?logo=render)](https://lanterned-api.onrender.com)
@@ -10,7 +10,7 @@
 [![Object Storage](https://img.shields.io/badge/Cloudflare-R2%20Storage-F38020?logo=cloudflare)](https://www.cloudflare.com/products/r2/)
 [![WebRTC SFU](https://img.shields.io/badge/LiveKit-Cloud%20SFU-FF6359?logo=webrtc)](https://livekit.io)
 [![Test Suite](https://img.shields.io/badge/Automated%20Tests-897%20Passed-brightgreen.svg)](backend/)
-[![Cross-Platform](https://img.shields.io/badge/Platforms-Web%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-0F5B57.svg)](https://github.com/yynvr1408/LanternEd/releases/latest)
+[![Cross-Platform](https://img.shields.io/badge/Platforms-Web%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-0F5B57.svg)](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
 
 > **LanternED is an offline-first, low-bandwidth, AI-augmented educational operating system engineered for colleges and polytechnics where internet connectivity is intermittent, congested, or cost-prohibitive. Built on an adaptive audio-first engine with local peer sync, split-screen rubric grading, and a lockdown examination suite, it bridges the digital divide without sacrificing university academic governance.**
 
@@ -23,7 +23,7 @@
 * 📖 **Interactive OpenAPI / Swagger Documentation:** [https://lanterned-api.onrender.com/docs](https://lanterned-api.onrender.com/docs)
 * 🩺 **Backend Health & Diagnostic Probe:** [https://lanterned-api.onrender.com/health](https://lanterned-api.onrender.com/health)
 * ✉️ **Verified Institutional Mail Domain:** `notifications@mail.afzaltech.in` (SPF / DKIM / DMARC Verified)
-* 📦 **Official Native Installers (Latest Release):** [LanternEd Releases Channel](https://github.com/yynvr1408/LanternEd/releases/latest) (*Windows `.exe`, macOS `.dmg`, Android `.apk`, iOS `.ipa`*)
+* 📦 **Official Native Installers (Latest Release):** [LanternEd Releases Channel](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest) (*Windows `.exe`, macOS `.dmg`, Android `.apk`, iOS `.ipa`*)
 
 ---
 
@@ -189,9 +189,9 @@ LanternED is not a conceptual prototype—**it is a verified, production-deploye
 * ✅ **Zero Unstaged Regressions:** Fixed premature logout loops via sliding-window tokens, decoupled course creation, eliminated cross-portal links, and implemented full examination state recovery.
 
 ### Direct Download Links (Latest Stable Release)
-* 🪟 **Windows Desktop Installer:** [`LanternEd-Setup.exe`](https://github.com/yynvr1408/LanternEd/releases/latest)
-* 🤖 **Android Mobile APK:** [`LanternEd-release.apk`](https://github.com/yynvr1408/LanternEd/releases/latest)
-* 🍎 **macOS Universal DMG:** [`LanternEd.dmg`](https://github.com/yynvr1408/LanternEd/releases/latest)
+* 🪟 **Windows Desktop Installer:** [`LanternEd-Setup.exe`](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
+* 🤖 **Android Mobile APK:** [`LanternEd-release.apk`](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
+* 🍎 **macOS Universal DMG:** [`LanternEd.dmg`](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
 * 🌐 **Live Web App:** [`https://lantern-ed.vercel.app`](https://lantern-ed.vercel.app)
 
 ---

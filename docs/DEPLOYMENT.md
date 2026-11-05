@@ -65,7 +65,7 @@ COOKIE_SAMESITE=none
 ```bash
 VITE_API_BASE_URL=https://lanterned-api.onrender.com
 VITE_LIVEKIT_URL=wss://lanterned-prod.livekit.cloud
-VITE_APP_RELEASES_URL=https://github.com/yynvr1408/LanternEd/releases/latest
+VITE_APP_RELEASES_URL=https://github.com/yynvr1408/LanternEd-app-releases/releases/latest
 ```
 
 ---
@@ -205,9 +205,9 @@ jobs:
 
 The frontend download modals ([`AppDownloadModal.tsx`](file:///frontend/src/components/ui/AppDownloadModal.tsx)) and update services ([`releaseService.ts`](file:///frontend/src/services/releaseService.ts)) dynamically query the active GitHub release channel:
 
-- **Download Redirect URL:** [`https://github.com/yynvr1408/LanternEd/releases/latest`](https://github.com/yynvr1408/LanternEd/releases/latest)
-- **Direct Windows Installer:** `https://github.com/yynvr1408/LanternEd/releases/latest/download/LanternEd-Setup.exe`
-- **Direct Android APK:** `https://github.com/yynvr1408/LanternEd/releases/latest/download/LanternEd-release.apk`
-- **Direct macOS DMG:** `https://github.com/yynvr1408/LanternEd/releases/latest/download/LanternEd.dmg`
+- **Download Redirect URL:** [`https://github.com/yynvr1408/LanternEd-app-releases/releases/latest`](https://github.com/yynvr1408/LanternEd-app-releases/releases/latest)
+- **Direct Windows Installer:** `https://github.com/yynvr1408/LanternEd-app-releases/releases/latest/download/LanternEd-Setup.exe`
+- **Direct Android APK:** `https://github.com/yynvr1408/LanternEd-app-releases/releases/latest/download/LanternEd-release.apk`
+- **Direct macOS DMG:** `https://github.com/yynvr1408/LanternEd-app-releases/releases/latest/download/LanternEd.dmg`
 
 This ensures end users and institutional computer labs always receive the newest stable binary without manual hyperlink maintenance.
