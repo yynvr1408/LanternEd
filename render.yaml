@@ -40,7 +40,7 @@ services:
       - key: SPEECH_TO_TEXT_BASE_URL
         value: https://api.groq.com/openai/v1
       - key: EMAIL_FROM
-        value: LanternED <onboarding@resend.dev>
+        value: LanternED <notifications@mail.afzaltech.in>
       - key: ELEVENLABS_VOICE_ID
         value: 21m00Tcm4TlvDq8ikWAM
       - key: ELEVENLABS_MODEL_ID
