@@ -42,10 +42,37 @@ describe('NetworkBandwidthController Component', () => {
 
     expect(screen.getByText('Bandwidth Simulation Tool')).toBeInTheDocument()
     expect(screen.getByText('Bandwidth Presets')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /⚡ Auto-Adaptive \(Production\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /🛠️ Manual Simulator \(Jury Mode\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Campus Wi-Fi/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Offline/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /2G \(20k\)/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /3G \(150k\)/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /4G \(1.5M\)/i })).toBeInTheDocument()
+  })
+
+  it('toggles between Auto-Adaptive and Manual Simulator modes', async () => {
+    render(
+      <NetworkProvider>
+        <SyncProvider>
+          <NetworkBandwidthController />
+        </SyncProvider>
+      </NetworkProvider>
+    )
+
+    fireEvent.click(screen.getByText(/⚡ Native \(Unlimited\)/i))
+
+    const autoBtn = screen.getByRole('button', { name: /⚡ Auto-Adaptive \(Production\)/i })
+    const manualBtn = screen.getByRole('button', { name: /🛠️ Manual Simulator \(Jury Mode\)/i })
+
+    // Click Manual mode
+    fireEvent.click(manualBtn)
+    expect(localStorage.getItem('lanterned_net_mode')).toBe('manual')
+
+    // Click Auto mode
+    fireEvent.click(autoBtn)
+    expect(localStorage.getItem('lanterned_net_mode')).toBe('auto')
+    expect(screen.getByText(/Auto-Detected Policy:/i)).toBeInTheDocument()
   })
 
   it('simulates offline mode when Offline preset is clicked', async () => {
@@ -89,6 +116,28 @@ describe('NetworkBandwidthController Component', () => {
     await waitFor(() => {
       expect((window as any).__LANTERNED_SIMULATED_KBPS__).toBe(20)
       expect(screen.getByText(/LiveKit Fallback:/i)).toBeInTheDocument()
+    })
+  })
+
+  it('simulates high-bandwidth Campus Wi-Fi preset', async () => {
+    render(
+      <NetworkProvider>
+        <SyncProvider>
+          <NetworkBandwidthController />
+        </SyncProvider>
+      </NetworkProvider>
+    )
+
+    // Expand
+    fireEvent.click(screen.getByText(/⚡ Native \(Unlimited\)/i))
+
+    // Click Campus Wi-Fi preset
+    const wifiBtn = screen.getByRole('button', { name: /Campus Wi-Fi/i })
+    fireEvent.click(wifiBtn)
+
+    await waitFor(() => {
+      expect((window as any).__LANTERNED_SIMULATED_KBPS__).toBe(10000)
+      expect(screen.getByText(/Optimal Network:/i)).toBeInTheDocument()
     })
   })
 

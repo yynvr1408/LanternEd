@@ -56,7 +56,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
       expect(screen.queryByRole('link', { name: /Platform Administration/i })).toBeNull()
     })
 
-    it('shows platform management link on web browsers', () => {
+    it('hides platform management link from public UI on web browsers', () => {
       expect(platformAdapter.isNative()).toBe(false)
 
       render(
@@ -65,7 +65,7 @@ describe('Multi-Dashboard Portals & Native Super-Admin Access Restriction', () =
         </MemoryRouter>
       )
 
-      expect(screen.getByText(/Platform Administration/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Platform Administration/i)).not.toBeInTheDocument()
     })
   })
 

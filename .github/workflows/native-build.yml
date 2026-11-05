@@ -82,7 +82,7 @@ jobs:
       - run: npm run build
       - name: Sync Capacitor Android
         run: npx cap sync android
-      - name: Setup Android SDK Environment & Accept Licenses
+      - name: Setup Android SDK Environment & Keystore
         run: |
           mkdir -p "$ANDROID_HOME/licenses"
           echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n84831b9409646a918e30573bab4c9c91346d8abd\nd56f5187479451eabf01fb78af6dfcb131a6481e" > "$ANDROID_HOME/licenses/android-sdk-license"
@@ -90,18 +90,17 @@ jobs:
           if [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then
             export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
             yes | sdkmanager --licenses || true
-            sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
+            sdkmanager "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0" || true
           fi
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null || true
+          mkdir -p android/app
+          cp ~/.android/debug.keystore android/app/debug.keystore 2>/dev/null || true
       - name: Build Android APK
         run: |
           cd android
           chmod +x ./gradlew
-          if ./gradlew assembleRelease --stacktrace; then
-            echo "Release build succeeded."
-          else
-            echo "Release build failed, falling back to assembleDebug..."
-            ./gradlew assembleDebug --stacktrace
-          fi
+          (./gradlew assembleDebug assembleRelease --stacktrace || ./gradlew assembleDebug --stacktrace) 2>&1 | tee gradle_build.log
           apk_file=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -n "$apk_file" ]; then
             cp "$apk_file" app/build/outputs/apk/LanternEd-v0.1.1.apk

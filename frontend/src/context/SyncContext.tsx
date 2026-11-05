@@ -16,7 +16,7 @@ interface SyncContextType {
 const SyncContext = createContext<SyncContextType | undefined>(undefined)
 
 export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isOnline } = useNetworkStatus()
+  const { isOnline, streamingPolicy } = useNetworkStatus()
   const [pendingCount, setPendingCount] = useState<number>(0)
   const [isSyncing, setIsSyncing] = useState<boolean>(false)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
@@ -36,9 +36,11 @@ export const SyncProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refreshQueue()
-    const interval = setInterval(refreshQueue, 5000)
+    const intervalMs = streamingPolicy?.syncIntervalMs ?? 5000
+    if (intervalMs <= 0) return // paused while offline
+    const interval = setInterval(refreshQueue, intervalMs)
     return () => clearInterval(interval)
-  }, [refreshQueue])
+  }, [refreshQueue, streamingPolicy?.syncIntervalMs])
 
   const syncNow = async (): Promise<SyncResult> => {
     if (isSyncing) {

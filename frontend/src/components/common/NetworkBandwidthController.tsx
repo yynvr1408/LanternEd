@@ -21,13 +21,17 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 export const NetworkBandwidthController: React.FC = () => {
   const {
+    mode,
+    setMode,
     isOnline,
     quality,
     latencyMs,
+    effectiveKbps,
+    statusTag,
+    streamingPolicy,
     simulatedBandwidthKbps,
     setSimulatedBandwidth,
     restoreNormalNetwork,
-    isSimulated,
   } = useNetworkStatus()
 
   // Expanded panel vs compact floating pill
@@ -41,7 +45,7 @@ export const NetworkBandwidthController: React.FC = () => {
       if (savedX && savedY) {
         return { x: Number(savedX), y: Number(savedY) }
       }
-      return { x: Math.max(16, window.innerWidth - 340), y: Math.max(16, window.innerHeight - 100) }
+      return { x: Math.max(16, window.innerWidth - 360), y: Math.max(16, window.innerHeight - 100) }
     }
     return { x: 20, y: 500 }
   })
@@ -102,8 +106,8 @@ export const NetworkBandwidthController: React.FC = () => {
       const deltaX = currentX - dragStartRef.current.startX
       const deltaY = currentY - dragStartRef.current.startY
 
-      const newX = Math.max(10, Math.min(window.innerWidth - (isExpanded ? 340 : 160), dragStartRef.current.posX + deltaX))
-      const newY = Math.max(10, Math.min(window.innerHeight - (isExpanded ? 460 : 60), dragStartRef.current.posY + deltaY))
+      const newX = Math.max(10, Math.min(window.innerWidth - (isExpanded ? 360 : 160), dragStartRef.current.posX + deltaX))
+      const newY = Math.max(10, Math.min(window.innerHeight - (isExpanded ? 520 : 60), dragStartRef.current.posY + deltaY))
 
       setPosition({ x: newX, y: newY })
     }
@@ -166,8 +170,17 @@ export const NetworkBandwidthController: React.FC = () => {
     }
   }
 
-  // Visual label for current simulated speed
-  const getSpeedLabel = () => {
+  // Visual label for floating pill
+  const getPillLabel = () => {
+    if (mode === 'auto') {
+      if (simulatedBandwidthKbps === null && streamingPolicy.tier === 'high') {
+        return '⚡ Native (Unlimited)'
+      }
+      if (streamingPolicy.tier === 'offline') return '🔴 Offline (0 kbps)'
+      if (streamingPolicy.tier === 'low') return '⚠️ 2G Audio'
+      return `⚡ Auto: ${statusTag}`
+    }
+    // Manual mode
     if (simulatedBandwidthKbps === null) return '⚡ Native (Unlimited)'
     if (simulatedBandwidthKbps === 0) return '🔴 Offline (0 kbps)'
     if (simulatedBandwidthKbps < 1000) return `⚠️ ${simulatedBandwidthKbps} kbps`
@@ -203,16 +216,16 @@ export const NetworkBandwidthController: React.FC = () => {
             className="flex items-center gap-2 cursor-pointer pr-1"
             title="Click to open Bandwidth Controller"
           >
-            {simulatedBandwidthKbps === 0 ? (
+            {!isOnline || (mode === 'manual' && simulatedBandwidthKbps === 0) ? (
               <span className="w-2.5 h-2.5 rounded-full bg-[#E53935] animate-pulse" />
-            ) : simulatedBandwidthKbps !== null && simulatedBandwidthKbps <= 30 ? (
+            ) : streamingPolicy.tier === 'low' || (mode === 'manual' && simulatedBandwidthKbps !== null && simulatedBandwidthKbps <= 30) ? (
               <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] animate-pulse" />
             ) : (
               <span className="w-2.5 h-2.5 rounded-full bg-[#2DBE8B]" />
             )}
 
             <span className="text-xs font-bold tracking-tight text-[#E1E8E4]">
-              {getSpeedLabel()}
+              {getPillLabel()}
             </span>
 
             {pendingSyncCount && (pendingSyncCount.drafts > 0 || pendingSyncCount.ops > 0) ? (
@@ -226,7 +239,7 @@ export const NetworkBandwidthController: React.FC = () => {
         </div>
       ) : (
         /* ================= EXPANDED CONTROLLER PANEL ================= */
-        <div className="w-[330px] sm:w-[350px] bg-[#121A19] text-[#FFFFFF] rounded-2xl shadow-2xl border border-[#202B2A] overflow-hidden flex flex-col">
+        <div className="w-[340px] sm:w-[360px] bg-[#121A19] text-[#FFFFFF] rounded-2xl shadow-2xl border border-[#202B2A] overflow-hidden flex flex-col">
           {/* Header & Drag Bar */}
           <div
             onMouseDown={handleDragStart}
@@ -254,61 +267,131 @@ export const NetworkBandwidthController: React.FC = () => {
           </div>
 
           <div className="p-3.5 space-y-3 text-xs">
-            {/* Live Metrics HUD */}
+            {/* 1. DUAL-MODE SWITCHER SEGMENTED CONTROL */}
+            <div className="bg-[#15201F] p-1 rounded-xl border border-[#2A3937] flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMode('auto')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  mode === 'auto'
+                    ? 'bg-[#0F5B57] text-[#FFFFFF] shadow-sm'
+                    : 'text-[#84908D] hover:text-[#FFFFFF] hover:bg-[#1A2524]'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 text-[#2DBE8B]" />
+                ⚡ Auto-Adaptive (Production)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('manual')}
+                className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  mode === 'manual'
+                    ? 'bg-[#0F5B57] text-[#FFFFFF] shadow-sm'
+                    : 'text-[#84908D] hover:text-[#FFFFFF] hover:bg-[#1A2524]'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5 text-[#38BDF8]" />
+                🛠️ Manual Simulator (Jury Mode)
+              </button>
+            </div>
+
+            {/* 2. REAL-TIME STATUS HEADER HUD */}
             <div className="bg-[#1A2524] p-3 rounded-xl border border-[#2A3937] flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-[10px] text-[#84908D] uppercase font-semibold">Incoming / Outgoing</span>
+                <div className="flex items-center gap-1 text-[10px] text-[#84908D] uppercase font-semibold">
+                  <span>{mode === 'auto' ? '⚡ Auto-Adaptive' : '🛠️ Manual Simulator'}</span>
+                  <span>•</span>
+                  <span>Speed</span>
+                </div>
                 <span className="text-sm font-bold text-[#FFFFFF] flex items-center gap-1.5 mt-0.5">
                   <ArrowDown className="w-3.5 h-3.5 text-[#2DBE8B]" />
-                  {simulatedBandwidthKbps === null
+                  {mode === 'manual' && simulatedBandwidthKbps === null
                     ? 'Native Speed'
-                    : simulatedBandwidthKbps === 0
+                    : effectiveKbps === 0
                     ? '0 kbps'
-                    : `${simulatedBandwidthKbps} kbps`}
+                    : effectiveKbps >= 1000
+                    ? `${(effectiveKbps / 1000).toFixed(1)} Mbps`
+                    : `${effectiveKbps} kbps`}
                   <span className="text-[#84908D] font-normal text-xs">/</span>
                   <ArrowUp className="w-3.5 h-3.5 text-[#38BDF8]" />
-                  {simulatedBandwidthKbps === null
+                  {mode === 'manual' && simulatedBandwidthKbps === null
                     ? 'Native'
-                    : simulatedBandwidthKbps === 0
+                    : effectiveKbps === 0
                     ? '0 kbps'
-                    : `${Math.round(simulatedBandwidthKbps * 0.5)} kbps`}
+                    : effectiveKbps >= 1000
+                    ? `${(effectiveKbps / 2000).toFixed(1)} Mbps`
+                    : `${Math.round(effectiveKbps * 0.5)} kbps`}
                 </span>
               </div>
 
               <div className="flex flex-col items-end">
                 <span className="text-[10px] text-[#84908D] uppercase font-semibold">Latency / State</span>
-                <span className="text-xs font-bold mt-0.5 flex items-center gap-1">
-                  {!isOnline ? (
-                    <span className="text-[#E53935] font-semibold flex items-center gap-1">
-                      <WifiOff className="w-3 h-3" /> Offline
-                    </span>
-                  ) : quality === 'poor' ? (
-                    <span className="text-[#F59E0B] font-semibold flex items-center gap-1">
-                      <Radio className="w-3 h-3 animate-pulse" /> 2G Audio
-                    </span>
-                  ) : (
-                    <span className="text-[#2DBE8B] font-semibold flex items-center gap-1">
-                      <Wifi className="w-3 h-3" /> {latencyMs}ms
-                    </span>
-                  )}
-                </span>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span className="text-xs font-bold">
+                    {!isOnline || (mode === 'manual' && simulatedBandwidthKbps === 0) ? (
+                      <span className="text-[#E53935] font-semibold flex items-center gap-1">
+                        <WifiOff className="w-3 h-3" /> Offline
+                      </span>
+                    ) : quality === 'poor' || streamingPolicy.tier === 'low' ? (
+                      <span className="text-[#F59E0B] font-semibold flex items-center gap-1">
+                        <Radio className="w-3 h-3 animate-pulse" /> {latencyMs}ms
+                      </span>
+                    ) : (
+                      <span className="text-[#2DBE8B] font-semibold flex items-center gap-1">
+                        <Wifi className="w-3 h-3" /> {latencyMs}ms
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      streamingPolicy.tier === 'offline'
+                        ? 'bg-[#E53935]/20 text-[#EF4444] border border-[#EF4444]/40'
+                        : streamingPolicy.tier === 'low'
+                        ? 'bg-[#D97706]/20 text-[#F59E0B] border border-[#F59E0B]/40'
+                        : streamingPolicy.tier === 'medium'
+                        ? 'bg-[#0284C7]/20 text-[#38BDF8] border border-[#38BDF8]/40'
+                        : 'bg-[#059669]/20 text-[#2DBE8B] border border-[#2DBE8B]/40'
+                    }`}
+                  >
+                    {statusTag}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Active Fallback Indicator */}
+            {/* Auto Mode Telemetry Badge Notice */}
+            {mode === 'auto' && (
+              <div className="p-2 rounded-lg text-[11px] bg-[#15201F] border border-[#2A3937] text-[#A3B3AF] flex items-center justify-between">
+                <span>
+                  <strong>Auto-Detected Policy:</strong> Telemetry dynamically sets resolution &amp; sync rate.
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1A2524] text-[#2DBE8B] border border-[#2DBE8B]/30 shrink-0 ml-2">
+                  Auto: {statusTag}
+                </span>
+              </div>
+            )}
+
+            {/* 3. DYNAMIC LIVEKIT & STORAGE FALLBACK NOTICES */}
             <div className="p-2.5 rounded-lg text-[11px] border bg-[#15201F] border-[#2A3937] text-[#CBD7D1]">
-              {!isOnline ? (
+              {!isOnline || (mode === 'manual' && simulatedBandwidthKbps === 0) ? (
                 <div className="flex items-center gap-2 text-[#EF4444]">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>
                     <strong>Offline Fallback:</strong> Writing drafts saves to IndexedDB; API calls fail cleanly with sync queue pending.
                   </span>
                 </div>
-              ) : quality === 'poor' ? (
+              ) : streamingPolicy.tier === 'low' || (mode === 'manual' && simulatedBandwidthKbps !== null && simulatedBandwidthKbps <= 30) ? (
                 <div className="flex items-center gap-2 text-[#F59E0B]">
                   <Radio className="w-4 h-4 shrink-0 animate-pulse" />
                   <span>
                     <strong>LiveKit Fallback:</strong> Low-bandwidth voice stream active. Video unsubscribed at transport layer.
+                  </span>
+                </div>
+              ) : streamingPolicy.tier === 'medium' ? (
+                <div className="flex items-center gap-2 text-[#38BDF8]">
+                  <Wifi className="w-4 h-4 shrink-0" />
+                  <span>
+                    <strong>Adaptive Stream:</strong> 360p video &amp; optimized voice active ({streamingPolicy.resolution}).
                   </span>
                 </div>
               ) : (
@@ -321,57 +404,61 @@ export const NetworkBandwidthController: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Presets */}
+            {/* 4. BANDWIDTH PRESETS MATRIX (6 PRESETS) */}
             <div>
-              <span className="text-[10px] font-bold text-[#84908D] uppercase tracking-wider block mb-1.5">
-                Bandwidth Presets
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold text-[#84908D] uppercase tracking-wider">
+                  Bandwidth Presets
+                </span>
+                {mode === 'auto' && (
+                  <span className="text-[10px] text-[#A3B3AF]">
+                    (Selecting preset switches to Manual)
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-1.5">
+                {/* 1. Campus Wi-Fi / Fiber (10M) */}
                 <button
                   type="button"
-                  onClick={() => handleApplyPreset(0)}
+                  onClick={() => handleApplyPreset(10000)}
                   className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    simulatedBandwidthKbps === 0
-                      ? 'bg-[#E53935] text-white border-[#E53935] shadow-sm'
-                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#E53935]'
+                    mode === 'manual' && simulatedBandwidthKbps === 10000
+                      ? 'bg-[#0F5B57] text-white border-[#2DBE8B] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
+                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#2DBE8B]'
                   }`}
                 >
-                  <WifiOff className="w-3 h-3 text-[#EF4444]" />
-                  Offline
+                  <Wifi className="w-3 h-3 text-[#2DBE8B]" />
+                  Campus Wi-Fi
                 </button>
 
+                {/* 2. Native / Full Speed */}
                 <button
                   type="button"
-                  onClick={() => handleApplyPreset(20)}
+                  onClick={() => handleApplyPreset(null)}
                   className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    simulatedBandwidthKbps === 20
-                      ? 'bg-[#D97706] text-white border-[#D97706] shadow-sm'
-                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#D97706]'
+                    mode === 'manual' && simulatedBandwidthKbps === null
+                      ? 'bg-[#0F5B57] text-white border-[#2DBE8B] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
+                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#2DBE8B]'
                   }`}
                 >
-                  <Radio className="w-3 h-3 text-[#F59E0B]" />
-                  2G (20k)
+                  <RotateCcw className="w-3 h-3 text-[#2DBE8B]" />
+                  Native / Full Speed
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleApplyPreset(150)}
-                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    simulatedBandwidthKbps === 150
-                      ? 'bg-[#0284C7] text-white border-[#0284C7] shadow-sm'
-                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#0284C7]'
-                  }`}
-                >
-                  <Wifi className="w-3 h-3 text-[#38BDF8]" />
-                  3G (150k)
-                </button>
-
+                {/* 3. 4G (1.5M) */}
                 <button
                   type="button"
                   onClick={() => handleApplyPreset(1500)}
                   className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                    simulatedBandwidthKbps === 1500
+                    mode === 'manual' && simulatedBandwidthKbps === 1500
                       ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
                       : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#059669]'
                   }`}
                 >
@@ -379,22 +466,57 @@ export const NetworkBandwidthController: React.FC = () => {
                   4G (1.5M)
                 </button>
 
+                {/* 4. 3G (150k) */}
                 <button
                   type="button"
-                  onClick={() => handleApplyPreset(null)}
-                  className={`col-span-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    simulatedBandwidthKbps === null
-                      ? 'bg-[#0F5B57] text-white border-[#2DBE8B] shadow-sm'
-                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#2DBE8B]'
+                  onClick={() => handleApplyPreset(150)}
+                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    mode === 'manual' && simulatedBandwidthKbps === 150
+                      ? 'bg-[#0284C7] text-white border-[#0284C7] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
+                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#0284C7]'
                   }`}
                 >
-                  <RotateCcw className="w-3 h-3 text-[#2DBE8B]" />
-                  Native / Full Speed
+                  <Wifi className="w-3 h-3 text-[#38BDF8]" />
+                  3G (150k)
+                </button>
+
+                {/* 5. 2G (20k) */}
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset(20)}
+                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    mode === 'manual' && simulatedBandwidthKbps === 20
+                      ? 'bg-[#D97706] text-white border-[#D97706] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
+                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#D97706]'
+                  }`}
+                >
+                  <Radio className="w-3 h-3 text-[#F59E0B]" />
+                  2G (20k)
+                </button>
+
+                {/* 6. Offline */}
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset(0)}
+                  className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    mode === 'manual' && simulatedBandwidthKbps === 0
+                      ? 'bg-[#E53935] text-white border-[#E53935] shadow-sm'
+                      : mode === 'auto'
+                      ? 'bg-[#15201F] text-[#84908D] border-[#2A3937] hover:text-[#FFFFFF]'
+                      : 'bg-[#1A2524] text-[#E1E8E4] border-[#2A3937] hover:border-[#E53935]'
+                  }`}
+                >
+                  <WifiOff className="w-3 h-3 text-[#EF4444]" />
+                  Offline
                 </button>
               </div>
             </div>
 
-            {/* Drag Slider (Dynamic Speed Controller) */}
+            {/* 5. DYNAMIC SLIDER & MANUAL CONTROLS */}
             <div className="bg-[#1A2524] p-3 rounded-xl border border-[#2A3937] space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-semibold text-[#CBD7D1]">Drag Speed Limit:</span>
@@ -409,7 +531,7 @@ export const NetworkBandwidthController: React.FC = () => {
               <input
                 type="range"
                 min="0"
-                max="5000"
+                max="10000"
                 step="10"
                 value={sliderValue}
                 onChange={handleSliderChange}
@@ -418,13 +540,13 @@ export const NetworkBandwidthController: React.FC = () => {
               <div className="flex justify-between text-[9px] text-[#84908D] font-mono">
                 <span>0k (Offline)</span>
                 <span>20k (2G)</span>
-                <span>250k (3G)</span>
+                <span>150k (3G)</span>
                 <span>1.5M (4G)</span>
-                <span>5M (HD)</span>
+                <span>10M (Fiber)</span>
               </div>
             </div>
 
-            {/* Manual Input & Submit */}
+            {/* Custom Input & Submit */}
             <form onSubmit={handleCustomInputSubmit} className="flex items-center gap-2">
               <div className="relative flex-1">
                 <input
@@ -449,7 +571,7 @@ export const NetworkBandwidthController: React.FC = () => {
               </button>
             </form>
 
-            {/* Forward Push & Recovery Action */}
+            {/* 6. FORWARD PUSH & RECOVERY ACTION */}
             <div className="pt-1 border-t border-[#202B2A]">
               <button
                 type="button"
@@ -458,7 +580,7 @@ export const NetworkBandwidthController: React.FC = () => {
                 className="w-full py-2 px-3 bg-[#0F5B57] hover:bg-[#126b66] active:scale-[0.98] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-60"
               >
                 <Play className={`w-3.5 h-3.5 fill-current ${isPushingQueue ? 'animate-spin' : ''}`} />
-                Restore Internet & Forward-Push Queue
+                Restore Internet &amp; Forward-Push Queue
               </button>
 
               {pushStatusMessage && (
@@ -468,7 +590,7 @@ export const NetworkBandwidthController: React.FC = () => {
               )}
             </div>
 
-            {/* Pending Queues Counter */}
+            {/* 7. PENDING QUEUES COUNTER */}
             {pendingSyncCount && (
               <div className="flex items-center justify-between text-[10px] text-[#84908D] pt-1">
                 <span className="flex items-center gap-1">

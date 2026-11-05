@@ -279,13 +279,32 @@ export function useAdaptiveAudio({
 
     const handleSimulatedQuality = (e: Event) => {
       const detail = (e as CustomEvent)?.detail
-      if (detail?.quality === 'poor' || detail?.quality === 'offline') {
+      if (
+        detail?.quality === 'poor' ||
+        detail?.quality === 'offline' ||
+        detail?.tier === 'low' ||
+        detail?.tier === 'offline'
+      ) {
         reportQuality(ConnectionQuality.Poor, 'stats')
-      } else if (detail?.quality === 'good' || detail?.quality === 'excellent') {
+        if (detail?.videoSubscribed === false && !manualRef.current) {
+          setIsAudioOnly(true)
+          applySubscriptionPolicy(true)
+        }
+      } else if (
+        detail?.quality === 'good' ||
+        detail?.quality === 'excellent' ||
+        detail?.tier === 'high' ||
+        detail?.tier === 'medium'
+      ) {
         reportQuality(ConnectionQuality.Good, 'stats')
+        if (detail?.videoSubscribed === true && !manualRef.current) {
+          setIsAudioOnly(false)
+          applySubscriptionPolicy(false)
+        }
       }
     }
     window.addEventListener('lanterned:network-quality', handleSimulatedQuality)
+    window.addEventListener('lanterned:adaptive-policy', handleSimulatedQuality)
 
     room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQuality)
     room.on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
@@ -298,6 +317,7 @@ export function useAdaptiveAudio({
 
     return () => {
       window.removeEventListener('lanterned:network-quality', handleSimulatedQuality)
+      window.removeEventListener('lanterned:adaptive-policy', handleSimulatedQuality)
       room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQuality)
       room.off(RoomEvent.TrackSubscribed, handleTrackSubscribed)
       room.off(RoomEvent.TrackPublished, handleTrackPublished)
