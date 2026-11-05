@@ -54,7 +54,9 @@ def main():
     print(f"Target Directory: {target_dir}")
 
     # First verify release integrity in source directory
-    from package_release import verify_releases
+    from package_release import verify_releases, load_manifest
+    manifest = load_manifest()
+    version = manifest.get("version", "0.1.1")
     if not verify_releases():
         print("[!] Verification failed. Please ensure all binaries match manifest before syncing.")
         sys.exit(1)
@@ -89,7 +91,7 @@ def main():
     if args.push:
         print("\nStaging, committing, and pushing release artifacts...")
         subprocess.run(["git", "add", "."], cwd=str(target_dir), check=True)
-        subprocess.run(["git", "commit", "-m", "chore(release): publish v0.1.0 cross-platform release artifacts"], cwd=str(target_dir), check=True)
+        subprocess.run(["git", "commit", "-m", "chore(release): publish v" + version + " cross-platform release artifacts"], cwd=str(target_dir), check=True)
         subprocess.run(["git", "push", "-u", "origin", "main", "--force"], cwd=str(target_dir), check=True)
         print("[SUCCESS] Published release packages to remote repository!")
     else:
@@ -97,7 +99,7 @@ def main():
         print("To push manually, run:")
         print(f"  cd \"{target_dir}\"")
         print("  git add .")
-        print("  git commit -m \"chore(release): publish v0.1.0 cross-platform release artifacts\"")
+        print("  git commit -m \"chore(release): publish v{version} cross-platform release artifacts\"")
         print("  git remote add origin <YOUR_APP_RELEASES_REPO_URL>")
         print("  git push -u origin main")
 

@@ -1,6 +1,6 @@
 [package]
 name = "lanterned-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "LanternEd Native Rural Education Application"
 edition = "2021"
 
@@ -12,6 +12,3 @@ tauri = { version = "2.0.0", features = [] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.38", features = ["full"] }
-
-[features]
-custom-protocol = ["tauri/custom-protocol"]

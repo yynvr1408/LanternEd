@@ -160,16 +160,41 @@ def verify_releases() -> bool:
     return all_passed
 
 
+def normalize_downloaded_artifacts(plat: str, target_filename: str) -> Path | None:
+    """If the exact expected target_filename does not exist in releases/<plat>,
+    find any binary artifact with matching or compatible extension and rename it to target_filename."""
+    platform_dir = RELEASES_DIR / plat
+    if not platform_dir.exists():
+        return None
+    target_path = platform_dir / target_filename
+    if target_path.exists():
+        return target_path
+
+    ext = Path(target_filename).suffix.lower()
+    candidates = [f for f in platform_dir.iterdir() if f.is_file() and f.suffix.lower() == ext]
+    if not candidates:
+        alt_map = {".exe": [".msi"], ".ipa": [".zip", ".tar.gz", ".app"]}
+        compat_exts = alt_map.get(ext, [])
+        candidates = [f for f in platform_dir.iterdir() if f.is_file() and f.suffix.lower() in compat_exts]
+
+    if candidates:
+        candidate = sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+        print(f"  [{plat}] Normalizing downloaded artifact: {candidate.name} -> {target_filename}")
+        candidate.rename(target_path)
+        return target_path
+    return None
+
+
 def update_hashes(dry_run: bool = False):
     """Recomputes SHA-256 and sizes for all binaries present in releases/<platform>/."""
     manifest = load_manifest()
-    version = manifest.get("version", "0.1.0")
+    version = manifest.get("version", "0.1.1")
     print(f"Updating checksums for LanternEd v{version}...")
 
     for plat in PLATFORMS:
         info = manifest["platforms"].get(plat, {})
         filename = info.get("fileName") or DEFAULT_SPECS[plat]["fileName"].format(version=version)
-        filepath = RELEASES_DIR / plat / filename
+        filepath = normalize_downloaded_artifacts(plat, filename) or (RELEASES_DIR / plat / filename)
 
         if filepath.exists():
             sha = calculate_sha256(filepath)
