@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GraduationCap, BookOpen, Building2, ArrowRight, ShieldCheck, Download } from 'lucide-react'
+import { GraduationCap, BookOpen, Building2, ArrowRight, ShieldCheck, Download, Sparkles } from 'lucide-react'
 import { Logo } from '../../components/ui/Logo'
 import { LanguageSwitcher } from '../../components/ui/LanguageSwitcher'
 import { platformAdapter } from '../../services/platformAdapter'
@@ -23,106 +23,180 @@ export const LoginChoicePage: React.FC = () => {
   const [isDownloadOpen, setIsDownloadOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#F8FAF7] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg px-4">
-        <div className="flex justify-end mb-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#F2F7F4] via-[#F8FAF7] to-[#F1F6F3] flex flex-col">
+      {/* Top Navigation Header */}
+      <header className="w-full border-b border-[#E1E8E4]/80 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Logo size={32} />
+          <div className="flex flex-col text-left">
+            <span className="text-sm font-bold text-[#202B2A] tracking-tight leading-tight">LanternED</span>
+            <span className="text-[10px] text-[#687775] font-medium hidden sm:inline leading-tight">
+              Offline-First Educational Platform
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
           <LanguageSwitcher />
         </div>
-        <div className="flex flex-col items-center text-center mb-8">
-          <Logo size={48} className="mb-3" />
-          <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">LanternED</h1>
-          <p className="text-xs sm:text-sm text-[#687775] mt-1 max-w-xs leading-relaxed">{t('auth.tagline')}</p>
-        </div>
+      </header>
 
-        <p className="text-center text-sm font-semibold text-[#202B2A] mb-4">{t('auth.howSigningIn')}</p>
-
-        <div className="flex flex-col gap-3">
-          {/* 1. Student Portal */}
-          <Link
-            to="/login/student"
-            className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
-          >
-            <div className="w-11 h-11 shrink-0 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <div className="flex-1 text-left">
-              <h2 className="text-sm font-bold text-[#202B2A]">{t('auth.studentPortal')}</h2>
-              <p className="text-xs text-[#687775]">{t('auth.studentPortalDesc')}</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
-          </Link>
-
-          {/* 2. Teacher Portal */}
-          <Link
-            to="/login/teacher"
-            className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
-          >
-            <div className="w-11 h-11 shrink-0 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div className="flex-1 text-left">
-              <h2 className="text-sm font-bold text-[#202B2A]">{t('auth.teacherPortal')}</h2>
-              <p className="text-xs text-[#687775]">{t('auth.teacherPortalDesc')}</p>
-            </div>
-            <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
-          </Link>
-
-          {/* 3. College Admin Portal */}
-          <Link
-            to="/login/college-admin"
-            className="group bg-[#FFFFFF] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-5 flex items-center gap-4 shadow-xs transition-colors"
-          >
-            <div className="w-11 h-11 shrink-0 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center">
-              <Building2 className="w-6 h-6" />
-            </div>
-            <div className="flex-1 text-left">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-[#202B2A]">{t('auth.collegeAdminPortal')}</h2>
-                <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#DDF3EA] text-[#0F5B57] px-2 py-0.5 rounded-full">
-                  Admin
-                </span>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-lg">
+          {/* Hero Branding */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="relative mb-3">
+              <div className="absolute inset-0 bg-[#0F5B57]/15 rounded-3xl blur-xl scale-125 pointer-events-none" />
+              <div className="relative p-3.5 bg-white rounded-2xl shadow-xs border border-[#E1E8E4]">
+                <Logo size={48} />
               </div>
-              <p className="text-xs text-[#687775]">{t('auth.collegeAdminPortalDesc')}</p>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#CBD7D1] group-hover:text-[#0F5B57] transition-colors shrink-0" />
-          </Link>
-        </div>
-
-        {/* Native App Downloads Banner */}
-        <div className="mt-5 p-4 rounded-2xl bg-[#FFFFFF] border border-[#E1E8E4] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#DDF3EA] text-[#0F5B57] flex items-center justify-center shrink-0">
-              <Download className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-bold text-[#202B2A]">LanternEd Native Apps</h3>
-              <p className="text-[11px] text-[#687775]">Offline campus study for Windows, Mac, Android & iOS</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#202B2A]">
+              LanternED
+            </h1>
+            <p className="text-xs sm:text-sm text-[#687775] mt-1.5 max-w-sm leading-relaxed">
+              {t('auth.tagline')}
+            </p>
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EAF6F0] text-[#0F5B57] text-[11px] font-semibold border border-[#CDE5DA]">
+              <Sparkles className="w-3 h-3 text-[#0F5B57]" />
+              <span>Optimized for Low-Bandwidth & Offline Learning</span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsDownloadOpen(true)}
-            className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-semibold transition-colors cursor-pointer text-center shrink-0 shadow-xs"
-          >
-            Download App
-          </button>
-        </div>
 
-        {/* Web-Only Platform Management Link (Hidden on native apps) */}
-        {!isNative && (
-          <div className="mt-8 text-center border-t border-[#E1E8E4] pt-4">
-            <Link
-              to="/platform-console"
-              className="text-xs text-[#84908D] hover:text-[#0F5B57] transition-colors inline-flex items-center gap-1.5"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Platform Administration (Web Portal)</span>
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-3 px-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#687775]">
+              {t('auth.howSigningIn')}
+            </p>
+            <Link to="/register" className="text-xs font-semibold text-[#0F5B57] hover:underline">
+              Create account →
             </Link>
           </div>
-        )}
 
-        <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
-      </div>
+          {/* Portal Selection Cards */}
+          <div className="flex flex-col gap-3">
+            {/* 1. Student Portal */}
+            <Link
+              to="/login/student"
+              className="group relative bg-white hover:bg-[#FAFDFB] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-xl bg-[#EAF6F0] text-[#0F5B57] group-hover:bg-[#0F5B57] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[#202B2A] group-hover:text-[#0F5B57] transition-colors">
+                    {t('auth.studentPortal')}
+                  </h2>
+                  <span className="text-[10px] font-medium text-[#0F5B57] bg-[#EAF6F0] px-2 py-0.5 rounded-full border border-[#CDE5DA]">
+                    Learner
+                  </span>
+                </div>
+                <p className="text-xs text-[#687775] mt-0.5 truncate sm:whitespace-normal">
+                  {t('auth.studentPortalDesc')}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#F5F8F6] group-hover:bg-[#EAF6F0] flex items-center justify-center shrink-0 transition-colors">
+                <ArrowRight className="w-4 h-4 text-[#84908D] group-hover:text-[#0F5B57] group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* 2. Teacher Portal */}
+            <Link
+              to="/login/teacher"
+              className="group relative bg-white hover:bg-[#FAFDFB] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-xl bg-[#EAF6F0] text-[#0F5B57] group-hover:bg-[#0F5B57] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[#202B2A] group-hover:text-[#0F5B57] transition-colors">
+                    {t('auth.teacherPortal')}
+                  </h2>
+                  <span className="text-[10px] font-medium text-[#0F5B57] bg-[#EAF6F0] px-2 py-0.5 rounded-full border border-[#CDE5DA]">
+                    Educator
+                  </span>
+                </div>
+                <p className="text-xs text-[#687775] mt-0.5 truncate sm:whitespace-normal">
+                  {t('auth.teacherPortalDesc')}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#F5F8F6] group-hover:bg-[#EAF6F0] flex items-center justify-center shrink-0 transition-colors">
+                <ArrowRight className="w-4 h-4 text-[#84908D] group-hover:text-[#0F5B57] group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+
+            {/* 3. College Admin Portal */}
+            <Link
+              to="/login/college-admin"
+              className="group relative bg-white hover:bg-[#FAFDFB] border border-[#E1E8E4] hover:border-[#0F5B57] rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-xl bg-[#EAF6F0] text-[#0F5B57] group-hover:bg-[#0F5B57] group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-[#202B2A] group-hover:text-[#0F5B57] transition-colors">
+                    {t('auth.collegeAdminPortal')}
+                  </h2>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0F5B57] text-white px-2 py-0.5 rounded-full">
+                    Admin
+                  </span>
+                </div>
+                <p className="text-xs text-[#687775] mt-0.5 truncate sm:whitespace-normal">
+                  {t('auth.collegeAdminPortalDesc')}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-[#F5F8F6] group-hover:bg-[#EAF6F0] flex items-center justify-center shrink-0 transition-colors">
+                <ArrowRight className="w-4 h-4 text-[#84908D] group-hover:text-[#0F5B57] group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </Link>
+          </div>
+
+          {/* Native App Downloads Banner */}
+          <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-white via-[#F7FAF8] to-[#EEF6F2] border border-[#D5E5DE] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#0F5B57] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-[#202B2A]">LanternEd Native Apps</h3>
+                  <span className="text-[10px] font-semibold bg-[#EAF6F0] text-[#0F5B57] px-2 py-0.5 rounded-full border border-[#CDE5DA]">
+                    Desktop & Mobile
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-[#687775] mt-0.5">
+                  Offline study for Windows, macOS, Android & iOS
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsDownloadOpen(true)}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs font-semibold transition-all cursor-pointer text-center shrink-0 shadow-xs hover:shadow-sm"
+            >
+              Download App
+            </button>
+          </div>
+
+          {/* Web-Only Platform Management Link (Hidden on native apps) */}
+          {!isNative && (
+            <div className="mt-6 text-center border-t border-[#E1E8E4] pt-4">
+              <Link
+                to="/platform-console"
+                className="text-xs text-[#84908D] hover:text-[#0F5B57] transition-colors inline-flex items-center gap-1.5 py-1 px-3 rounded-full hover:bg-white/60"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Platform Administration (Web Portal)</span>
+              </Link>
+            </div>
+          )}
+
+          <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
+        </div>
+      </main>
     </div>
   )
 }

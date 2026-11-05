@@ -166,35 +166,67 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAF7] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="flex justify-end mb-3">
+    <div className="min-h-screen bg-gradient-to-b from-[#F2F7F4] via-[#F8FAF7] to-[#F1F6F3] flex flex-col">
+      {/* Top Header */}
+      <header className="w-full border-b border-[#E1E8E4]/80 bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3 flex items-center justify-between">
+        <Link to="/login" className="flex items-center gap-2.5 group">
+          <Logo size={32} />
+          <div className="flex flex-col text-left">
+            <span className="text-sm font-bold text-[#202B2A] tracking-tight leading-tight group-hover:text-[#0F5B57] transition-colors">
+              LanternED
+            </span>
+            <span className="text-[10px] text-[#687775] font-medium hidden sm:inline leading-tight">
+              Offline-First Learning
+            </span>
+          </div>
+        </Link>
+        <div className="flex items-center gap-3">
           <LanguageSwitcher />
         </div>
-        {/* Brand */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <Logo size={48} className="mb-3" />
-          <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">
-            LanternED
-          </h1>
-          <p className="text-xs sm:text-sm text-[#687775] mt-1 max-w-xs leading-relaxed">
-            Offline-first educational learning platform for reliable learning in low-bandwidth regions.
-          </p>
-        </div>
+      </header>
 
-        {portal && (
-          <div className="flex justify-center mb-4">
-            <Link
-              to="/login"
-              className="text-xs font-semibold text-[#687775] hover:text-[#0F5B57] inline-flex items-center gap-1"
-            >
-              ← Not a {portal === 'college-admin' ? 'college administrator' : portal === 'teacher' ? 'teacher' : 'student'}? Switch portal
-            </Link>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          {/* Brand & Portal Info */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="relative mb-3">
+              <div className="absolute inset-0 bg-[#0F5B57]/15 rounded-3xl blur-xl scale-125 pointer-events-none" />
+              <div className="relative p-3 bg-white rounded-2xl shadow-xs border border-[#E1E8E4]">
+                <Logo size={42} />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">
+              {portal === 'college-admin'
+                ? 'College Administrator Sign In'
+                : portal === 'teacher'
+                ? 'Teacher Sign In'
+                : portal === 'student'
+                ? 'Student Sign In'
+                : 'Sign In to LanternED'}
+            </h1>
+            <p className="text-xs sm:text-sm text-[#687775] mt-1 max-w-xs leading-relaxed">
+              {portal === 'student'
+                ? 'Access your course materials, offline downloads, and classes'
+                : portal === 'teacher'
+                ? 'Manage curriculum, conduct classes, and review summaries'
+                : 'Manage college structures, departments, and registrations'}
+            </p>
           </div>
-        )}
 
-        {/* Card */}
-        <div className="bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl p-6 sm:p-8 shadow-xs">
+          {portal && (
+            <div className="flex justify-center mb-4">
+              <Link
+                to="/login"
+                className="text-xs font-semibold text-[#687775] hover:text-[#0F5B57] inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/80 border border-[#E1E8E4] shadow-xs hover:border-[#0F5B57] transition-all"
+              >
+                ← Switch to a different portal
+              </Link>
+            </div>
+          )}
+
+          {/* Card */}
+          <div className="bg-[#FFFFFF] border border-[#E1E8E4] rounded-2xl p-6 sm:p-8 shadow-sm">
           <h2 className="text-lg font-bold text-[#202B2A] mb-5">
             {portal === 'college-admin'
               ? 'College Administrator Sign In'
@@ -362,7 +394,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
         </div>
 
         <AppDownloadModal isOpen={isDownloadOpen} onClose={() => setIsDownloadOpen(false)} />
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
