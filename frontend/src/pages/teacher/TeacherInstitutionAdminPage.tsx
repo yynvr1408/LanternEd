@@ -343,7 +343,7 @@ const BillingSection: React.FC<{ college: College }> = ({ college }) => {
         amount: order.amount_paise,
         currency: order.currency,
         order_id: order.order_id,
-        name: 'LanternEd',
+        name: 'LanternED',
         description: `${college.name}: ${months} months`,
         handler: () => void confirmPayment(before),
         modal: { ondismiss: () => setBusy(false) },

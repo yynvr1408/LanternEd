@@ -29,16 +29,16 @@ EMAILJS_API_URL = "https://api.emailjs.com/api/v1.0/email/send"
 RESEND_API_URL = "https://api.resend.com/emails"
 
 _SUBJECTS = {
-    "reset": "Your LanternEd password reset code",
-    "login": "Approve your new LanternEd sign-in",
-    "registration": "Verify your email for LanternEd",
-    "deletion": "Confirm college deletion on LanternEd",
+    "reset": "Your LanternED password reset code",
+    "login": "Approve your new LanternED sign-in",
+    "registration": "Verify your email for LanternED",
+    "deletion": "Confirm college deletion on LanternED",
 }
 _INTRO = {
-    "reset": "Use this code to reset your LanternEd password.",
-    "login": "Someone is signing in to your LanternEd account from a new device. Use this code to approve it.",
-    "registration": "Use this code to verify your email address and finish creating your LanternEd account.",
-    "deletion": "Use this code to confirm deleting your college from LanternEd. This cannot be undone.",
+    "reset": "Use this code to reset your LanternED password.",
+    "login": "Someone is signing in to your LanternED account from a new device. Use this code to approve it.",
+    "registration": "Use this code to verify your email address and finish creating your LanternED account.",
+    "deletion": "Use this code to confirm deleting your college from LanternED. This cannot be undone.",
 }
 
 

@@ -1,6 +1,6 @@
-# Publishing LanternEd on Google Play (Trusted Web Activity)
+# Publishing LanternED on Google Play (Trusted Web Activity)
 
-LanternEd is already an installable PWA (`vite-plugin-pwa`). A Trusted Web Activity (TWA) wraps it in a thin Android app so students can find it on Google Play without a second codebase. Most of the work is accounts and assets, not code.
+LanternED is already an installable PWA (`vite-plugin-pwa`). A Trusted Web Activity (TWA) wraps it in a thin Android app so students can find it on Google Play without a second codebase. Most of the work is accounts and assets, not code.
 
 ## 1. What you need
 

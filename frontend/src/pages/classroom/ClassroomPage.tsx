@@ -367,7 +367,15 @@ const ClassroomStage: React.FC<{
     room,
     initialAudioOnly: !isTeacher && false,
     autoAdaptiveEnabled: true,
+    recoveryThresholdMs: 5000,
   })
+
+  const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState(false)
+  useEffect(() => {
+    if (isAdaptiveActive) {
+      setIsAudioBannerDismissed(false)
+    }
+  }, [isAdaptiveActive])
 
   // Watch room connection state
   useEffect(() => {
@@ -415,7 +423,7 @@ const ClassroomStage: React.FC<{
     if (recoveryRequired) onNeedFreshToken()
   }, [recoveryRequired, onNeedFreshToken])
 
-  // Three separate signals: the device, the LanternEd API, and the live media connection.
+  // Three separate signals: the device, the LanternED API, and the live media connection.
   const { isBrowserOnline, isServerReachable } = useNetworkStatus()
   const diagnosis = diagnoseConnectivity({ browserOnline: isBrowserOnline, apiReachable: isServerReachable, liveKitState: connectionStateStr })
 
@@ -627,21 +635,40 @@ const ClassroomStage: React.FC<{
       )}
 
       {/* Adaptive Audio-Only Banner Notification */}
-      {isAudioOnly && !severeDegradation && (
-        <div className="bg-[#E8F3FC] border-b border-[#CBD7D1] px-4 py-2 flex items-center justify-between text-xs text-[#2364AA]">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-[#2364AA] shrink-0" />
+      {isAudioOnly && !severeDegradation && !isAudioBannerDismissed && (
+        <div className="bg-[#121A19] border-b border-[#202B2A] px-4 py-2.5 flex items-center justify-between text-xs text-[#CBD7D1] shrink-0 shadow-sm" role="status">
+          <div className="flex items-center gap-2.5">
+            <Radio className="w-4 h-4 text-[#2DBE8B] animate-pulse shrink-0" />
             <span>
-              <strong>Audio-Only Mode Active:</strong> Incoming video tracks unsubscribed at transport layer to conserve cellular data. Audio remains crystal clear.
+              {isAdaptiveActive ? (
+                <>
+                  <strong className="text-[#FFFFFF]">Unstable connection detected.</strong> Switched to Voice-Only to keep audio uninterrupted.
+                </>
+              ) : (
+                <>
+                  <strong className="text-[#FFFFFF]">Voice-Only Mode Active:</strong> Incoming video tracks unsubscribed at transport layer to conserve cellular data.
+                </>
+              )}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => toggleAudioOnly(false)}
-            className="underline font-semibold hover:text-[#0F5B57] text-xs cursor-pointer ml-3 shrink-0"
-          >
-            Switch to Video
-          </button>
+          <div className="flex items-center gap-3 ml-4 shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleAudioOnly(false)}
+              className="text-xs text-[#2DBE8B] hover:text-[#7EE2B8] font-semibold cursor-pointer underline"
+            >
+              Switch to Video
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAudioBannerDismissed(true)}
+              className="text-[#84908D] hover:text-[#FFFFFF] p-1 rounded cursor-pointer touch-target flex items-center justify-center"
+              aria-label="Dismiss banner"
+              title="Dismiss notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -776,9 +803,28 @@ const ClassroomStage: React.FC<{
             }
           >
             {isAudioOnly && !isTeacher ? (
-              <div className="flex flex-col items-center text-[#CBD7D1] text-[11px]">
-                <Volume2 className="w-6 h-6 text-[#2364AA] animate-pulse mb-1" />
-                Audio only
+              <div className="flex flex-col items-center justify-center h-full w-full p-2.5 text-center bg-gradient-to-b from-[#162322] to-[#0D1615]">
+                <div
+                  className={`relative w-14 h-14 rounded-full flex items-center justify-center mb-1.5 transition-all duration-300 ${
+                    cameraTrack?.participant?.isSpeaking
+                      ? 'ring-4 ring-[#2DBE8B] shadow-[0_0_16px_rgba(45,190,139,0.5)] scale-105 animate-pulse'
+                      : 'ring-2 ring-[#374947]'
+                  } bg-[#0F5B57] text-[#FFFFFF]`}
+                >
+                  <User className="w-7 h-7 text-[#E1E8E4]" />
+                  {cameraTrack?.participant?.isSpeaking && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#2DBE8B] border-2 border-[#121A19] flex items-center justify-center" title="Speaking">
+                      <Mic className="w-2.5 h-2.5 text-[#FFFFFF]" />
+                    </span>
+                  )}
+                </div>
+                <span className="font-semibold text-xs text-[#FFFFFF] truncate max-w-[130px]">
+                  {cameraTrack?.participant?.name || 'Teacher'}
+                </span>
+                <span className="text-[10px] text-[#7EE2B8] flex items-center gap-1 mt-0.5 font-medium">
+                  <Volume2 className="w-3 h-3 text-[#2DBE8B] animate-pulse" />
+                  Voice-Only Stream
+                </span>
               </div>
             ) : cameraTrack?.publication?.track ? (
               <VideoTrack trackRef={cameraTrack} className="w-full h-full object-cover" />

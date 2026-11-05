@@ -31,11 +31,11 @@ export const isRegistrationPending = (r: AuthResponse | User | RegistrationPendi
 
 export const authService = {
   isSharedDevice(): boolean {
-    return localStorage.getItem('eduvillage_shared_device') === 'true'
+    return localStorage.getItem('lanterned_shared_device') === 'true'
   },
 
   setSharedDevice(enabled: boolean): void {
-    localStorage.setItem('eduvillage_shared_device', String(enabled))
+    localStorage.setItem('lanterned_shared_device', String(enabled))
   },
 
   getStorage(): Storage {
@@ -43,7 +43,7 @@ export const authService = {
   },
 
   cacheUser(user: User): void {
-    this.getStorage().setItem('eduvillage_user', JSON.stringify(user))
+    this.getStorage().setItem('lanterned_user', JSON.stringify(user))
   },
 
   async login(email: string, password: string): Promise<AuthResponse | LoginOtpChallenge> {
@@ -153,12 +153,12 @@ export const authService = {
   },
 
   clearLocalSession(): void {
-    sessionStorage.removeItem('eduvillage_user')
-    localStorage.removeItem('eduvillage_user')
+    sessionStorage.removeItem('lanterned_user')
+    localStorage.removeItem('lanterned_user')
   },
 
   getStoredUser(): User | null {
-    const raw = sessionStorage.getItem('eduvillage_user') || localStorage.getItem('eduvillage_user')
+    const raw = sessionStorage.getItem('lanterned_user') || localStorage.getItem('lanterned_user')
     if (!raw) return null
     try {
       return JSON.parse(raw) as User

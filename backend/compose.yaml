@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: eduvillage
-      POSTGRES_PASSWORD: eduvillage
-      POSTGRES_DB: eduvillage
+      POSTGRES_USER: lanterned
+      POSTGRES_PASSWORD: lanterned
+      POSTGRES_DB: lanterned
     ports:
       - "5432:5432"
     volumes:
-      - eduvillage_pgdata:/var/lib/postgresql/data
+      - lanterned_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eduvillage"]
+      test: ["CMD-SHELL", "pg_isready -U lanterned"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg2://eduvillage:eduvillage@db:5432/eduvillage
+      DATABASE_URL: postgresql+psycopg2://lanterned:lanterned@db:5432/lanterned
       APP_ENV: development
       FRONTEND_ORIGIN: http://localhost:5173
       SESSION_SECRET: dev-secret-change-me
@@ -38,11 +38,11 @@ services:
       api:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql+psycopg2://eduvillage:eduvillage@db:5432/eduvillage
+      DATABASE_URL: postgresql+psycopg2://lanterned:lanterned@db:5432/lanterned
       APP_ENV: development
     volumes:
       - ./media:/app/media
     command: python -m app.worker
 
 volumes:
-  eduvillage_pgdata:
+  lanterned_pgdata:

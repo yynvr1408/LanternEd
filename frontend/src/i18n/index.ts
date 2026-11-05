@@ -91,7 +91,7 @@ i18n
       // language list, so a deliberate choice always wins over Accept-Language/navigator.language.
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
-      lookupLocalStorage: 'lanternEd:language',
+      lookupLocalStorage: 'lanterned:language',
     },
   })
 

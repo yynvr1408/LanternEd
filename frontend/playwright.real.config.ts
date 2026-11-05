@@ -11,7 +11,7 @@ import { join } from 'node:path'
  */
 const FRONTEND_PORT = 4175
 const BACKEND_PORT = 8010
-const dir = mkdtempSync(join(tmpdir(), 'eduvillage-real-'))
+const dir = mkdtempSync(join(tmpdir(), 'lanterned-real-'))
 const db = `sqlite:///${join(dir, 'e2e.db').replace(/\\/g, '/')}`
 
 process.env.E2E_ADMIN_USERNAME ||= `admin-${randomBytes(3).toString('hex')}`

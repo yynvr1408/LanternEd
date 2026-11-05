@@ -18,7 +18,7 @@ const ORIGIN = 'http://localhost:4173'
 const VIDEO = readFileSync(path.join(here, 'fixtures', 'lecture.webm'))
 const VIDEO_SHA = createHash('sha256').update(VIDEO).digest('hex')
 
-const USER = { id: 'u1', email: 'student@eduvillage.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
+const USER = { id: 'u1', email: 'student@lanterned.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
 const COURSE = { id: 'c1', title: 'Soil Mechanics', description: 'd', subject: 'SOIL', teacher_id: 't1', teacher_name: 'Prof. Miller', status: 'published', created_at: '2026-01-01T00:00:00' }
 const RESOURCE = {
   id: 'vid-1', course_id: 'c1', lesson_id: null, filename: 'lecture.webm', mime_type: 'video/webm', size_bytes: VIDEO.length,
@@ -84,7 +84,7 @@ async function mockBackend(page: Page) {
 
 async function signIn(page: Page) {
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)
@@ -100,7 +100,7 @@ async function goOffline(context: BrowserContext) {
 async function storedState(page: Page) {
   return page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((res, rej) => {
-      const r = indexedDB.open('EduVillageDB')
+      const r = indexedDB.open('LanternEDDB')
       r.onsuccess = () => res(r.result)
       r.onerror = () => rej(r.error)
     })
@@ -205,7 +205,7 @@ test.describe('real video, offline', () => {
     await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime), { timeout: 10000 }).toBeGreaterThan(4)
     await video.evaluate((v: HTMLVideoElement) => { v.currentTime = 2.4; v.pause() }) // the pause handler stores this position
     await expect.poll(async () => (await page.evaluate(async () => {
-      const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('EduVillageDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
+      const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('LanternEDDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
       const row: any = await new Promise((res) => { const r = db.transaction('playbackPositions').objectStore('playbackPositions').get('res:vid-1'); r.onsuccess = () => res(r.result) })
       db.close()
       return row?.positionSeconds ?? null
@@ -278,7 +278,7 @@ test.describe('real video, offline', () => {
     await expect(page.getByText('No resources downloaded yet')).toBeVisible()
     // A file that claims to be WebM but is not (e.g. storage corruption).
     await page.evaluate(async () => {
-      const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('EduVillageDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
+      const db: IDBDatabase = await new Promise((res, rej) => { const r = indexedDB.open('LanternEDDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
       const tx = db.transaction('downloadedResources', 'readwrite')
       tx.objectStore('downloadedResources').put({
         id: 'bad-1', resourceId: 'bad-1', courseId: 'c1', title: 'Broken Lecture', fileType: 'video', sizeBytes: 64,

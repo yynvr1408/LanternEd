@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 const API = 'http://localhost:8000'
-const USER = { id: 'u1', email: 'student@eduvillage.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
+const USER = { id: 'u1', email: 'student@lanterned.org', full_name: 'Amina Diallo', role: 'student', status: 'active' }
 
 /** The backend, mocked at the network layer. Only auth and health exist; everything else is empty. */
 const net = { offline: false }
@@ -41,7 +41,7 @@ async function seedDownloads(page: Page) {
   await page.evaluate(async (wav) => {
     const open = () =>
       new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('EduVillageDB')
+        const req = indexedDB.open('LanternEDDB')
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)
       })
@@ -61,7 +61,7 @@ test('downloaded lectures open and play with the network completely disconnected
 
   // 1. Online: sign in, let the service worker install, and create the local database.
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)
@@ -108,7 +108,7 @@ test('downloaded lectures open and play with the network completely disconnected
 test('the Downloads page is reachable from the dashboard while offline (client-side navigation)', async ({ page, context }) => {
   await mockBackend(page)
   await page.goto('/login/student')
-  await page.fill('#email', 'student@eduvillage.org')
+  await page.fill('#email', 'student@lanterned.org')
   await page.fill('#password', 'student123')
   await page.click('button:has-text("Sign In")')
   await page.waitForURL(/\/student\/dashboard/)

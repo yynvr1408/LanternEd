@@ -97,10 +97,10 @@ def create_online_order(db: Session, user_id: str, college: College, *, period_m
         raise ValidationFailedError("Choose between 1 and 36 months.", code="INVALID_PERIOD")
     sub = get_subscription(db, college.id)
     if sub is None or sub.status == "canceled":
-        raise ConflictError("This college has no active subscription to pay for. Contact LanternEd.", code="NO_SUBSCRIPTION")
+        raise ConflictError("This college has no active subscription to pay for. Contact LanternED.", code="NO_SUBSCRIPTION")
     amount = order_amount_paise(sub, period_months)
     if amount < 100:  # Razorpay's minimum is 100 paise (Rs 1)
-        raise ConflictError("No amount is due under the agreed terms. Contact LanternEd.", code="NOTHING_DUE")
+        raise ConflictError("No amount is due under the agreed terms. Contact LanternED.", code="NOTHING_DUE")
     order = razorpay.create_order(
         amount_paise=amount, receipt=f"col-{college.id[:8]}-{int(utcnow().timestamp())}",
         notes={"college_id": college.id, "period_months": str(period_months)},

@@ -219,6 +219,9 @@ export interface Summary {
   /** 'llm' for a real model, 'stub' for the labeled no-provider fallback. */
   generator?: string
   teacher_edited?: boolean
+  audio_recap_key?: string
+  audio_recap_url?: string
+  is_approved?: boolean
   created_at: string
 }
 

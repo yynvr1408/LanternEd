@@ -17,6 +17,7 @@ import {
   SignalLow,
   Wrench,
   Check,
+  Zap,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -84,7 +85,7 @@ export const ClassroomControls: React.FC<ClassroomControlsProps> = ({
 
   return (
     <div className="bg-[#121A19] text-[#FFFFFF] border-t border-[#202B2A] p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 safe-bottom">
-      {/* Left: Connection State & Mode Badges */}
+      {/* Left: Connection State & Data Transparency Badge */}
       <div className="flex items-center gap-2">
         <Badge
           variant={
@@ -99,12 +100,31 @@ export const ClassroomControls: React.FC<ClassroomControlsProps> = ({
           {connectionState.toUpperCase()}
         </Badge>
 
-        {isAudioOnly && (
-          <Badge variant={isAdaptiveActive ? 'warning' : 'info'} size="sm">
-            <Radio className="w-3 h-3 mr-1 text-[#2364AA]" />
-            {isAdaptiveActive ? 'Adaptive Audio-Only' : 'Manual Audio-Only'}
+        <button
+          type="button"
+          onClick={onToggleAudioOnly}
+          className="cursor-pointer group flex items-center transition-transform active:scale-95 touch-target"
+          title={isAudioOnly ? "Click to switch to HD Stream (~800 kbps)" : "Click to activate Data Saver voice-only mode (~20 kbps)"}
+          aria-label={isAudioOnly ? "Data Saver Active. Click to switch to HD Video" : "HD Stream Active. Click to switch to Data Saver"}
+        >
+          <Badge
+            variant={isAudioOnly ? 'warning' : 'info'}
+            size="sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium tracking-wide transition-colors group-hover:brightness-110"
+          >
+            {isAudioOnly ? (
+              <>
+                <Zap className="w-3.5 h-3.5 text-[#F2A516] shrink-0 animate-pulse" />
+                <span>⚡ Data Saver: Active (~20 kbps)</span>
+              </>
+            ) : (
+              <>
+                <Video className="w-3.5 h-3.5 text-[#2DBE8B] shrink-0" />
+                <span>🎥 HD Stream (~800 kbps)</span>
+              </>
+            )}
           </Badge>
-        )}
+        </button>
       </div>
 
       {/* Center: Core Controls (Mic, Camera, Audio-Only, Summary) */}

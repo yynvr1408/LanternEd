@@ -61,7 +61,7 @@ def update_me(payload: UserUpdate, user: User = Depends(get_current_user), db: S
 
 @router.get("/me/export")
 def export_my_data(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Everything LanternEd holds about the signed-in person, as a JSON download."""
+    """Everything LanternED holds about the signed-in person, as a JSON download."""
     rate_limit_service.enforce(db, f"data-export:{user.id}", limit=10, window=timedelta(hours=1))
     from fastapi.responses import JSONResponse
 

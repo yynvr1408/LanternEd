@@ -34,7 +34,7 @@ def get_current_user(user: User | None = Depends(get_optional_user)) -> User:
     return user
 
 
-ADMIN_CSRF_HEADER = "x-eduvillage-admin"
+ADMIN_CSRF_HEADER = "x-lanterned-admin"
 
 
 def require_admin_csrf(request: Request) -> None:

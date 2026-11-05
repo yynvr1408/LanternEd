@@ -74,10 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null)
     }
 
-    window.addEventListener('eduvillage:auth:expired', handleExpired)
+    window.addEventListener('lanterned:auth:expired', handleExpired)
     return () => {
       isMounted = false
-      window.removeEventListener('eduvillage:auth:expired', handleExpired)
+      window.removeEventListener('lanterned:auth:expired', handleExpired)
     }
   }, [])
 

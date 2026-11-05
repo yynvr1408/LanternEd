@@ -21,7 +21,7 @@ from app.db.models.user import User, UserSession
 from app.main import app
 from app.services import admin_service, college_service
 
-CSRF = {"X-EduVillage-Admin": "1"}
+CSRF = {"X-LanternED-Admin": "1"}
 BASE = "/api/v1/admin"
 
 
@@ -177,7 +177,7 @@ def test_unauthenticated_requests_are_rejected(admin_creds):
 
 
 def test_mutations_without_csrf_header_are_rejected(admin_client):
-    admin_client.headers.pop("X-EduVillage-Admin")
+    admin_client.headers.pop("X-LanternED-Admin")
     assert _create(admin_client).status_code == 403
 
 

@@ -64,7 +64,7 @@ describe('admin panel', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect username or password.')
     const login = calls.find((c) => c.url.endsWith('/auth/login'))!
     expect(login.credentials).toBe('include')
-    expect(login.headers['X-EduVillage-Admin']).toBe('1')
+    expect(login.headers['X-LanternED-Admin']).toBe('1')
   })
 
   it('signs in, lists colleges, and only reports a creation after the server confirms it', async () => {

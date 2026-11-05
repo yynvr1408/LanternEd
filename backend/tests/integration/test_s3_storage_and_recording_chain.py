@@ -16,7 +16,7 @@ import httpx
 import pytest
 from moto.server import ThreadedMotoServer
 
-BUCKET = "eduvillage-test"
+BUCKET = "lanterned-test"
 MP4 = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom" + bytes(range(256)) * 40  # ~10 KB with real ftyp header
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"
 EXE = b"MZ\x90\x00\x03\x00\x00\x00" + b"\x00" * 64

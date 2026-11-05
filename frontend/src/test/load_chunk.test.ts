@@ -30,11 +30,11 @@ describe('loadChunk (stale deploy recovery for dynamic imports)', () => {
     const raced = await Promise.race([pending.then(() => 'resolved'), pending.catch(() => 'rejected'), Promise.resolve('neither')])
     expect(raced).toBe('neither')
     expect(window.location.reload).toHaveBeenCalledTimes(1)
-    expect(sessionStorage.getItem('eduvillage:chunk-reload-guard')).toBe('1')
+    expect(sessionStorage.getItem('lanterned:chunk-reload-guard')).toBe('1')
   })
 
   it('does not reload a second time in the same session; the error surfaces normally instead', async () => {
-    sessionStorage.setItem('eduvillage:chunk-reload-guard', '1')
+    sessionStorage.setItem('lanterned:chunk-reload-guard', '1')
     const err = new TypeError('error loading dynamically imported module')
     await expect(loadChunk(async () => { throw err })).rejects.toBe(err)
     expect(window.location.reload).not.toHaveBeenCalled()

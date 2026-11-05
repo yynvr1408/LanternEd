@@ -54,7 +54,7 @@ export function useAdaptiveAudio({
   initialAudioOnly = false,
   autoAdaptiveEnabled = true,
   sustainedThresholdMs = 5000,
-  recoveryThresholdMs = 15000,
+  recoveryThresholdMs = 5000,
   severeThresholdMs = 8000,
   statsPollIntervalMs = 2000,
   statsConsecutiveBadSamples = 2,

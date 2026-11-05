@@ -1,11 +1,11 @@
-# LanternEd
+# LanternED
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Backend Tests](https://img.shields.io/badge/pytest-634%20passed-brightgreen.svg)](backend/)
 [![Frontend Tests](https://img.shields.io/badge/vitest-263%20passed-brightgreen.svg)](frontend/)
 [![Platforms](https://img.shields.io/badge/Native%20Apps-Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-teal.svg)](releases/)
 
-**An offline-first, low-bandwidth cross-platform learning ecosystem for institutions where connectivity is unreliable — live low-bitrate classes, recorded lessons, on-device AI transcription, campus peer-to-peer LAN mode, and offline assignment submissions.**
+**An offline-first, low-bandwidth cross-platform learning ecosystem for institutions where connectivity is unreliable — live low-bitrate classes, recorded lessons, on-device AI transcription, campus peer-to-peer LAN mode, ElevenLabs audio recaps, and offline assignment submissions.**
 
 LanternEd gives institutions everything required to educate students over congested, high-packet-loss, or offline environments: teachers run live classes (with floating video, collaborative whiteboard, background blur, and low-bitrate DTX voice optimization), record lessons, and publish AI summaries; students join live, catch up from offline media packs, and submit work even when offline.
 
@@ -65,7 +65,7 @@ A step-by-step tour of the product, in the order a college would use it. (Self-r
 
 ## 2. Problem and solution
 
-| Challenge in connectivity-constrained institutions | What LanternEd provides |
+| Challenge in connectivity-constrained institutions | What LanternED provides |
 |---|---|
 | Weak or expensive internet | Adaptive audio-only mode in live classes; offline-first assignment drafts and sync; resumable downloads of recordings and materials; a whiteboard that works over a few hundred bytes per stroke |
 | Few devices, shared computers | Shared-device mode clears drafts, queue and downloads on sign-out; revocable server sessions |
@@ -133,7 +133,7 @@ flowchart TD
 | AI | OpenAI-compatible provider selected by configuration: Groq `openai/gpt-oss-120b` and `whisper-large-v3-turbo` in `render.yaml`; a labelled stub when unconfigured |
 | Storage | Cloudflare R2 (S3 API); local disk in development |
 | Hosting | Vercel (frontend), Render (backend Docker service), Neon, LiveKit Cloud, Cloudflare R2 |
-| Source control | GitHub (`yynvr1408/LanternEd`) |
+| Source control | GitHub (`yynvr1408/LanternED`) |
 | Testing | pytest, Vitest with Testing Library, Playwright |
 | Tooling | oxlint, strict TypeScript build, Docker Compose for local PostgreSQL |
 
@@ -218,8 +218,8 @@ want to keep their own data on their own infrastructure can run the same codebas
 **Prerequisites:** Python 3.12, Node.js 20+ with npm, Git. Docker is optional (`backend/compose.yaml` provides PostgreSQL 16).
 
 ```bash
-git clone https://github.com/yynvr1408/LanternEd.git
-cd LanternEd
+git clone https://github.com/yynvr1408/LanternED.git
+cd LanternED
 ```
 
 **Backend**
@@ -366,7 +366,7 @@ Latest results (2026-10-18): backend 459 passed, 12 skipped on SQLite (one summa
 ## 15. Project structure
 
 ```
-LanternEd/
+LanternED/
   README.md  render.yaml
   docs/                         guides, references, scalability and cost documents, cost_model.py
   backend/

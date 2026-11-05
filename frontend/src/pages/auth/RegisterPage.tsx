@@ -433,7 +433,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
               ? 'Create Teacher Account'
               : portal === 'student'
               ? 'Create Student Account'
-              : 'Create LanternEd Account'}
+              : 'Create LanternED Account'}
           </h1>
           <p className="text-xs sm:text-sm text-[#687775] mt-1 max-w-xs leading-relaxed">
             Join low-bandwidth classrooms and access downloadable offline curricula.
@@ -560,7 +560,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
               label="College Code"
               htmlFor="collegeCode"
               required
-              hint="From your administrator"
+              hint="Admin-issued institutional code (e.g., EV-XXXX-XXXX)"
               error={fieldErrors.collegeCode}
             >
               <Input
@@ -575,6 +575,10 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
                 isError={!!fieldErrors.collegeCode}
                 required
               />
+              <p className="text-[11px] text-[#687775] mt-1.5 leading-relaxed">
+                Institutional registration requires a verified college code issued by your administrator (generated via the{' '}
+                <Link to="/platform-console" className="text-[#0F5B57] font-semibold underline">Platform Console</Link>).
+              </p>
             </FormField>
 
             <FormField label="Branch" htmlFor="branch" required error={fieldErrors.branch}>

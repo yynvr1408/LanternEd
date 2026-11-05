@@ -92,13 +92,13 @@ def test_simultaneous_duplicate_requests_create_one_submission(enrolled_student,
     arbitrate, never an in-memory check."""
     from app.main import app
 
-    cookie = enrolled_student[0].cookies.get("eduvillage_session")
+    cookie = enrolled_student[0].cookies.get("lanterned_session")
     payload = _op("op-race", published_assignment["id"], "racing")
     results, barrier = [], threading.Barrier(6)
 
     def fire():
         c = TestClient(app)
-        c.cookies.set("eduvillage_session", cookie)
+        c.cookies.set("lanterned_session", cookie)
         barrier.wait()
         results.append(c.post("/api/v1/sync/operations", json=payload).json()["results"][0])
 

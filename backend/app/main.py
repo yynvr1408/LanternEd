@@ -18,7 +18,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import OriginCheckMiddleware, RequestIdMiddleware
 
 configure_logging()
-logger = logging.getLogger("eduvillage")
+logger = logging.getLogger("lanterned")
 
 settings = get_settings()
 
@@ -87,7 +87,7 @@ async def lifespan(_app: FastAPI):
 
 # The interactive docs and OpenAPI schema are a development aid; don't publish the full API map in production.
 _docs = {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.is_production else {}
-app = FastAPI(title="LanternEd API", lifespan=lifespan, **_docs)
+app = FastAPI(title="LanternED API", lifespan=lifespan, **_docs)
 
 app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.frontend_origin)
 app.add_middleware(RequestIdMiddleware)  # added after, so it wraps the origin check and its refusals carry a request id
@@ -138,7 +138,16 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    from sqlalchemy import text
+    from app.db.session import SessionLocal
+
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        return {"status": "ok"}
+    except Exception as exc:
+        logger.error("health check database connectivity failed: %s", type(exc).__name__)
+        return JSONResponse(status_code=503, content={"status": "degraded", "error": "database_unavailable"})
 
 
 @app.get("/ready")

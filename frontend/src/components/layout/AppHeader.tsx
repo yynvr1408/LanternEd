@@ -71,7 +71,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
           >
             <Logo size={32} />
             <span className="font-bold text-base sm:text-lg tracking-tight text-[#202B2A]">
-              LanternEd
+              LanternED
             </span>
           </Link>
 
@@ -175,7 +175,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}
         title="Confirm sign out"
-        description="Are you sure you want to log out of LanternEd?"
+        description={
+          isSharedDevice
+            ? "Shared Device Mode is active: Signing out will securely wipe all your local assignment drafts, downloaded media metadata, and pending sync queues from this device."
+            : "Are you sure you want to log out of LanternED?"
+        }
         maxWidth="sm"
       >
         <div className="flex items-center justify-end space-x-2 pt-2">

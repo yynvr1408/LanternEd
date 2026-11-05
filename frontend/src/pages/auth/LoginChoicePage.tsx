@@ -30,7 +30,7 @@ export const LoginChoicePage: React.FC = () => {
         </div>
         <div className="flex flex-col items-center text-center mb-8">
           <Logo size={48} className="mb-3" />
-          <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">LanternEd</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[#202B2A]">LanternED</h1>
           <p className="text-xs sm:text-sm text-[#687775] mt-1 max-w-xs leading-relaxed">{t('auth.tagline')}</p>
         </div>
 

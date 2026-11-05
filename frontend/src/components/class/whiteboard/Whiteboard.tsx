@@ -149,7 +149,7 @@ export const Whiteboard: React.FC<{
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'eduvillage-whiteboard.png'
+      a.download = 'lanterned-whiteboard.png'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

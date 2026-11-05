@@ -63,7 +63,7 @@ def api_doc() -> str:
         "",
         f"{len(rows)} operations. All application routes are under `/api/v1`. Errors always have the shape `{{ \"error\": {{ \"code\", \"message\", \"request_id\", \"details\" }} }}`.",
         "",
-        "**Authentication.** Students and teachers authenticate with an httpOnly session cookie (`eduvillage_session`). The administrator uses a separate cookie (`eduvillage_admin_session`) and must send `X-EduVillage-Admin: 1` on every request that changes data. \"public\" means no session is required.",
+        "**Authentication.** Students and teachers authenticate with an httpOnly session cookie (`lanterned_session`). The administrator uses a separate cookie (`lanterned_admin_session`) and must send `X-LanternED-Admin: 1` on every request that changes data. \"public\" means no session is required.",
         "",
     ]
     tag = None

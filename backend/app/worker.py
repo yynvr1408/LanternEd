@@ -13,7 +13,7 @@ from app.core.logging import configure_logging
 from app.db.session import SessionLocal
 from app.services import audit_service, notification_service, rate_limit_service, recording_service, summary_service
 
-logger = logging.getLogger("eduvillage.worker")
+logger = logging.getLogger("lanterned.worker")
 
 
 def run_once() -> int:
@@ -59,7 +59,7 @@ def run_once() -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LanternEd background worker")
+    parser = argparse.ArgumentParser(description="LanternED background worker")
     parser.add_argument("--once", action="store_true", help="process the queue once and exit")
     parser.add_argument("--interval", type=float, default=5.0, help="seconds between polls")
     args = parser.parse_args()

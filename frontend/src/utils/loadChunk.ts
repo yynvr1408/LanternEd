@@ -7,7 +7,7 @@
  * outright by picking up the current deployment's chunk manifest, so we do that once automatically
  * rather than surfacing a misleading "this isn't supported" to the user.
  */
-const RELOAD_GUARD_KEY = 'eduvillage:chunk-reload-guard'
+const RELOAD_GUARD_KEY = 'lanterned:chunk-reload-guard'
 
 function looksLikeStaleChunkError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err)

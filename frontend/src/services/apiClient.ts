@@ -113,7 +113,11 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
         continue
       }
       // Network failure (server down, offline, DNS failure, timeout, etc.)
-      throw new ApiError('Unable to connect to LanternEd server. Operating in offline mode.', 0, true)
+      const offlineMsg = 'Unable to connect to LanternED server. Operating in offline mode.'
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lanterned:toast', { detail: { type: 'warning', message: offlineMsg } }))
+      }
+      throw new ApiError(offlineMsg, 0, true, 'NETWORK_OFFLINE')
     } finally {
       if (timer) clearTimeout(timer)
     }
@@ -126,12 +130,24 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
       const body = await response.json().catch(() => null)
       if (response.status === 401 && body?.error?.code !== 'INVALID_CREDENTIALS') {
         // The server no longer recognizes this session (expired, revoked, signed out elsewhere).
-        sessionStorage.removeItem('eduvillage_user')
-        localStorage.removeItem('eduvillage_user')
-        window.dispatchEvent(new CustomEvent('eduvillage:auth:expired'))
+        sessionStorage.removeItem('lanterned_user')
+        localStorage.removeItem('lanterned_user')
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('lanterned:toast', { detail: { type: 'info', message: 'Session expired. Please log in again.' } }))
+          window.dispatchEvent(new CustomEvent('lanterned:auth:expired'))
+        }
+      } else if (response.status === 429 && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('lanterned:toast', { detail: { type: 'error', message: 'Too many requests. Please wait a moment and try again.' } }))
       }
       throw new ApiError(
-        messageFrom(body, response.status === 401 ? 'Session expired. Please log in again.' : `HTTP Error ${response.status}`),
+        messageFrom(
+          body,
+          response.status === 401
+            ? 'Session expired. Please log in again.'
+            : response.status === 429
+            ? 'Too many requests. Please wait a moment and try again.'
+            : `HTTP Error ${response.status}`
+        ),
         response.status,
         false,
         body?.error?.code
@@ -363,6 +379,9 @@ function mapSummary(s: Raw, courseId = ''): Summary {
     revision_questions: c.revision_questions,
     generator: s.generator ?? c.source ?? undefined,
     teacher_edited: Boolean(c.teacher_edited),
+    audio_recap_key: s.audio_recap_key,
+    audio_recap_url: s.audio_recap_url,
+    is_approved: Boolean(s.is_approved ?? (s.status === 'completed')),
     created_at: s.created_at ?? '',
   }
 }

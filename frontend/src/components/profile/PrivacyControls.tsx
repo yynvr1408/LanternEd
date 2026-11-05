@@ -47,7 +47,7 @@ export const PrivacyControls: React.FC<{ onErased?: () => void }> = ({ onErased 
     <Card>
       <CardHeader>
         <h3 className="text-sm font-bold text-[#202B2A]">Your data</h3>
-        <p className="text-xs text-[#687775]">Download a copy of what LanternEd holds about you, or erase your account.</p>
+        <p className="text-xs text-[#687775]">Download a copy of what LanternED holds about you, or erase your account.</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">

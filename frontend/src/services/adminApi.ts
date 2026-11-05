@@ -174,7 +174,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       credentials: 'include',
       cache: 'no-store',
       headers: {
-        'X-EduVillage-Admin': '1',
+        'X-LanternED-Admin': '1',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

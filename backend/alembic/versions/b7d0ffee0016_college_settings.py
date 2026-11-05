@@ -1,7 +1,7 @@
 """college settings
 
 Revision ID: b7d0ffee0016
-Revises: b6d0ffee0015
+Revises: 33eb0e755582
 Create Date: 2026-11-05 12:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'b7d0ffee0016'
-down_revision: Union[str, Sequence[str], None] = 'b6d0ffee0015'
+down_revision: Union[str, Sequence[str], None] = '33eb0e755582'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

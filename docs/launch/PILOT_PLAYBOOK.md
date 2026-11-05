@@ -1,6 +1,6 @@
 # Pilot playbook
 
-Goal: 2-3 colleges using LanternEd weekly by mid-December, each willing to say so in writing and to pay from the next term.
+Goal: 2-3 colleges using LanternED weekly by mid-December, each willing to say so in writing and to pay from the next term.
 
 ## 1. Choosing pilot colleges
 

@@ -24,7 +24,7 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: none
       - key: FRONTEND_ORIGIN
-        sync: false # set to the deployed frontend URL, e.g. https://eduvillage.vercel.app
+        sync: false # set to the deployed frontend URL, e.g. https://lanterned.vercel.app
       # Per-IP rate limits key on the connecting address. Behind Render's proxy that is the proxy, so every user
       # would share one bucket until uvicorn is told to trust X-Forwarded-For. Set this in the dashboard (e.g. "*",
       # since Render's edge is the only way in) after confirming from two networks that the client IPs differ.
@@ -72,12 +72,12 @@ services:
       - key: EMAILJS_SERVICE_ID
         sync: false
       - key: EMAILJS_TEMPLATE_ID
-        sync: false # password-reset OTP wording: "{{otp}} is your LanternEd password reset code"
+        sync: false # password-reset OTP wording: "{{otp}} is your LanternED password reset code"
       - key: EMAILJS_LOGIN_TEMPLATE_ID
         sync: false # optional: a separate template for the new-device-login-approval OTP (falls
         # back to EMAILJS_TEMPLATE_ID if left unset)
       - key: EMAILJS_REGISTRATION_TEMPLATE_ID
-        sync: false # optional: a separate template ("Verify Your LanternEd Email Address") for
+        sync: false # optional: a separate template ("Verify Your LanternED Email Address") for
         # the registration email-verification OTP (falls back to EMAILJS_TEMPLATE_ID if unset)
       - key: EMAILJS_REGISTRATION_SERVICE_ID
         sync: false # optional: all three REGISTRATION_* vars together route registration OTP
@@ -94,7 +94,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false # an address on a domain verified in Resend, e.g. LanternEd <no-reply@yourdomain.in>
+        sync: false # an address on a domain verified in Resend, e.g. LanternED <no-reply@yourdomain.in>
       - key: SENTRY_DSN
         sync: false # error tracking; leave unset to disable
       # Optional: online payments (Razorpay), WhatsApp alerts, recording retention. See docs/OPERATIONS.md.
@@ -112,6 +112,26 @@ services:
         value: "true" # runs the worker pass inside the API (WhatsApp, retention, job recovery) - see the note at the bottom
       - key: RECORDING_RETENTION_DAYS
         sync: false # e.g. 180: recording media older than this is deleted by the worker; empty = keep
+
+  - type: workflow
+    name: lanterned-audio-pipeline
+    runtime: python
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.workflows.post_class_pipeline
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_ACCESS_KEY
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
 
 # Background worker: EMBEDDED_WORKER=true runs the worker pass inside the API, so no second service is required.
 # On Render's free web service that only happens while the service is awake (it sleeps after ~15 minutes idle); a

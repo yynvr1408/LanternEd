@@ -1,11 +1,11 @@
-# 🏆 LanternEd: 24-Hour Hackathon Jury Review & Pitch Guide
-> **The Ultimate Checkpoint Companion: How to Pitch, Demo, and Defend LanternEd Every 6 Hours**
+# 🏆 LanternED: 24-Hour Hackathon Jury Review & Pitch Guide
+> **The Ultimate Checkpoint Companion: How to Pitch, Demo, and Defend LanternED Every 6 Hours**
 
 ---
 
 ## 📌 Executive Pitch & Elevator Pitch (Read Before Any Review)
 
-> **"LanternEd is an offline-first, low-bandwidth learning ecosystem engineered specifically for institutions where internet connectivity is intermittent, slow, or expensive. While traditional platforms like Zoom, Google Meet, and Canvas demand high-speed broadband and constant connectivity, LanternEd enables live adaptive classes (cutting bandwidth by up to 90%), offline resumable downloads, offline assignment drafting with idempotent sync, and localized AI-generated study aids across 21 bundled languages."**
+> **"LanternED is an offline-first, low-bandwidth learning ecosystem engineered specifically for institutions where internet connectivity is intermittent, slow, or expensive. While traditional platforms like Zoom, Google Meet, and Canvas demand high-speed broadband and constant connectivity, LanternED enables live adaptive classes (cutting bandwidth by up to 90%), offline resumable downloads, offline assignment drafting with idempotent sync, and localized AI-generated study aids across 21 bundled languages."**
 
 ---
 
@@ -45,8 +45,8 @@ Establish the institutional core: high-security multi-college hierarchy, adminis
 * **Strict Teaching Scope Enforcement (`teaching_scope_service.py`):**
   A teacher is bound to a section or an "All Sections" branch scope. The backend cryptographically validates on every request that teachers cannot create cohorts, access student submissions, or broadcast classes outside their authorized branch or section.
 * **Dual-Session & Header Protection:**
-  - `eduvillage_admin_session` vs `eduvillage_session`: completely isolated cookies.
-  - Admin state-changing requests mandate the custom header `X-EduVillage-Admin: 1`, nullifying CSRF attacks.
+  - `lanterned_admin_session` vs `lanterned_session`: completely isolated cookies.
+  - Admin state-changing requests mandate the custom header `X-LanternED-Admin: 1`, nullifying CSRF attacks.
   - Admin sessions enforce single-session concurrency with an automatic idle timeout (120s).
 * **Concurrent Login Protection & Mailbox OTP Verification:**
   Signing in on a second device while a session is active returns `202 Accepted {otp_required: true}` and dispatches a single-use 6-digit OTP to the user's verified email. Verifying the code invalidates the previous terminal session automatically.
@@ -191,7 +191,7 @@ flowchart TD
   - Upon reconnection, `POST /api/v1/sync/operations` submits the queue.
   - The backend commits the assignment and records the `operation_id` in a single database transaction.
   - Replaying the same request returns the cached result without duplicate writes. Tampered payloads with reused IDs trigger a `409 Conflict`.
-  - **Deadline Grace Policy:** If a student finished work offline before the deadline, LanternEd honors the submission within a configurable grace window (`OFFLINE_SUBMISSION_GRACE_HOURS = 24`), capping future device timestamps to server time to prevent clock tampering.
+  - **Deadline Grace Policy:** If a student finished work offline before the deadline, LanternED honors the submission within a configurable grace window (`OFFLINE_SUBMISSION_GRACE_HOURS = 24`), capping future device timestamps to server time to prevent clock tampering.
 * **Whisper Turbo + LLM Lecture Notes Pipeline (`transcription_service.py`, `summary_service.py`):**
   - Recordings in Cloudflare R2 are processed via FFmpeg into speech-optimized audio.
   - Split into chunks to respect Whisper's 25 MB limit, maintaining per-chunk resumption state (`chunk_state`) so retries don't start from scratch.
@@ -213,7 +213,7 @@ flowchart TD
 
 ### 🎙️ 4. Jury Pitch Script (What to Say)
 
-> *"Judges, in this 18-hour sprint, we delivered true offline-first capability. Most edtech apps are useless without an active internet connection. With LanternEd, students can study, watch classes, and write assignments with zero connectivity.
+> *"Judges, in this 18-hour sprint, we delivered true offline-first capability. Most edtech apps are useless without an active internet connection. With LanternED, students can study, watch classes, and write assignments with zero connectivity.
 >
 > When a student downloads a lecture on a patchy cellular network, our chunked download engine uses HTTP byte-range requests. If the connection drops at 90%, it doesn't fail; it pauses and resumes at the exact byte when the connection returns, saving precious mobile data.
 >
@@ -226,7 +226,7 @@ flowchart TD
 | Question | Winning Answer |
 |---|---|
 | *"Can a student manipulate their computer clock to submit an assignment past the deadline?"* | **Answer:** We thought of that. In `synchronization_service.py`, `_effective_submission_time()` checks `min(client_updated_at, utcnow())`. A forward-dated device clock gains nothing. If the submission arrives after the deadline + grace period, the server overrides the timestamp with current server time. |
-| *"What happens to offline downloads on a shared public computer?"* | **Answer:** LanternEd includes a Shared Device mode. When a user logs out, `db.clearPrivateUserData({ includeDownloads: true })` runs an IndexedDB transaction wiping all drafts, cached summaries, and downloaded media blobs so the next user cannot access them. |
+| *"What happens to offline downloads on a shared public computer?"* | **Answer:** LanternED includes a Shared Device mode. When a user logs out, `db.clearPrivateUserData({ includeDownloads: true })` runs an IndexedDB transaction wiping all drafts, cached summaries, and downloaded media blobs so the next user cannot access them. |
 
 ---
 
@@ -261,7 +261,7 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
   - Integrated security audit skill covering 15 threat vectors: parameter injection, session hijacking, cross-tenant isolation, and rate-limiting buckets.
   - Parameterized queries across 100% of database access via SQLAlchemy 2.0.
   - Strict Origin check middleware and CORS headers restricting API consumption to the frontend origin.
-* **Empirical Cost Model ([`docs/cost_model.py`](file:///c:/Users/Nandhi%20vardhan%20reddy/Desktop/LanternEd/docs/cost_model.py)):**
+* **Empirical Cost Model ([`docs/cost_model.py`](file:///c:/Users/Nandhi%20vardhan%20reddy/Desktop/LanternED/docs/cost_model.py)):**
   Mathematical model showing a 1,000-student institution costs just **$174/month (₹16,749)** by utilizing Cloudflare R2 zero-egress storage and optimized 24 kbps audio.
 
 ---
@@ -270,20 +270,20 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 
 1. **Live Production URLs:** Open the deployed app on Vercel (`https://edu-village-nine.vercel.app`) talking to the live Render API (`https://eduvillage-api.onrender.com/health`).
 2. **Zero-Latency Language Switching:** Click the language switcher in the navbar. Switch to **Hindi**, then **Telugu**, then **Arabic**. Note that Arabic automatically flips layout to Right-to-Left (RTL). Inspect DevTools Network tab: **0 network requests made!**
-3. **PWA Installability:** Show Chrome install prompt ("Install LanternEd as App").
+3. **PWA Installability:** Show Chrome install prompt ("Install LanternED as App").
 4. **Cost Model & Economics:** Open `docs/cost_model.py` simulation results showing low cost per student.
 
 ---
 
 ### 🎙️ 4. Jury Pitch Script (What to Say)
 
-> *"Judges, in this final 24-hour review, we present LanternEd not as a prototype, but as a production-grade, globally accessible product.
+> *"Judges, in this final 24-hour review, we present LanternED not as a prototype, but as a production-grade, globally accessible product.
 >
 > First, education in developing nations must be in the student's mother tongue. We bundled 21 distinct languages—including 11 Indian languages, Swahili, Arabic, and Indonesian—directly into the application shell. Switching languages makes zero network requests, saving every kilobyte. For Arabic and Urdu, the layout shifts to Right-to-Left automatically.
 >
 > Second, our production deployment is live right now: static PWA on Vercel, containerized backend on Render, PostgreSQL on Neon, and video egress into Cloudflare R2.
 >
-> Third, sustainability: through our cost model, we proved that by eliminating S3 egress fees with Cloudflare R2 and halving audio bitrates, a 1,000-student rural college can run LanternEd for just $174 a month—less than 18 cents per student. LanternEd is secure, tested across 450+ backend tests and 220+ frontend tests, and ready for deployment on Day One."*
+> Third, sustainability: through our cost model, we proved that by eliminating S3 egress fees with Cloudflare R2 and halving audio bitrates, a 1,000-student rural college can run LanternED for just $174 a month—less than 18 cents per student. LanternED is secure, tested across 450+ backend tests and 220+ frontend tests, and ready for deployment on Day One."*
 
 ---
 
@@ -291,14 +291,14 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 
 | Question | Winning Answer |
 |---|---|
-| *"How will you monetize or keep this sustainable for colleges that have no budget?"* | **Answer:** LanternEd supports hybrid hosting. A college can run on our shared cloud tier for ~$0.17/student/month, or use our open-source Docker Compose self-hosting package (`deploy/self-hosted/`) on an on-premise refurbished server with local MinIO storage for $0 monthly cloud costs. |
+| *"How will you monetize or keep this sustainable for colleges that have no budget?"* | **Answer:** LanternED supports hybrid hosting. A college can run on our shared cloud tier for ~$0.17/student/month, or use our open-source Docker Compose self-hosting package (`deploy/self-hosted/`) on an on-premise refurbished server with local MinIO storage for $0 monthly cloud costs. |
 | *"Have you tested the application against real network drops and concurrency?"* | **Answer:** Yes. We built an automated test harness with Playwright (`playwright.offline.config.ts`, `playwright.real.config.ts`), a capacity load testing kit (`ops/loadtest/classday.js`), and a suite of 450+ unit and integration tests verifying offline download assembly, atomic sync, and scope enforcement. |
 
 ---
 
 ## 📊 Summary Scorecard for Judges
 
-| Evaluation Criteria | How LanternEd Delivers Maximum Points |
+| Evaluation Criteria | How LanternED Delivers Maximum Points |
 |---|---|
 | **Technical Complexity** | Custom LiveKit WebRTC tuning (24kbps Opus), vector data-channel whiteboard with re-hydration, Dexie.js IndexedDB v4 caching, HTTP byte-range resumable chunking with SHA-256 validation, and idempotent atomic offline sync. |
 | **Real-World Impact** | Democratizes education for millions of rural and tier-2/3 students affected by weak internet, power outages, expensive data caps, and shared devices. |
@@ -307,4 +307,4 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 | **Viability & Scale** | Validated cost model ($174/mo per 1,000 students), zero-egress Cloudflare R2 storage architecture, and automated self-hosting Docker Compose suite. |
 
 ---
-*Created for the LanternEd Hackathon Defense Team.*
+*Created for the LanternED Hackathon Defense Team.*

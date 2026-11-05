@@ -23,10 +23,10 @@ def test_student_a_signs_out_then_student_b_cannot_read_a_private_data(make_user
 
     # Alice signs out on the shared machine: her cookie must stop working server-side, even though
     # a browser that failed to clear it could still send it.
-    stale_cookie = a_client.cookies.get("eduvillage_session")
+    stale_cookie = a_client.cookies.get("lanterned_session")
     assert a_client.post("/api/v1/auth/logout").status_code == 204
     replay = TestClient(a_client.app)
-    replay.cookies.set("eduvillage_session", stale_cookie)
+    replay.cookies.set("lanterned_session", stale_cookie)
     assert replay.get("/api/v1/users/me").status_code == 401
     assert replay.get(f"/api/v1/assignments/{published_assignment['id']}/submissions/me").status_code == 401
 

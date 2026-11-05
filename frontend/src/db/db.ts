@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type { DownloadedResource, AssignmentDraft, SyncOperation, Summary, Lesson } from '../types'
 import type { DownloadJob, DownloadPart } from '../services/downloadEngine'
 
-const DATA_OWNER_KEY = 'eduvillage_data_owner'
+const DATA_OWNER_KEY = 'lanterned_data_owner'
 
 export interface CachedLesson {
   id: string
@@ -57,7 +57,7 @@ export interface PlaybackPosition {
   updatedAt: string
 }
 
-class EduVillageDatabase extends Dexie {
+class LanternEDDatabase extends Dexie {
   downloadedResources!: EntityTable<DownloadedResource, 'id'>
   downloadedRecordings!: EntityTable<DownloadedRecording, 'id'>
   downloadedSummaries!: EntityTable<DownloadedSummary, 'id'>
@@ -70,7 +70,7 @@ class EduVillageDatabase extends Dexie {
   syncOperations!: EntityTable<SyncOperation, 'id'>
 
   constructor() {
-    super('EduVillageDB')
+    super('LanternEDDB')
 
     // Schema version 1
     this.version(1).stores({
@@ -179,4 +179,4 @@ class EduVillageDatabase extends Dexie {
   }
 }
 
-export const db = new EduVillageDatabase()
+export const db = new LanternEDDatabase()

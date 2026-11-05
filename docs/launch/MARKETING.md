@@ -27,7 +27,7 @@ Taglines to test: "Classes that don't stop when the internet does." / "Every stu
 | 1 | "Why classes break in villages (and what we did about it)" | 600-word post + 2-minute video |
 | 2 | Teacher quick-start in Telugu and Hindi | 3-minute screen recording |
 | 3 | Real numbers from week 3 of the pilot (anonymised) | One image + caption |
-| 4 | "How to run an online class on a 2G student's phone" | Checklist PDF (shareable, useful without LanternEd) |
+| 4 | "How to run an online class on a 2G student's phone" | Checklist PDF (shareable, useful without LanternED) |
 | 6 | Champion teacher story | Short interview video (with consent) |
 | 8 | Principal's view: before/after | Quote card + one-pager |
 | Then | Weekly: one tip, one teacher story, one number | WhatsApp status / LinkedIn |

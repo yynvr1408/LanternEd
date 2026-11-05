@@ -2,13 +2,19 @@ import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from render import RenderAsync
 
+from app.config import get_settings
+from app.db.models.classroom import ClassRecording
 from app.dependencies import get_db
 import json
 
 from app.integrations import livekit, razorpay
 from app.services import billing_service, recording_service, summary_service
+
+settings = get_settings()
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -47,9 +53,28 @@ async def livekit_webhook(request: Request, background_tasks: BackgroundTasks, d
         if not handled:
             logger.info("egress_ended for unknown egress %s (ignored)", info.egress_id)
         elif auto_job is not None:
-            # Real audio -> transcript -> summary, queued the moment this recording became
-            # available — runs after this response is sent, so LiveKit's webhook call isn't held up.
-            background_tasks.add_task(summary_service.process_summary_job, auto_job.id)
+            # Check if Render Workflows dispatch is configured
+            recording = db.execute(
+                select(ClassRecording).where(ClassRecording.egress_id == info.egress_id)
+            ).scalar_one_or_none()
+
+            if settings.render_api_key and recording and recording.storage_key:
+                try:
+                    render_client = RenderAsync(token=settings.render_api_key)
+                    run = await render_client.workflows.start_task(
+                        "lanterned-audio-pipeline/process_lecture_pipeline",
+                        [recording.class_id, recording.storage_key],
+                    )
+                    run_id = getattr(run, "id", str(run))
+                    logger.info("Dispatched Render workflow run_id=%s for class_id=%s", run_id, recording.class_id)
+                    return {"status": "Workflow triggered", "run_id": run_id}
+                except Exception as exc:
+                    logger.error("Failed to trigger Render workflow: %s; falling back to local processing", exc, exc_info=True)
+                    background_tasks.add_task(summary_service.process_summary_job, auto_job.id)
+            else:
+                # Real audio -> transcript -> summary, queued the moment this recording became
+                # available — runs after this response is sent, so LiveKit's webhook call isn't held up.
+                background_tasks.add_task(summary_service.process_summary_job, auto_job.id)
     return {"status": "ok"}
 
 

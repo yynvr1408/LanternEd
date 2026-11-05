@@ -51,3 +51,6 @@ class SummaryOut(BaseModel):
     status: SummaryStatus
     reviewed_by: str | None
     reviewed_at: UtcDatetime | None
+    audio_recap_key: str | None = None
+    audio_recap_url: str | None = None
+    is_approved: bool = False

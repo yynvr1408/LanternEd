@@ -8,6 +8,7 @@ import type { Summary } from '../types'
 describe('Downloads & AI Lecture Summary Workflow', () => {
   beforeEach(async () => {
     await db.downloadedResources.clear()
+    await db.downloadedSummaries.clear()
   })
 
   it('renders SummaryViewer with Overview, Key Concepts, Definitions, and Revision Questions', () => {
@@ -48,5 +49,24 @@ describe('Downloads & AI Lecture Summary Workflow', () => {
     expect(screen.getByRole('button', { name: /Download Notes/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^PDF$/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^DOC$/ })).not.toBeInTheDocument()
+  })
+
+  it('renders ElevenLabs low-data audio recap player when audio_recap_url exists and summary is approved', () => {
+    const summary: Summary = {
+      id: 'sum-recap-1',
+      class_id: 'class-recap-101',
+      course_id: 'STEM-201',
+      status: 'COMPLETED',
+      review_status: 'APPROVED',
+      is_approved: true,
+      audio_recap_url: 'https://r2.storage/summaries/class-recap-101/audio_recap.mp3',
+      overview: 'Summary with audio recap.',
+      created_at: new Date().toISOString(),
+    }
+
+    render(<SummaryViewer summary={summary} />)
+
+    expect(screen.getByText(/2-Min Audio Recap \(ElevenLabs\) • Low-Data/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Download for Offline/i })).toBeInTheDocument()
   })
 })

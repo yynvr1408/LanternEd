@@ -31,7 +31,7 @@ def send_template(*, to_phone: str, title: str, detail: str) -> tuple[bool, str 
             "name": settings.whatsapp_template_name,
             "language": {"code": settings.whatsapp_template_language},
             "components": [
-                {"type": "body", "parameters": [{"type": "text", "text": title[:100]}, {"type": "text", "text": (detail or "Open LanternEd for details.")[:200]}]}
+                {"type": "body", "parameters": [{"type": "text", "text": title[:100]}, {"type": "text", "text": (detail or "Open LanternED for details.")[:200]}]}
             ],
         },
     }
