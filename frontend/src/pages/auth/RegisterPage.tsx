@@ -178,7 +178,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
     else if (password.length < 8) errs.password = 'Password must be at least 8 characters long.'
     if (password && confirmPassword !== password) errs.confirmPassword = 'Passwords do not match.'
     if (!collegeId) errs.college = 'Select your college.'
-    if (!collegeCode.trim()) errs.collegeCode = 'Enter the college code given by your administrator.'
     if (collegeId && !branchId) errs.branch = 'Select your branch.'
     if (branchId && !sectionId) errs.section = isTeacher ? 'Select a section or All Sections.' : 'Select your section.'
     setFieldErrors(errs)
@@ -190,7 +189,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
       try {
         const allSections = isTeacher && sectionId === ALL_SECTIONS
         const selection = collegeId
-          ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() }
+          ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() || undefined }
           : undefined
         const result = await register(email.trim(), fullName.trim(), password, role, undefined, selection)
         if (isRegistrationPending(result)) {
@@ -249,7 +248,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
       const { verification_token: verificationToken } = await authService.verifyRegistrationOtp(email.trim(), otp)
       const allSections = isTeacher && sectionId === ALL_SECTIONS
       const selection = collegeId
-        ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() }
+        ? { collegeId, branchId, sectionId: allSections ? undefined : sectionId, allSections, collegeCode: collegeCode.trim() || undefined }
         : undefined
       const result = await register(email, fullName, password, role, undefined, selection, verificationToken)
       if (isRegistrationPending(result)) {
@@ -296,17 +295,34 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
   }
 
   const filteredColleges = useMemo(() => {
-    if (colleges.status !== 'ready') return colleges.items
+    if (colleges.status !== 'ready') return []
     const q = institutionSearch.trim().toLowerCase()
-    if (!q) return colleges.items
-    return colleges.items.filter(
-      (c) => c.name.toLowerCase().includes(q) || (c.location && c.location.toLowerCase().includes(q))
+    const list = !q
+      ? colleges.items
+      : colleges.items.filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.location && c.location.toLowerCase().includes(q))
+        )
+    return [...list].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
     )
   }, [colleges, institutionSearch])
 
   const collegeOptions = [
-    { value: '', label: colleges.status === 'loading' ? 'Loading colleges...' : 'Select your college' },
-    ...filteredColleges.map((c) => ({ value: c.id, label: c.location ? `${c.name} — ${c.location}` : c.name })),
+    {
+      value: '',
+      label:
+        colleges.status === 'loading'
+          ? 'Loading colleges...'
+          : filteredColleges.length === 0 && institutionSearch
+          ? `No matching institutions for "${institutionSearch}"`
+          : 'Select your college',
+    },
+    ...filteredColleges.map((c) => ({
+      value: c.id,
+      label: c.location ? `${c.name} — ${c.location}` : c.name,
+    })),
   ]
   const branchOptions = [
     {
@@ -604,10 +620,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
             )}
 
             <FormField
-              label="College Code"
+              label="College Code (Optional)"
               htmlFor="collegeCode"
-              required
-              hint="Admin-issued institutional code (e.g., EV-XXXX-XXXX)"
+              hint="Admin-issued institutional code (e.g., EV-XXXX-XXXX) — optional if awaiting administrator approval"
               error={fieldErrors.collegeCode}
             >
               <Input
@@ -618,13 +633,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ portal }) => {
                   setFieldErrors((f) => ({ ...f, collegeCode: undefined }))
                 }}
                 autoComplete="off"
-                placeholder="EV-XXXX-XXXX"
+                placeholder="EV-XXXX-XXXX (Optional)"
                 isError={!!fieldErrors.collegeCode}
-                required
               />
               <p className="text-[11px] text-[#687775] mt-1.5 leading-relaxed">
-                Institutional registration requires a verified college code issued by your administrator (generated via the{' '}
-                <Link to="/platform-console" className="text-[#0F5B57] font-semibold underline">Platform Console</Link>).
+                If your institution administrator has provided you with a code, enter it here. Otherwise, leave it blank and your registration will be reviewed by your college administrator.
               </p>
             </FormField>
 

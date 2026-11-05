@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { ProtectedRoute } from './ProtectedRoute'
 import { StudentLayout } from '../components/layout/StudentLayout'
 import { TeacherLayout } from '../components/layout/TeacherLayout'
+import { InstitutionAdminLayout } from '../components/layout/InstitutionAdminLayout'
 import { LoadingState } from '../components/ui/LoadingState'
 
 /** Route-based code splitting: each page ships as its own chunk, fetched only when a user
@@ -74,7 +75,9 @@ export const AppRoutes: React.FC = () => {
   const renderRootRedirect = () => {
     if (isLoading) return null
     if (!isAuthenticated || !user) return <Navigate to="/login" replace />
-    return <Navigate to={user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />
+    if (user.role === 'admin') return <Navigate to="/institution/dashboard" replace />
+    if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />
+    return <Navigate to="/student/dashboard" replace />
   }
 
   return (
@@ -157,7 +160,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="assignments" element={<TeacherAssignmentsPage />} />
           <Route path="summaries" element={<TeacherSummariesPage />} />
           <Route path="summaries/:classId" element={<TeacherSummaryDetailPage />} />
-          <Route path="institution" element={<TeacherInstitutionAdminPage />} />
+          <Route path="institution" element={<Navigate to="/institution/dashboard" replace />} />
           <Route path="profile" element={<TeacherProfilePage />} />
         </Route>
 
@@ -165,13 +168,19 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/institution"
           element={
-            <ProtectedRoute allowedRoles={['teacher']}>
-              <TeacherLayout />
+            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+              <InstitutionAdminLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="/institution/dashboard" replace />} />
-          <Route path="dashboard" element={<TeacherInstitutionAdminPage />} />
+          <Route path="dashboard" element={<TeacherInstitutionAdminPage activeTab="overview" />} />
+          <Route path="branches" element={<TeacherInstitutionAdminPage activeTab="branches" />} />
+          <Route path="courses" element={<TeacherInstitutionAdminPage activeTab="courses" />} />
+          <Route path="teachers" element={<TeacherInstitutionAdminPage activeTab="teachers" />} />
+          <Route path="students" element={<TeacherInstitutionAdminPage activeTab="students" />} />
+          <Route path="approvals" element={<TeacherInstitutionAdminPage activeTab="approvals" />} />
+          <Route path="settings" element={<TeacherInstitutionAdminPage activeTab="settings" />} />
         </Route>
 
         {/* Admin panel: outside the student/teacher guards; access is enforced by the backend session, not the

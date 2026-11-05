@@ -24,6 +24,27 @@ export interface PendingUser {
   role: 'student' | 'teacher'
   status: 'pending' | 'active' | 'suspended' | 'rejected'
   created_at: string
+  branch_id?: string | null
+  branch_name?: string | null
+  section_id?: string | null
+  section_name?: string | null
+  all_sections?: boolean
+}
+
+export interface InstitutionCourse {
+  id: string
+  title: string
+  description?: string | null
+  subject?: string | null
+  teacher_id: string
+  teacher_name?: string | null
+  status: 'draft' | 'published' | 'archived'
+  branch_id?: string | null
+  branch_name?: string | null
+  section_id?: string | null
+  section_name?: string | null
+  enrollments_count: number
+  created_at: string
 }
 
 export interface RosterEntry {
@@ -112,6 +133,8 @@ export const institutionAdminApi = {
     apiRequest<CollegeBranch>(`/institution-admin/branches/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   setBranchStatus: (id: string, status: CollegeStatus) =>
     apiRequest<CollegeBranch>(`/institution-admin/branches/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  deleteBranch: (id: string) =>
+    apiRequest<void>(`/institution-admin/branches/${id}`, { method: 'DELETE' }),
   listSections: (branchId: string, search?: string) =>
     apiRequest<CollegeSection[]>(`/institution-admin/branches/${branchId}/sections${qs({ search: search?.trim() })}`),
   createSection: (branchId: string, name: string) =>
@@ -120,6 +143,8 @@ export const institutionAdminApi = {
     apiRequest<CollegeSection>(`/institution-admin/sections/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
   setSectionStatus: (id: string, status: CollegeStatus) =>
     apiRequest<CollegeSection>(`/institution-admin/sections/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }),
+  deleteSection: (id: string) =>
+    apiRequest<void>(`/institution-admin/sections/${id}`, { method: 'DELETE' }),
 
   // ---- student/teacher registration review ------------------------------------------------
   listPendingRegistrations: (collegeId: string) =>
@@ -156,6 +181,64 @@ export const institutionAdminApi = {
     apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/members/${userId}/reactivate`, { method: 'POST' }),
   removeMember: (collegeId: string, userId: string) =>
     apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/members/${userId}/remove`, { method: 'POST' }),
+  deleteMember: (collegeId: string, userId: string) =>
+    apiRequest<void>(`/institution-admin/colleges/${collegeId}/members/${userId}`, { method: 'DELETE' }),
+  updateMemberProfile: (
+    collegeId: string,
+    userId: string,
+    payload: {
+      full_name?: string
+      email?: string
+      branch_id?: string | null
+      section_id?: string | null
+      all_sections?: boolean
+    }
+  ) =>
+    apiRequest<PendingUser>(`/institution-admin/colleges/${collegeId}/members/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  // ---- courses ----------------------------------------------------------------------------
+  listCourses: (collegeId: string) =>
+    apiRequest<InstitutionCourse[]>(`/institution-admin/colleges/${collegeId}/courses`),
+  createCourse: (
+    collegeId: string,
+    payload: {
+      title: string
+      description?: string
+      subject?: string
+      teacher_id: string
+      branch_id?: string | null
+      section_id?: string | null
+      status?: string
+    }
+  ) =>
+    apiRequest<InstitutionCourse>(`/institution-admin/colleges/${collegeId}/courses`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateCourse: (
+    collegeId: string,
+    courseId: string,
+    payload: {
+      title?: string
+      description?: string
+      subject?: string
+      teacher_id?: string
+      branch_id?: string | null
+      section_id?: string | null
+      status?: string
+    }
+  ) =>
+    apiRequest<InstitutionCourse>(`/institution-admin/colleges/${collegeId}/courses/${courseId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  deleteCourse: (collegeId: string, courseId: string) =>
+    apiRequest<void>(`/institution-admin/colleges/${collegeId}/courses/${courseId}`, {
+      method: 'DELETE',
+    }),
 
   // ---- billing: this college's plan, seat use and payments; online payment through Razorpay when configured ----
   billing: (collegeId: string) => apiRequest<BillingSummary>(`/institution-admin/colleges/${collegeId}/billing`),

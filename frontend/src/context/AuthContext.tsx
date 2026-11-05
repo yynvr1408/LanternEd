@@ -11,6 +11,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isTeacher: boolean
   isStudent: boolean
+  isAdmin: boolean
   isLoading: boolean
   isSharedDevice: boolean
   setSharedDevice: (enabled: boolean) => void
@@ -105,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     college?: CollegeSelection,
     verificationToken?: string
   ): Promise<User | RegistrationPending> => {
-    const res = await authService.register(email, fullName, password, role, inviteCode, college, verificationToken)
+    const res = await authService.register(email, fullName, password, role as 'student' | 'teacher', inviteCode, college, verificationToken)
     if (isRegistrationPending(res)) return res
     await db.claimDataOwner(res.user.id)
     setUser(res.user)
@@ -167,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isTeacher = user?.role === 'teacher'
   const isStudent = user?.role === 'student'
+  const isAdmin = user?.role === 'admin'
   const isAuthenticated = Boolean(user)
 
   return (
@@ -176,6 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isTeacher,
         isStudent,
+        isAdmin,
         isLoading,
         isSharedDevice,
         setSharedDevice,

@@ -337,8 +337,13 @@ def set_section_status(db: Session, admin_id: str, section: CollegeSection, stat
     return section
 
 
-def list_registerable_colleges(db: Session) -> list[College]:
-    return list(db.execute(select(College).where(College.status == CollegeStatus.active).order_by(College.name_key)).scalars())
+def list_registerable_colleges(db: Session, search: str | None = None) -> list[College]:
+    stmt = select(College).where(College.status == CollegeStatus.active)
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        stmt = stmt.where(or_(func.lower(College.name).like(term), func.lower(College.location).like(term)))
+    stmt = stmt.order_by(College.name_key)
+    return list(db.execute(stmt).scalars())
 
 
 def validate_registration_target(
@@ -367,10 +372,12 @@ def validate_registration_target(
         raise ValidationFailedError("The selected college was not found.", code="COLLEGE_NOT_FOUND")
     if college.status != CollegeStatus.active:
         raise ConflictError("This college is not accepting registrations.", code="COLLEGE_INACTIVE")
-    if require_code:
-        supplied = normalize_code(college_code or "")
+    if require_code and not college_code:
+        raise ValidationFailedError("The college code is required.", code="COLLEGE_CODE_REQUIRED")
+    if college_code:
+        supplied = normalize_code(college_code)
         # One answer for a wrong code and for another college's code, so codes cannot be probed.
-        if not college_code or not hmac.compare_digest(supplied.encode(), college.code.encode()):
+        if not hmac.compare_digest(supplied.encode(), college.code.encode()):
             raise ValidationFailedError("The college code is incorrect for the selected college.", code="INVALID_COLLEGE_CODE")
     if not branch_id:
         raise ValidationFailedError("Select a branch.", code="BRANCH_REQUIRED")
@@ -418,13 +425,17 @@ def is_college_admin(db: Session, user_id: str, college_id: str) -> bool:
 
 
 def assert_can_manage_college(db: Session, user: User, college: College) -> None:
-    """For the teacher-session self-serve routes only. The platform admin router never calls this —
-    it's gated by its own, separate get_current_admin dependency and always has full access."""
+    """For the teacher-session self-serve routes only. Platform admin also has full access."""
+    if user.role == UserRole.admin:
+        return
     if not is_college_admin(db, user.id, college.id):
         raise ForbiddenError("You are not an administrator of this institution.")
 
 
 def list_colleges_administered_by(db: Session, user_id: str) -> list[College]:
+    u = db.get(User, user_id)
+    if u and u.role == UserRole.admin:
+        return list(db.execute(select(College).order_by(College.name_key)).scalars())
     stmt = (
         select(College)
         .join(CollegeAdministrator, CollegeAdministrator.college_id == College.id)
@@ -696,13 +707,14 @@ def reject_college_request(db: Session, platform_admin_id: str, request: College
 # ---- student/teacher registration approval (the college administrator's own queue) --------------
 
 
-def list_pending_registrations(db: Session, college_id: str) -> list[User]:
+def list_pending_registrations(db: Session, college_id: str) -> list[dict]:
     stmt = (
         select(User)
         .where(User.college_id == college_id, User.status == UserStatus.pending)
         .order_by(User.created_at)
     )
-    return list(db.execute(stmt).scalars())
+    users = list(db.execute(stmt).scalars())
+    return hydrate_users_with_affiliation(db, users)
 
 
 def _get_pending_registration_or_404(db: Session, college_id: str, user_id: str) -> User:
@@ -971,13 +983,14 @@ def update_college_settings(db: Session, college_admin_id: str, college_id: str,
 # through here — that delegation is a platform-admin-only decision (see assign/remove_college_admin).
 
 
-def list_college_members(db: Session, college_id: str) -> list[User]:
+def list_college_members(db: Session, college_id: str) -> list[dict]:
     stmt = (
         select(User)
         .where(User.college_id == college_id, User.status.in_([UserStatus.active, UserStatus.suspended]))
         .order_by(User.role, User.full_name)
     )
-    return list(db.execute(stmt).scalars())
+    users = list(db.execute(stmt).scalars())
+    return hydrate_users_with_affiliation(db, users)
 
 
 def _get_member_or_404(db: Session, college_id: str, user_id: str) -> User:
@@ -1120,3 +1133,331 @@ def decline_college_deletion(db: Session, college: College, deletion_request: Co
     db.refresh(deletion_request)
     audit_service.record(db, actor_id=confirming_user.id, action="college_deletion_declined", resource_type="college", resource_id=college.id)
     return deletion_request
+
+
+def delete_branch(db: Session, actor_id: str, branch: CollegeBranch) -> None:
+    audit_service.record(db, actor_id=actor_id, action="branch_deleted", resource_type="branch", resource_id=branch.id)
+    db.delete(branch)
+    db.commit()
+
+
+def delete_section(db: Session, actor_id: str, section: CollegeSection) -> None:
+    audit_service.record(db, actor_id=actor_id, action="section_deleted", resource_type="section", resource_id=section.id)
+    db.delete(section)
+    db.commit()
+
+
+def hydrate_users_with_affiliation(db: Session, users: list[User]) -> list[dict]:
+    if not users:
+        return []
+    user_ids = [u.id for u in users]
+    stmt_sections = (
+        select(
+            UserCollegeSection.user_id,
+            CollegeSection.id.label("section_id"),
+            CollegeSection.name.label("section_name"),
+            CollegeBranch.id.label("branch_id"),
+            CollegeBranch.name.label("branch_name"),
+        )
+        .join(CollegeSection, UserCollegeSection.college_section_id == CollegeSection.id)
+        .join(CollegeBranch, CollegeSection.branch_id == CollegeBranch.id)
+        .where(UserCollegeSection.user_id.in_(user_ids))
+    )
+    sec_rows = {row.user_id: row for row in db.execute(stmt_sections)}
+
+    stmt_branches = (
+        select(
+            UserBranchAssignment.user_id,
+            CollegeBranch.id.label("branch_id"),
+            CollegeBranch.name.label("branch_name"),
+        )
+        .join(CollegeBranch, UserBranchAssignment.branch_id == CollegeBranch.id)
+        .where(UserBranchAssignment.user_id.in_(user_ids))
+    )
+    branch_rows = {row.user_id: row for row in db.execute(stmt_branches)}
+
+    result = []
+    for u in users:
+        sec = sec_rows.get(u.id)
+        br = branch_rows.get(u.id)
+        if sec:
+            b_id, b_name = sec.branch_id, sec.branch_name
+            s_id, s_name = sec.section_id, sec.section_name
+            all_sec = False
+        elif br:
+            b_id, b_name = br.branch_id, br.branch_name
+            s_id, s_name = None, None
+            all_sec = True
+        else:
+            b_id, b_name, s_id, s_name, all_sec = None, None, None, None, False
+
+        result.append({
+            "id": u.id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "status": u.status,
+            "created_at": u.created_at,
+            "branch_id": b_id,
+            "branch_name": b_name,
+            "section_id": s_id,
+            "section_name": s_name,
+            "all_sections": all_sec,
+        })
+    return result
+
+
+def update_member_profile(
+    db: Session,
+    actor_id: str,
+    college_id: str,
+    user_id: str,
+    *,
+    full_name: str | None = None,
+    email: str | None = None,
+    branch_id: str | None = None,
+    section_id: str | None = None,
+    all_sections: bool | None = None,
+) -> dict:
+    user = _get_member_or_404(db, college_id, user_id)
+    if full_name is not None and full_name.strip():
+        user.full_name = full_name.strip()
+    if email is not None and email.strip():
+        normalized = email.strip().lower()
+        if normalized != user.email:
+            existing = db.execute(select(User).where(User.email == normalized, User.id != user.id)).scalar_one_or_none()
+            if existing:
+                raise ConflictError("An account with this email already exists.", code="EMAIL_TAKEN")
+            user.email = normalized
+
+    if branch_id is not None or section_id is not None or all_sections is not None:
+        db.execute(delete(UserCollegeSection).where(UserCollegeSection.user_id == user.id))
+        db.execute(delete(UserBranchAssignment).where(UserBranchAssignment.user_id == user.id))
+
+        if branch_id:
+            branch = get_branch_or_404(db, branch_id)
+            if branch.college_id != college_id:
+                raise ValidationFailedError("Branch does not belong to this college.")
+            if all_sections:
+                db.add(UserBranchAssignment(user_id=user.id, branch_id=branch.id))
+            elif section_id:
+                sec = get_section_or_404(db, section_id)
+                if sec.branch_id != branch.id:
+                    raise ValidationFailedError("Section does not belong to the selected branch.")
+                db.add(UserCollegeSection(user_id=user.id, college_section_id=sec.id))
+            else:
+                db.add(UserBranchAssignment(user_id=user.id, branch_id=branch.id))
+
+    db.commit()
+    db.refresh(user)
+    audit_service.record(db, actor_id=actor_id, action="member_updated", resource_type="user", resource_id=user.id)
+    hydrated = hydrate_users_with_affiliation(db, [user])
+    return hydrated[0]
+
+
+def list_college_courses(db: Session, college_id: str) -> list[dict]:
+    from app.db.models.course import Course, CourseEnrollment
+    from app.db.models.section import Section
+    stmt = (
+        select(
+            Course,
+            User.full_name.label("teacher_name"),
+            CollegeBranch.id.label("branch_id"),
+            CollegeBranch.name.label("branch_name"),
+            CollegeSection.id.label("section_id"),
+            CollegeSection.name.label("section_name"),
+            func.count(CourseEnrollment.id).label("enrollments_count"),
+        )
+        .join(User, Course.teacher_id == User.id)
+        .outerjoin(Section, Section.course_id == Course.id)
+        .outerjoin(CollegeSection, Section.college_section_id == CollegeSection.id)
+        .outerjoin(CollegeBranch, CollegeSection.branch_id == CollegeBranch.id)
+        .outerjoin(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+        .where(User.college_id == college_id)
+        .group_by(Course.id, User.full_name, CollegeBranch.id, CollegeBranch.name, CollegeSection.id, CollegeSection.name)
+        .order_by(Course.created_at.desc())
+    )
+    rows = db.execute(stmt).all()
+    result = []
+    for c, teacher_name, b_id, b_name, s_id, s_name, count in rows:
+        result.append({
+            "id": c.id,
+            "title": c.title,
+            "description": c.description,
+            "subject": c.subject,
+            "teacher_id": c.teacher_id,
+            "teacher_name": teacher_name,
+            "status": c.status,
+            "branch_id": b_id,
+            "branch_name": b_name,
+            "section_id": s_id,
+            "section_name": s_name,
+            "enrollments_count": count or 0,
+            "created_at": c.created_at,
+        })
+    return result
+
+
+def create_college_course(
+    db: Session,
+    actor_id: str,
+    college_id: str,
+    *,
+    title: str,
+    description: str | None = None,
+    subject: str | None = None,
+    teacher_id: str,
+    branch_id: str | None = None,
+    section_id: str | None = None,
+    status: str = "published",
+) -> dict:
+    from app.db.models.course import Course
+    from app.db.models.enums import CourseStatus
+    from app.db.models.section import Section
+    teacher = db.get(User, teacher_id)
+    if not teacher or teacher.college_id != college_id:
+        raise ValidationFailedError("Teacher must belong to this institution.")
+    course = Course(
+        title=title.strip(),
+        description=description.strip() if description else None,
+        subject=subject.strip() if subject else None,
+        teacher_id=teacher_id,
+        status=CourseStatus(status) if isinstance(status, str) else status,
+    )
+    db.add(course)
+    db.flush()
+
+    college_section_id = None
+    branch_name = None
+    section_name = None
+    if section_id:
+        sec = get_section_or_404(db, section_id)
+        if sec.college_id != college_id:
+            raise ValidationFailedError("Section does not belong to this college.")
+        college_section_id = sec.id
+        section_name = sec.name
+        br = db.get(CollegeBranch, sec.branch_id)
+        branch_name = br.name if br else None
+        branch_id = sec.branch_id
+    elif branch_id:
+        br = get_branch_or_404(db, branch_id)
+        if br.college_id != college_id:
+            raise ValidationFailedError("Branch does not belong to this college.")
+        branch_name = br.name
+        first_sec = db.execute(select(CollegeSection).where(CollegeSection.branch_id == br.id)).scalars().first()
+        if first_sec:
+            college_section_id = first_sec.id
+            section_name = first_sec.name
+
+    cohort = Section(
+        course_id=course.id,
+        name=branch_name or "Main Cohort",
+        code=f"SEC-{secrets.token_hex(3).upper()}",
+        college_section_id=college_section_id,
+    )
+    db.add(cohort)
+    db.commit()
+    db.refresh(course)
+    audit_service.record(db, actor_id=actor_id, action="course_created", resource_type="course", resource_id=course.id)
+    return {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "subject": course.subject,
+        "teacher_id": course.teacher_id,
+        "teacher_name": teacher.full_name,
+        "status": course.status,
+        "branch_id": branch_id,
+        "branch_name": branch_name,
+        "section_id": college_section_id,
+        "section_name": section_name,
+        "enrollments_count": 0,
+        "created_at": course.created_at,
+    }
+
+
+def update_college_course(
+    db: Session,
+    actor_id: str,
+    college_id: str,
+    course_id: str,
+    *,
+    title: str | None = None,
+    description: str | None = None,
+    subject: str | None = None,
+    teacher_id: str | None = None,
+    branch_id: str | None = None,
+    section_id: str | None = None,
+    status: str | None = None,
+) -> dict:
+    from app.db.models.course import Course
+    from app.db.models.enums import CourseStatus
+    from app.db.models.section import Section
+    course = db.get(Course, course_id)
+    if not course:
+        raise NotFoundError("Course not found.")
+    teacher = db.get(User, course.teacher_id)
+    if not teacher or teacher.college_id != college_id:
+        raise ForbiddenError("Course does not belong to this institution.")
+
+    if title is not None and title.strip():
+        course.title = title.strip()
+    if description is not None:
+        course.description = description.strip() if description else None
+    if subject is not None:
+        course.subject = subject.strip() if subject else None
+    if status is not None:
+        course.status = CourseStatus(status) if isinstance(status, str) else status
+    if teacher_id is not None and teacher_id != course.teacher_id:
+        new_teacher = db.get(User, teacher_id)
+        if not new_teacher or new_teacher.college_id != college_id:
+            raise ValidationFailedError("Teacher must belong to this institution.")
+        course.teacher_id = teacher_id
+
+    if branch_id is not None or section_id is not None:
+        sec_row = db.execute(select(Section).where(Section.course_id == course.id)).scalars().first()
+        if section_id:
+            cs = get_section_or_404(db, section_id)
+            if cs.college_id != college_id:
+                raise ValidationFailedError("Section does not belong to this college.")
+            if sec_row:
+                sec_row.college_section_id = cs.id
+        elif branch_id:
+            br = get_branch_or_404(db, branch_id)
+            first_cs = db.execute(select(CollegeSection).where(CollegeSection.branch_id == br.id)).scalars().first()
+            if sec_row and first_cs:
+                sec_row.college_section_id = first_cs.id
+
+    db.commit()
+    db.refresh(course)
+    audit_service.record(db, actor_id=actor_id, action="course_updated", resource_type="course", resource_id=course.id)
+    courses = list_college_courses(db, college_id)
+    match = next((c for c in courses if c["id"] == course.id), None)
+    return match or {
+        "id": course.id,
+        "title": course.title,
+        "description": course.description,
+        "subject": course.subject,
+        "teacher_id": course.teacher_id,
+        "teacher_name": teacher.full_name,
+        "status": course.status,
+        "branch_id": None,
+        "branch_name": None,
+        "section_id": None,
+        "section_name": None,
+        "enrollments_count": 0,
+        "created_at": course.created_at,
+    }
+
+
+def delete_college_course(db: Session, actor_id: str, college_id: str, course_id: str) -> None:
+    from app.db.models.course import Course
+    course = db.get(Course, course_id)
+    if not course:
+        raise NotFoundError("Course not found.")
+    teacher = db.get(User, course.teacher_id)
+    if not teacher or teacher.college_id != college_id:
+        raise ForbiddenError("Course does not belong to this institution.")
+    audit_service.record(db, actor_id=actor_id, action="course_deleted", resource_type="course", resource_id=course.id)
+    db.delete(course)
+    db.commit()

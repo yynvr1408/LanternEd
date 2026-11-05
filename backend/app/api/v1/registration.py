@@ -14,10 +14,10 @@ router = APIRouter(prefix="/registration", tags=["registration"])
 
 
 @router.get("/colleges", response_model=list[PublicCollegeOut])
-def registerable_colleges(response: Response, db: Session = Depends(get_db)):
+def registerable_colleges(response: Response, search: str | None = None, db: Session = Depends(get_db)):
     """Active colleges only, read live from the admin-managed table. Public, and never includes college codes."""
     response.headers["Cache-Control"] = "no-store"
-    return college_service.list_registerable_colleges(db)
+    return college_service.list_registerable_colleges(db, search=search)
 
 
 @router.get("/colleges/{college_id}/branches", response_model=list[PublicBranchOut])
