@@ -66,7 +66,7 @@ async def lifespan(_app: FastAPI):
     if not settings.llm_configured:
         logger.warning("No LLM provider configured — lecture summaries will use the labeled stub provider.")
     if not settings.email_configured:
-        logger.warning("EMAILJS_SERVICE_ID / EMAILJS_TEMPLATE_ID / EMAILJS_PUBLIC_KEY not configured — OTP emails will not be sent.")
+        logger.warning("No email provider configured (RESEND_API_KEY + EMAIL_FROM) — OTP emails will not be sent.")
     from app.db.session import SessionLocal
     from app.services import admin_service
 

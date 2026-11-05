@@ -69,28 +69,7 @@ services:
         value: whisper-large-v3-turbo
       - key: SPEECH_TO_TEXT_BASE_URL
         value: https://api.groq.com/openai/v1
-      - key: EMAILJS_SERVICE_ID
-        sync: false
-      - key: EMAILJS_TEMPLATE_ID
-        sync: false # password-reset OTP wording: "{{otp}} is your LanternED password reset code"
-      - key: EMAILJS_LOGIN_TEMPLATE_ID
-        sync: false # optional: a separate template for the new-device-login-approval OTP (falls
-        # back to EMAILJS_TEMPLATE_ID if left unset)
-      - key: EMAILJS_REGISTRATION_TEMPLATE_ID
-        sync: false # optional: a separate template ("Verify Your LanternED Email Address") for
-        # the registration email-verification OTP (falls back to EMAILJS_TEMPLATE_ID if unset)
-      - key: EMAILJS_REGISTRATION_SERVICE_ID
-        sync: false # optional: all three REGISTRATION_* vars together route registration OTP
-        # through a wholly separate EmailJS account (free-tier template-count workaround)
-      - key: EMAILJS_REGISTRATION_PUBLIC_KEY
-        sync: false
-      - key: EMAILJS_REGISTRATION_PRIVATE_KEY
-        sync: false
-      - key: EMAILJS_PUBLIC_KEY
-        sync: false
-      - key: EMAILJS_PRIVATE_KEY
-        sync: false # EmailJS dashboard: Account -> Security -> "Private Key"
-      # Transactional email through Resend (recommended for launch; takes precedence over EmailJS when both are set)
+      # Transactional email through Resend (delivers all 4 OTP operations)
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
