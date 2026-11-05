@@ -32,7 +32,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('course_id', name='uq_gradebook_config_course'),
     )
-    op.create_index(op.f('ix_gradebook_configs_course_id'), 'gradebook_configs', ['course_id'], unique=True)
+    op.create_index(op.f('ix_gradebook_configs_course_id'), 'gradebook_configs', ['course_id'], unique=False)
 
     # 2. Course Grade Records
     op.create_table(
@@ -122,7 +122,7 @@ def upgrade() -> None:
         'question_items',
         sa.Column('id', sa.String(length=36), nullable=False),
         sa.Column('bank_id', sa.String(length=36), nullable=False),
-        sa.Column('question_type', sa.String(length=50), nullable=False, server_default='mcq_single'),
+        sa.Column('question_type', sa.Enum('mcq_single', 'mcq_multi', 'coding', 'numerical', 'subjective', name='questiontype', native_enum=False), nullable=False, server_default='mcq_single'),
         sa.Column('prompt', sa.Text(), nullable=False),
         sa.Column('options', sa.JSON(), nullable=False),
         sa.Column('correct_answer', sa.JSON(), nullable=False),
@@ -152,7 +152,7 @@ def upgrade() -> None:
         sa.Column('shuffle_options', sa.Boolean(), nullable=False, server_default='1'),
         sa.Column('enforce_fullscreen', sa.Boolean(), nullable=False, server_default='1'),
         sa.Column('max_tab_switches', sa.Integer(), nullable=False, server_default='3'),
-        sa.Column('status', sa.String(length=50), nullable=False, server_default='draft'),
+        sa.Column('status', sa.Enum('draft', 'published', 'in_progress', 'closed', 'archived', name='examstatus', native_enum=False), nullable=False, server_default='draft'),
         sa.Column('created_by', sa.String(length=36), nullable=False),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
@@ -193,7 +193,7 @@ def upgrade() -> None:
         sa.Column('auto_graded_score', sa.Float(), nullable=False, server_default='0.0'),
         sa.Column('manual_graded_score', sa.Float(), nullable=False, server_default='0.0'),
         sa.Column('final_score', sa.Float(), nullable=True),
-        sa.Column('status', sa.String(length=50), nullable=False, server_default='in_progress'),
+        sa.Column('status', sa.Enum('in_progress', 'submitted', 'auto_submitted', 'evaluated', name='attemptstatus', native_enum=False), nullable=False, server_default='in_progress'),
         sa.Column('tab_blur_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('is_flagged_for_review', sa.Boolean(), nullable=False, server_default='0'),
         sa.ForeignKeyConstraint(['exam_id'], ['exams.id'], ondelete='CASCADE'),

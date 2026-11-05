@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     admin_session_ttl_minutes: int = 720  # 12 hours sliding-window refresh token lifecycle
     admin_cookie_name: str = "lanterned_admin_session"
     admin_login_max_attempts: int = 5  # per client + username, and per client, per 15 minutes (anyone + username: 10x)
-    admin_enforce_single_session: bool = False  # institution security policy: false permits multi-device admin sessions
+    admin_enforce_single_session: bool = True  # institution security policy: false permits multi-device admin sessions
     # Transactional email via Resend (https://resend.com): preferred when set, because EmailJS's free tier caps at
     # 200 emails a month. EMAIL_FROM must be an address on a domain verified in Resend.
     resend_api_key: str | None = None

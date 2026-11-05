@@ -387,8 +387,12 @@ def validate_registration_target(
     if role == UserRole.teacher:
         # Teachers register directly against their institution. Branch and section
         # are assigned post-registration by the institution administrator.
-        if not branch_id and not section_id:
+        if not branch_id and not section_id and not all_sections:
             return college, None, None
+        if (section_id or all_sections) and not branch_id:
+            raise ValidationFailedError("Select a branch.", code="BRANCH_REQUIRED")
+        if all_sections and section_id:
+            raise ValidationFailedError("Cannot select both all sections and a specific section.", code="INVALID_SECTION")
         branch = None
         if branch_id:
             branch = db.get(CollegeBranch, branch_id)
@@ -479,11 +483,6 @@ def is_college_admin(db: Session, user_id: str, college_id: str) -> bool:
     if college and college.created_by == user_id:
         return True
 
-    # 3. Active teacher / admin associated with this college
-    u = db.get(User, user_id)
-    if u and u.college_id == college_id and u.role in (UserRole.teacher, UserRole.admin):
-        return True
-
     return False
 
 
@@ -500,17 +499,10 @@ def list_colleges_administered_by(db: Session, user_id: str) -> list[College]:
     if u and u.role == UserRole.admin:
         return list(db.execute(select(College).order_by(College.name_key)).scalars())
 
-    conditions = [
-        CollegeAdministrator.user_id == user_id,
-        College.created_by == user_id,
-    ]
-    if u and u.college_id and u.role in (UserRole.teacher, UserRole.admin):
-        conditions.append(College.id == u.college_id)
-
     stmt = (
         select(College)
         .outerjoin(CollegeAdministrator, CollegeAdministrator.college_id == College.id)
-        .where(or_(*conditions))
+        .where(or_(CollegeAdministrator.user_id == user_id, College.created_by == user_id))
         .distinct()
         .order_by(College.name_key)
     )

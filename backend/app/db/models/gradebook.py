@@ -10,9 +10,10 @@ class GradebookConfig(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """Configurable Continuous Internal Assessment (CIA) syllabus weighting rules for a course."""
 
     __tablename__ = "gradebook_configs"
+    __table_args__ = (UniqueConstraint("course_id", name="uq_gradebook_config_course"),)
 
     course_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+        String(36), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # Weights stored as normalized decimals summing to 1.0 (e.g. {"assignments": 0.25, "quizzes": 0.15, "midterm": 0.20, "final": 0.30, "attendance": 0.10})
     weights: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
@@ -68,9 +69,10 @@ class EvaluationFeedback(UUIDPrimaryKeyMixin, Base):
     """Detailed split-screen evaluation feedback, criteria scoring, and teacher annotations for a submission."""
 
     __tablename__ = "evaluation_feedbacks"
+    __table_args__ = (UniqueConstraint("submission_id", name="uq_eval_feedback_submission"),)
 
     submission_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("assignment_submissions.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+        String(36), ForeignKey("assignment_submissions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     evaluator_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     # Criterion score breakdown e.g. {"crit_1": 10.0, "crit_2": 8.5}
