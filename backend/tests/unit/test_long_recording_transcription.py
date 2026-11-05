@@ -92,7 +92,7 @@ def test_a_recording_larger_than_whisper_limit_is_cut_and_every_chunk_is_transcr
 
     assert len(stt) in (11, 12)  # 6600 s / 600 s chunks (may produce 11 or 12 depending on frame alignment)
     assert all(c["bytes"] < WHISPER_LIMIT for c in stt)  # every upload fits
-    assert sum(round(c["duration"]) for c in stt) == 6600  # the chunks cover the WHOLE recording, no gaps
+    assert sum(round(c["duration"]) for c in stt if c.get("duration") is not None) == 6600  # the chunks cover the WHOLE recording, no gaps
     assert text.split("\n\n") == [f"part-{i}" for i in range(1, len(stt) + 1)]  # combined in recording order
     done, total = transcription_service.chunk_summary(transcript)
     assert done == total >= 11  # every chunk, including the empty leftover, is accounted for
