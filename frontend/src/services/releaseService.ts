@@ -82,7 +82,7 @@ export const releaseService = {
 
   /** Returns the direct installer download URL for a platform pointing dynamically to /releases/latest. */
   getDownloadUrl(platform?: 'windows' | 'macos' | 'android' | 'ios'): string {
-    const GITHUB_RELEASES_BASE = 'https://github.com/yynvr1408/LanternEd-app-releases/releases'
+    const GITHUB_RELEASES_BASE = 'https://github.com/yynvr1408/LanternEd-App-Releases/releases'
     const files: Record<string, string> = {
       windows: `LanternEd-Setup-${APP_CURRENT_VERSION}.exe`,
       macos: `LanternEd-${APP_CURRENT_VERSION}-universal.dmg`,

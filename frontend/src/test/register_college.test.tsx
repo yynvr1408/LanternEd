@@ -29,8 +29,7 @@ vi.mock('../services/registrationApi', () => ({
 }))
 
 const COLLEGE = /^College\s*\*?$/
-const BRANCH = /^Branch\s*\*?$/
-const SECTION = /^Section\s*\*?$/
+const BRANCH = /^Branch\s*\/?\s*Department\s*\*?$/
 
 const COLLEGES = [
   { id: 'col-a', name: 'Alpha College', location: 'Pune' },
@@ -39,11 +38,6 @@ const COLLEGES = [
 const BRANCHES: Record<string, { id: string; name: string; short_code: string | null }[]> = {
   'col-a': [{ id: 'br-cse', name: 'Computer Science', short_code: 'CSE' }, { id: 'br-ece', name: 'Electronics', short_code: null }],
   'col-b': [{ id: 'br-me', name: 'Mechanical', short_code: 'ME' }],
-}
-const SECTIONS: Record<string, { id: string; college_id: string; branch_id: string; name: string }[]> = {
-  'br-cse': [{ id: 'sec-a', college_id: 'col-a', branch_id: 'br-cse', name: 'Section A' }, { id: 'sec-b', college_id: 'col-a', branch_id: 'br-cse', name: 'Section B' }],
-  'br-ece': [{ id: 'sec-e', college_id: 'col-a', branch_id: 'br-ece', name: 'Section E' }],
-  'br-me': [{ id: 'sec-m', college_id: 'col-b', branch_id: 'br-me', name: 'Section M' }],
 }
 
 const renderPage = (portal: 'student' | 'teacher') =>
@@ -63,12 +57,10 @@ const fillBasics = () => {
 const optionTexts = (label: RegExp) => Array.from((screen.getByLabelText(label) as HTMLSelectElement).options).map((o) => o.text)
 const waitColleges = () => waitFor(() => expect(optionTexts(COLLEGE)).toContain('Beta Institute'))
 
-async function pick(college: string, branch: string, section: string) {
+async function pickStudent(college: string, branch: string) {
   fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: college } })
   await waitFor(() => expect(optionTexts(BRANCH).length).toBeGreaterThan(1))
   fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: branch } })
-  await waitFor(() => expect(optionTexts(SECTION).length).toBeGreaterThan(1))
-  fireEvent.change(screen.getByLabelText(SECTION), { target: { value: section } })
 }
 
 beforeEach(() => {
@@ -77,11 +69,10 @@ beforeEach(() => {
   verifyRegistrationOtp.mockReset().mockResolvedValue({ verification_token: 'tok-abc', expires_in_minutes: 10 })
   listColleges.mockReset().mockResolvedValue(COLLEGES)
   listBranches.mockReset().mockImplementation(async (id: string) => BRANCHES[id] ?? [])
-  listSections.mockReset().mockImplementation(async (id: string) => SECTIONS[id] ?? [])
+  listSections.mockReset().mockResolvedValue([])
 })
 
-/** Clicks "Send Verification Code", waits for the OTP step, enters a code and submits it —
- * the real path to register() now being called, since registration is gated on email-OTP. */
+/** Clicks "Send Verification Code", waits for the OTP step, enters a code and submits it */
 async function submitAndVerify() {
   fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
   const otpInput = await screen.findByLabelText(/verification code/i)
@@ -89,49 +80,42 @@ async function submitAndVerify() {
   fireEvent.click(screen.getByRole('button', { name: /verify & create account/i }))
 }
 
-describe('registration: college -> branch -> section', () => {
-  it('teacher form has the requested fields, no role question, and colleges come from the API', async () => {
+describe('registration: decoupled teacher branch/section & student branch allocation', () => {
+  it('teacher form has the requested fields without branch or section options', async () => {
     renderPage('teacher')
     expect(screen.queryByLabelText(/role/i)).not.toBeInTheDocument()
     await waitFor(() => expect(optionTexts(COLLEGE)).toContain('Alpha College — Pune'))
-    for (const l of [/full name/i, /email address/i, /^password/i, /confirm password/i, COLLEGE, /college code/i, BRANCH, SECTION]) {
+    for (const l of [/full name/i, /email address/i, /^password/i, /confirm password/i, COLLEGE, /college code/i]) {
       expect(screen.getByLabelText(l)).toBeInTheDocument()
     }
-    expect(screen.getByLabelText(BRANCH)).toBeDisabled()
-    expect(screen.getByLabelText(SECTION)).toBeDisabled()
+    // As requested: branch and section are removed from teacher registration
+    expect(screen.queryByLabelText(BRANCH)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Section/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Department & Section Allocation:/i)).toBeInTheDocument()
   })
 
-  it('changing the college reloads branches and clears branch and section; changing the branch clears the section', async () => {
-    renderPage('teacher')
+  it('student form asks for the branch but section is allocated by admin upon approval', async () => {
+    renderPage('student')
+    await waitColleges()
+    expect(screen.getByLabelText(BRANCH)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Section/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Section Allocation:/i)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-a' } })
+    await waitFor(() => expect(optionTexts(BRANCH)).toEqual(['Select your branch', 'Computer Science (CSE)', 'Electronics']))
+  })
+
+  it('changing college reloads branches for student', async () => {
+    renderPage('student')
     await waitColleges()
     fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-a' } })
     await waitFor(() => expect(optionTexts(BRANCH)).toEqual(['Select your branch', 'Computer Science (CSE)', 'Electronics']))
     fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-cse' } })
-    await waitFor(() => expect(optionTexts(SECTION)).toEqual(['Select your section', 'Section A', 'Section B', 'All Sections']))
-    fireEvent.change(screen.getByLabelText(SECTION), { target: { value: 'sec-b' } })
 
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-ece' } })
-    await waitFor(() => expect(optionTexts(SECTION)).toContain('Section E'))
-    expect((screen.getByLabelText(SECTION) as HTMLSelectElement).value).toBe('')
-
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-cse' } })
-    await waitFor(() => expect(optionTexts(SECTION)).toContain('Section B'))
-    fireEvent.change(screen.getByLabelText(SECTION), { target: { value: 'sec-a' } })
     fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-b' } })
     await waitFor(() => expect(optionTexts(BRANCH)).toEqual(['Select your branch', 'Mechanical (ME)']))
     expect((screen.getByLabelText(BRANCH) as HTMLSelectElement).value).toBe('')
-    expect((screen.getByLabelText(SECTION) as HTMLSelectElement).value).toBe('')
-    expect(screen.getByLabelText(SECTION)).toBeDisabled()
     expect(listBranches).toHaveBeenLastCalledWith('col-b')
-  })
-
-  it('only teachers get the All Sections option', async () => {
-    renderPage('student')
-    await waitColleges()
-    fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-a' } })
-    await waitFor(() => expect(optionTexts(BRANCH).length).toBeGreaterThan(1))
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-cse' } })
-    await waitFor(() => expect(optionTexts(SECTION)).toEqual(['Select your section', 'Section A', 'Section B']))
   })
 
   it('shows field-specific validation errors and does not call the server', async () => {
@@ -147,8 +131,8 @@ describe('registration: college -> branch -> section', () => {
     expect(register).not.toHaveBeenCalled()
   })
 
-  it('asks for the branch and the section in turn', async () => {
-    renderPage('teacher')
+  it('asks student for the branch if omitted', async () => {
+    renderPage('student')
     await waitColleges()
     fillBasics()
     type(/college code/i, 'EV-AAAA-2222')
@@ -156,10 +140,6 @@ describe('registration: college -> branch -> section', () => {
     await waitFor(() => expect(optionTexts(BRANCH).length).toBeGreaterThan(1))
     fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
     expect(await screen.findByText('Select your branch.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-cse' } })
-    await waitFor(() => expect(optionTexts(SECTION).length).toBeGreaterThan(1))
-    fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
-    expect(await screen.findByText('Select a section or All Sections.')).toBeInTheDocument()
     expect(register).not.toHaveBeenCalled()
   })
 
@@ -171,13 +151,13 @@ describe('registration: college -> branch -> section', () => {
     expect(await screen.findByText('Password must be at least 8 characters long.')).toBeInTheDocument()
   })
 
-  it('submits a specific section once and keeps every value on a server error', async () => {
+  it('teacher submits with college and code and preserves values on error', async () => {
     let reject!: (e: unknown) => void
     register.mockImplementation(() => new Promise((_, rej) => { reject = rej }))
     renderPage('teacher')
     await waitColleges()
     fillBasics()
-    await pick('col-a', 'br-cse', 'sec-a')
+    fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-a' } })
     type(/college code/i, 'EV-WRONG-CODE')
     fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
     const otpInput = await screen.findByLabelText(/verification code/i)
@@ -187,28 +167,12 @@ describe('registration: college -> branch -> section', () => {
     fireEvent.click(verify) // double click must not send twice
     await waitFor(() => expect(register).toHaveBeenCalledTimes(1))
     expect(register).toHaveBeenCalledWith('asha@example.com', 'Asha Rao', 'password123', 'teacher', undefined, {
-      collegeId: 'col-a', branchId: 'br-cse', sectionId: 'sec-a', allSections: false, collegeCode: 'EV-WRONG-CODE',
+      collegeId: 'col-a', branchId: undefined, collegeCode: 'EV-WRONG-CODE',
     }, 'tok-abc')
     reject(new ApiError('The college code is incorrect for the selected college.', 422, false, 'INVALID_COLLEGE_CODE'))
     expect(await screen.findByText('The college code is incorrect for the selected college.')).toBeInTheDocument()
     expect((screen.getByLabelText(/full name/i) as HTMLInputElement).value).toBe('Asha Rao')
     expect((screen.getByLabelText(/college code/i) as HTMLInputElement).value).toBe('EV-WRONG-CODE')
-    expect((screen.getByLabelText(BRANCH) as HTMLSelectElement).value).toBe('br-cse')
-    expect((screen.getByLabelText(SECTION) as HTMLSelectElement).value).toBe('sec-a')
-  })
-
-  it('"All Sections" is sent as a branch-wide flag, never as a section id', async () => {
-    register.mockResolvedValue({ role: 'teacher' })
-    renderPage('teacher')
-    await waitColleges()
-    fillBasics()
-    await pick('col-a', 'br-cse', '__all_sections__')
-    type(/college code/i, 'EV-AAAA-2222')
-    await submitAndVerify()
-    await waitFor(() => expect(register).toHaveBeenCalled())
-    expect(register.mock.calls[0][5]).toEqual({
-      collegeId: 'col-a', branchId: 'br-cse', sectionId: undefined, allSections: true, collegeCode: 'EV-AAAA-2222',
-    })
   })
 
   it('shows a duplicate email next to the email field and a network failure as a banner', async () => {
@@ -216,7 +180,7 @@ describe('registration: college -> branch -> section', () => {
     renderPage('student')
     await waitColleges()
     fillBasics()
-    await pick('col-a', 'br-cse', 'sec-a')
+    await pickStudent('col-a', 'br-cse')
     type(/college code/i, 'EV-ALPHA-0001')
     await submitAndVerify()
     expect(await screen.findByText('An account with this email already exists.')).toBeInTheDocument()
@@ -225,18 +189,18 @@ describe('registration: college -> branch -> section', () => {
     expect(await screen.findByText(/Cannot reach the server/)).toBeInTheDocument()
   })
 
-  it('a student sends the hierarchy including a college code, same as a teacher', async () => {
+  it('a student sends the branch and college code', async () => {
     register.mockResolvedValue({ role: 'student' })
     renderPage('student')
     await waitColleges()
     expect(screen.getByLabelText(/college code/i)).toBeInTheDocument()
     fillBasics()
-    await pick('col-b', 'br-me', 'sec-m')
+    await pickStudent('col-b', 'br-me')
     type(/college code/i, 'EV-BETA-0001')
     await submitAndVerify()
     await waitFor(() => expect(register).toHaveBeenCalled())
     expect(register.mock.calls[0][5]).toEqual({
-      collegeId: 'col-b', branchId: 'br-me', sectionId: 'sec-m', allSections: false, collegeCode: 'EV-BETA-0001',
+      collegeId: 'col-b', branchId: 'br-me', collegeCode: 'EV-BETA-0001',
     })
   })
 
@@ -245,13 +209,13 @@ describe('registration: college -> branch -> section', () => {
     renderPage('student')
     await waitColleges()
     fillBasics()
-    await pick('col-b', 'br-me', 'sec-m')
+    await pickStudent('col-b', 'br-me')
     fireEvent.click(screen.getByRole('button', { name: /send verification code/i }))
     await waitFor(() => expect(requestRegistrationOtp).toHaveBeenCalledWith('asha@example.com'))
     expect(await screen.findByText(/We sent a 6-digit code to/)).toBeInTheDocument()
   })
 
-  it('shows empty and error states for colleges, branches and sections', async () => {
+  it('shows empty and error states for colleges and branches', async () => {
     listColleges.mockResolvedValueOnce([])
     const { unmount } = renderPage('teacher')
     expect(await screen.findByText(/No colleges are open for registration yet/)).toBeInTheDocument()
@@ -271,16 +235,6 @@ describe('registration: college -> branch -> section', () => {
     listBranches.mockResolvedValueOnce([])
     fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-b' } })
     expect(await screen.findByText(/This college has no branches yet/)).toBeInTheDocument()
-
-    fireEvent.change(screen.getByLabelText(COLLEGE), { target: { value: 'col-a' } })
-    await waitFor(() => expect(optionTexts(BRANCH).length).toBeGreaterThan(1))
-    listSections.mockRejectedValueOnce(new Error('down'))
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-cse' } })
-    expect(await screen.findByText(/Could not load sections/)).toBeInTheDocument()
-
-    listSections.mockResolvedValueOnce([])
-    fireEvent.change(screen.getByLabelText(BRANCH), { target: { value: 'br-ece' } })
-    expect(await screen.findByText(/This branch has no sections yet/)).toBeInTheDocument()
   })
 
   it('re-fetches branches when the server says the branch is no longer open', async () => {
@@ -288,7 +242,7 @@ describe('registration: college -> branch -> section', () => {
     renderPage('student')
     await waitColleges()
     fillBasics()
-    await pick('col-a', 'br-cse', 'sec-a')
+    await pickStudent('col-a', 'br-cse')
     type(/college code/i, 'EV-ALPHA-0001')
     const callsBefore = listBranches.mock.calls.length
     listBranches.mockResolvedValueOnce([BRANCHES['col-a'][1]])
@@ -303,7 +257,7 @@ describe('registration: college -> branch -> section', () => {
     renderPage('student')
     await waitColleges()
     fillBasics()
-    await pick('col-a', 'br-cse', 'sec-a')
+    await pickStudent('col-a', 'br-cse')
     type(/college code/i, 'EV-ALPHA-0001')
     listColleges.mockResolvedValueOnce([COLLEGES[1]])
     await submitAndVerify()

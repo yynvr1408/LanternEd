@@ -3,7 +3,13 @@ import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import elevenlabs.client as el_client
+try:
+    import elevenlabs.client as el_client
+except ImportError:
+    import sys
+    el_client = MagicMock()
+    sys.modules["elevenlabs"] = MagicMock()
+    sys.modules["elevenlabs.client"] = el_client
 
 import pytest
 from app.db.models.classroom import ClassRecording

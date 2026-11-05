@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { TeacherManageCoursePage } from '../pages/teacher/TeacherManageCoursePage'
 
@@ -21,14 +21,17 @@ const COURSE = {
   status: 'published', created_at: '2026-01-01T00:00:00Z', lessons: [],
 }
 
-const renderPage = () =>
+const renderPage = async () => {
   render(
     <MemoryRouter initialEntries={['/teacher/courses/course-1/manage']}>
       <Routes>
         <Route path="/teacher/courses/:courseId/manage" element={<TeacherManageCoursePage />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   )
+  const rosterBtn = await screen.findByRole('button', { name: /Roster/i })
+  fireEvent.click(rosterBtn)
+}
 
 beforeEach(() => {
   getCourseById.mockReset().mockResolvedValue(COURSE)
@@ -48,7 +51,7 @@ describe('teacher course roster: real enrolled students, not hardcoded', () => {
         student_name: 'Kwame Mensah', student_email: 'kwame@example.com', branch: null, section: null,
       },
     ])
-    renderPage()
+    await renderPage()
     expect(await screen.findByText('Amina Diallo')).toBeInTheDocument()
     expect(screen.getByText('amina@example.com')).toBeInTheDocument()
     expect(screen.getByText(/Computer Science/)).toBeInTheDocument()
@@ -59,19 +62,19 @@ describe('teacher course roster: real enrolled students, not hardcoded', () => {
 
   it('shows an empty state when nobody is enrolled yet', async () => {
     getEnrollments.mockResolvedValue([])
-    renderPage()
+    await renderPage()
     expect(await screen.findByText(/No students enrolled yet/)).toBeInTheDocument()
   })
 
   it('shows an error state instead of crashing when the roster request fails', async () => {
     getEnrollments.mockRejectedValue(new Error('network down'))
-    renderPage()
+    await renderPage()
     expect(await screen.findByText('Could not load the course roster.')).toBeInTheDocument()
   })
 
   it('requests the real backend roster for this exact course, not a hardcoded list', async () => {
     getEnrollments.mockResolvedValue([])
-    renderPage()
+    await renderPage()
     await waitFor(() => expect(getEnrollments).toHaveBeenCalledWith('course-1'))
   })
 })

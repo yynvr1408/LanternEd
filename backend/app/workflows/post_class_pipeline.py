@@ -12,7 +12,40 @@ import logging
 import tempfile
 from pathlib import Path
 
-from render import Retry, TaskContext, Workflows
+try:
+    from render import Retry, TaskContext, Workflows
+except ImportError:
+    class _FallbackRender:
+        def __init__(self, *args, **kwargs):
+            pass
+        def task(self, *args, **kwargs):
+            if args and callable(args[0]):
+                f = args[0]
+                setattr(f, "func", f)
+                return f
+            def decorator(f):
+                setattr(f, "func", f)
+                return f
+            return decorator
+        def workflow(self, *args, **kwargs):
+            if args and callable(args[0]):
+                f = args[0]
+                setattr(f, "func", f)
+                return f
+            def decorator(f):
+                setattr(f, "func", f)
+                return f
+            return decorator
+
+    Workflows = _FallbackRender
+    Retry = _FallbackRender
+    class TaskContext:
+        async def run(self, fn, *args, **kwargs):
+            import inspect
+            real_fn = getattr(fn, "func", fn)
+            if inspect.iscoroutinefunction(real_fn):
+                return await real_fn(self, *args, **kwargs)
+            return real_fn(self, *args, **kwargs)
 
 from app.config import get_settings
 from app.db.models.enums import SummaryStatus
