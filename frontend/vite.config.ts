@@ -52,6 +52,26 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src')
     }
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('livekit-client') || id.includes('@livekit')) {
+              return 'vendor-livekit'
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons'
+            }
+          }
+        }
+      }
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',
