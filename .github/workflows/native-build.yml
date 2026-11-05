@@ -82,11 +82,13 @@ jobs:
       - run: npm run build
       - name: Sync Capacitor Android
         run: npx cap sync android
+      - name: Accept Android SDK Licenses
+        run: yes | sdkmanager --licenses || true
       - name: Build Android Release APK
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-Android-Release-APK
