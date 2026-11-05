@@ -60,20 +60,7 @@ export const TeacherSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {isInstitutionAdmin && (
-        <div className="pt-4 border-t border-[#E1E8E4]">
-          <NavLink
-            to="/institution/dashboard"
-            className="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold text-[#0F5B57] bg-[#DDF3EA]/70 hover:bg-[#DDF3EA] transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[#0F5B57]" />
-              Institution Admin Console
-            </span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </NavLink>
-        </div>
-      )}
+
     </aside>
   )
 }

@@ -119,7 +119,7 @@ def authenticate_admin(db: Session, *, username: str, password: str, client_ip: 
         audit_service.record(db, actor_id=None, action="admin_login_failed", resource_type="admin")
         raise UnauthorizedError("Incorrect username or password.", code="INVALID_CREDENTIALS")
 
-    if _active_admin_session(db, admin.id) is not None:
+    if get_settings().admin_enforce_single_session and _active_admin_session(db, admin.id) is not None:
         audit_service.record(db, actor_id=admin.id, action="admin_login_blocked_session_active", resource_type="admin", resource_id=admin.id)
         raise ConflictError(
             "An admin is already signed in. Try again in a moment, or ask them to sign out.",
@@ -150,6 +150,12 @@ def get_admin_from_session_token(db: Session, token: str) -> User | None:
     user = db.get(User, session.user_id)
     if user is None or user.role != UserRole.admin:
         return None
-    session.last_seen_at = utcnow()
+    now = utcnow()
+    session.last_seen_at = now
+    # Sliding window refresh: extend expiration if more than halfway through TTL
+    settings = get_settings()
+    full_ttl = timedelta(minutes=settings.admin_session_ttl_minutes)
+    if session.expires_at - now < (full_ttl / 2):
+        session.expires_at = now + full_ttl
     db.commit()
     return user

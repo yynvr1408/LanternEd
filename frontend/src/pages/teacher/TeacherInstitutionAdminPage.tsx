@@ -328,7 +328,8 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
   const [courseDesc, setCourseDesc] = useState('')
   const [courseTeacherId, setCourseTeacherId] = useState('')
   const [courseBranchId, setCourseBranchId] = useState('')
-  const [courseStatus, setCourseStatus] = useState<'published' | 'draft'>('published')
+  const [courseSectionId, setCourseSectionId] = useState('')
+  const [courseStatus, setCourseStatus] = useState<'published' | 'draft' | 'archived'>('published')
   const [courseBusy, setCourseBusy] = useState(false)
   const [courseFilterBranch, setCourseFilterBranch] = useState('')
   const [deletingCourse, setDeletingCourse] = useState<InstitutionCourse | null>(null)
@@ -338,9 +339,14 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
     setCourseTitle('')
     setCourseSubject('')
     setCourseDesc('')
-    setCourseTeacherId(teachers.length > 0 ? teachers[0].id : '')
-    setCourseBranchId(branches.length > 0 ? branches[0].id : '')
+    setCourseTeacherId('')
+    const defaultBranch = branches.length > 0 ? branches[0].id : ''
+    setCourseBranchId(defaultBranch)
+    setCourseSectionId('')
     setCourseStatus('published')
+    if (defaultBranch && !branchSections[defaultBranch]) {
+      loadSectionsForBranch(defaultBranch)
+    }
     setIsCourseModalOpen(true)
   }
 
@@ -349,15 +355,19 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
     setCourseTitle(c.title)
     setCourseSubject(c.subject || '')
     setCourseDesc(c.description || '')
-    setCourseTeacherId(c.teacher_id)
+    setCourseTeacherId(c.teacher_id || '')
     setCourseBranchId(c.branch_id || '')
-    setCourseStatus(c.status === 'published' ? 'published' : 'draft')
+    setCourseSectionId(c.section_id || '')
+    setCourseStatus((c.status as any) || 'published')
+    if (c.branch_id && !branchSections[c.branch_id]) {
+      loadSectionsForBranch(c.branch_id)
+    }
     setIsCourseModalOpen(true)
   }
 
   const handleSaveCourse = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeCollege || !courseTitle.trim() || !courseTeacherId) return
+    if (!activeCollege || !courseTitle.trim()) return
     setCourseBusy(true)
     setError(null)
     try {
@@ -366,8 +376,9 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
           title: courseTitle.trim(),
           subject: courseSubject.trim() || undefined,
           description: courseDesc.trim() || undefined,
-          teacher_id: courseTeacherId,
+          teacher_id: courseTeacherId || undefined,
           branch_id: courseBranchId || null,
+          section_id: courseSectionId || null,
           status: courseStatus,
         })
         setNotice(`Course "${courseTitle.trim()}" updated successfully.`)
@@ -376,8 +387,9 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
           title: courseTitle.trim(),
           subject: courseSubject.trim() || undefined,
           description: courseDesc.trim() || undefined,
-          teacher_id: courseTeacherId,
+          teacher_id: courseTeacherId || undefined,
           branch_id: courseBranchId || null,
+          section_id: courseSectionId || null,
           status: courseStatus,
         })
         setNotice(`Course "${courseTitle.trim()}" created successfully.`)
@@ -1629,23 +1641,54 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
               required
             />
           </FormField>
-          <FormField label="Subject / Domain" htmlFor="cSub">
-            <Input
-              id="cSub"
-              placeholder="e.g. Computer Science"
-              value={courseSubject}
-              onChange={(e) => setCourseSubject(e.target.value)}
-            />
+          <FormField label="Branch / Department" htmlFor="cBranch" required hint="Academic department offering this course">
+            <select
+              id="cBranch"
+              value={courseBranchId}
+              onChange={(e) => {
+                const bId = e.target.value
+                setCourseBranchId(bId)
+                setCourseSectionId('')
+                if (bId && !branchSections[bId]) {
+                  loadSectionsForBranch(bId)
+                }
+              }}
+              className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
+              required
+            >
+              <option value="">Select a Branch</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({b.short_code || 'General'})
+                </option>
+              ))}
+            </select>
           </FormField>
-          <FormField label="Assigned Faculty / Teacher" htmlFor="cTeacher" required>
+
+          <FormField label="Student Section Mapping" htmlFor="cSec" hint="Cohort section eligible for enrollment">
+            <select
+              id="cSec"
+              value={courseSectionId}
+              onChange={(e) => setCourseSectionId(e.target.value)}
+              className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
+            >
+              <option value="">All Sections in Department (Branch-wide)</option>
+              {(branchSections[courseBranchId] || []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  Section {s.name}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <FormField label="Assigned Faculty (Optional)" htmlFor="cTeacher" hint="Faculty assignment is decoupled; can be assigned or updated at any time">
             <select
               id="cTeacher"
               value={courseTeacherId}
               onChange={(e) => setCourseTeacherId(e.target.value)}
               className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
-              required
             >
-              <option value="">Select a teacher</option>
+              <option value="">-- Unassigned (Assign Faculty Later) --</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.full_name} ({t.email})
@@ -1653,32 +1696,30 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
               ))}
             </select>
           </FormField>
-          <FormField label="Target Branch / Department" htmlFor="cBranch">
-            <select
-              id="cBranch"
-              value={courseBranchId}
-              onChange={(e) => setCourseBranchId(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
-            >
-              <option value="">All Branches / General</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="Publication Status" htmlFor="cStat">
-            <select
-              id="cStat"
-              value={courseStatus}
-              onChange={(e) => setCourseStatus(e.target.value as 'published' | 'draft')}
-              className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
-            >
-              <option value="published">Published (Visible to Students)</option>
-              <option value="draft">Draft (Private)</option>
-            </select>
-          </FormField>
+
+          <div className="grid grid-cols-2 gap-2">
+            <FormField label="Subject / Domain" htmlFor="cSub">
+              <Input
+                id="cSub"
+                placeholder="e.g. Computer Science"
+                value={courseSubject}
+                onChange={(e) => setCourseSubject(e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Publication Status" htmlFor="cStat">
+              <select
+                id="cStat"
+                value={courseStatus}
+                onChange={(e) => setCourseStatus(e.target.value as any)}
+                className="w-full text-xs px-3 py-2 rounded-lg border border-[#CBD7D1] bg-white text-[#202B2A]"
+              >
+                <option value="published">Published (Live)</option>
+                <option value="draft">Draft (In Progress)</option>
+                <option value="archived">Archived</option>
+              </select>
+            </FormField>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="outline" type="button" onClick={() => setIsCourseModalOpen(false)}>
               Cancel

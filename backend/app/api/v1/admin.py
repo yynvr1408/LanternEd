@@ -89,6 +89,29 @@ def admin_me(response: Response, admin: User = Depends(get_current_admin)):
     return _admin_out(admin)
 
 
+@router.post("/auth/refresh", response_model=AdminOut)
+def admin_refresh(
+    request: Request,
+    response: Response,
+    settings: Settings = Depends(get_settings),
+    admin: User = Depends(get_current_admin),
+):
+    token = request.cookies.get(settings.admin_cookie_name)
+    samesite = settings.session_cookie_samesite.lower()
+    if token:
+        response.set_cookie(
+            key=settings.admin_cookie_name,
+            value=token,
+            httponly=True,
+            secure=settings.is_production or samesite == "none",
+            samesite=samesite,
+            max_age=settings.admin_session_ttl_minutes * 60,
+            path="/",
+        )
+    response.headers["Cache-Control"] = "no-store"
+    return _admin_out(admin)
+
+
 @router.get("/overview", response_model=OverviewOut)
 def overview(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
     return college_service.overview(db)

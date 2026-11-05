@@ -42,7 +42,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'Windows Desktop',
       icon: Monitor,
       badge: 'Installer (.exe / .msi)',
-      fileName: 'LanternEd-Setup-0.1.0.exe',
+      fileName: 'LanternEd-Setup-0.1.1.exe',
       sizeMb: 14.8,
       minOs: 'Windows 10 / 11 (64-bit)',
       arch: 'x64 (DirectML Hardware Accelerated)',
@@ -57,7 +57,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'macOS Desktop',
       icon: Apple,
       badge: 'Universal DMG (.dmg / .app)',
-      fileName: 'LanternEd-0.1.0-universal.dmg',
+      fileName: 'LanternEd-0.1.1-universal.dmg',
       sizeMb: 16.2,
       minOs: 'macOS 10.15+ (Catalina through Sequoia)',
       arch: 'Universal Binary (Apple Silicon M1/M2/M3 & Intel)',
@@ -72,7 +72,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'Android Mobile',
       icon: Smartphone,
       badge: 'Package (.apk)',
-      fileName: 'LanternEd-v0.1.0.apk',
+      fileName: 'LanternEd-v0.1.1.apk',
       sizeMb: 18.5,
       minOs: 'Android 8.0+ (Oreo through Android 15)',
       arch: 'Universal ARM (arm64-v8a, armeabi-v7a)',
@@ -87,7 +87,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'iOS Mobile',
       icon: Smartphone,
       badge: 'Package (.ipa)',
-      fileName: 'LanternEd-v0.1.0.ipa',
+      fileName: 'LanternEd-v0.1.1.ipa',
       sizeMb: 22.1,
       minOs: 'iOS 14.0+ (iPhone & iPad)',
       arch: '64-bit ARM (arm64)',
@@ -186,7 +186,8 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
 
             <a
               href={releaseService.getDownloadUrl(selectedPlatform)}
-              download={active.fileName}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F5B57] hover:bg-[#123B39] text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs shrink-0"
             >
               <Download className="w-4 h-4" />

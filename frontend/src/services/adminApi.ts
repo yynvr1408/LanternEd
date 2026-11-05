@@ -204,6 +204,7 @@ export const adminApi = {
     request<{ username: string; display_name: string }>('POST', '/auth/login', { username, password }),
   logout: () => request<void>('POST', '/auth/logout'),
   me: () => request<{ username: string; display_name: string }>('GET', '/auth/me'),
+  refresh: () => request<{ username: string; display_name: string }>('POST', '/auth/refresh'),
   overview: () => request<AdminOverview>('GET', '/overview'),
   usage: (days = 30) => request<UsageReport>('GET', `/usage?days=${days}`),
   billing: (collegeId: string) => request<BillingSummary>('GET', `/colleges/${collegeId}/billing`),

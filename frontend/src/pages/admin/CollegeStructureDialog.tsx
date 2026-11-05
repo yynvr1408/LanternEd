@@ -30,10 +30,11 @@ interface ListProps {
   onOpen?: (item: Item) => void
   withShortCode?: boolean
   busy: boolean
+  readOnly?: boolean
 }
 
 /** One reusable list for either level: add, search, rename, activate/deactivate (and open, for branches). */
-const ManageList: React.FC<ListProps> = ({ noun, items, search, onSearch, onAdd, onRename, onToggle, onOpen, withShortCode, busy }) => {
+const ManageList: React.FC<ListProps> = ({ noun, items, search, onSearch, onAdd, onRename, onToggle, onOpen, withShortCode, busy, readOnly = false }) => {
   const [name, setName] = useState('')
   const [shortCode, setShortCode] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
@@ -70,29 +71,46 @@ const ManageList: React.FC<ListProps> = ({ noun, items, search, onSearch, onAdd,
 
   return (
     <div className="flex flex-col gap-4">
-      <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 sm:items-end" noValidate>
-        <div className="flex-1">
-          <FormField label={`New ${noun}`} htmlFor={`new-${noun}`} error={formError ?? undefined}>
-            <Input
-              id={`new-${noun}`}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={noun === 'branch' ? 120 : 80}
-              placeholder={noun === 'branch' ? 'e.g. Computer Science and Engineering' : 'e.g. Section A'}
-            />
-          </FormField>
+      {readOnly ? (
+        <div className="p-3.5 bg-[#F4FBF7] border border-[#A7E2C7] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#0F5B57]">
+          <div>
+            <span className="font-semibold text-sm block sm:inline">View-Only Access:</span>{' '}
+            <span>Sections are managed directly by Institution Administrators. Super Admin has view-only metrics.</span>
+          </div>
+          <div className="flex items-center gap-2 font-medium shrink-0">
+            <span className="px-2.5 py-1 rounded-md bg-white border border-[#A7E2C7] shadow-xs text-[#202B2A] font-semibold">
+              {items ? `${items.length} Total Section${items.length === 1 ? '' : 's'}` : '0 Sections'}
+            </span>
+            <span className="px-2.5 py-1 rounded-md bg-[#E5F5EB] text-[#247A4D] font-semibold">
+              {items ? `${items.filter((i) => i.status === 'active').length} Active` : '0 Active'}
+            </span>
+          </div>
         </div>
-        {withShortCode && (
-          <div className="sm:w-32">
-            <FormField label="Short code" htmlFor="new-branch-code">
-              <Input id="new-branch-code" value={shortCode} onChange={(e) => setShortCode(e.target.value)} maxLength={20} placeholder="CSE" />
+      ) : (
+        <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 sm:items-end" noValidate>
+          <div className="flex-1">
+            <FormField label={`New ${noun}`} htmlFor={`new-${noun}`} error={formError ?? undefined}>
+              <Input
+                id={`new-${noun}`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={noun === 'branch' ? 120 : 80}
+                placeholder={noun === 'branch' ? 'e.g. Computer Science and Engineering' : 'e.g. Section A'}
+              />
             </FormField>
           </div>
-        )}
-        <Button type="submit" isLoading={busy} icon={<Plus className="w-4 h-4" />}>
-          Add {Noun}
-        </Button>
-      </form>
+          {withShortCode && (
+            <div className="sm:w-32">
+              <FormField label="Short code" htmlFor="new-branch-code">
+                <Input id="new-branch-code" value={shortCode} onChange={(e) => setShortCode(e.target.value)} maxLength={20} placeholder="CSE" />
+              </FormField>
+            </div>
+          )}
+          <Button type="submit" isLoading={busy} icon={<Plus className="w-4 h-4" />}>
+            Add {Noun}
+          </Button>
+        </form>
+      )}
 
       <Input aria-label={`Search ${noun}s`} placeholder={`Search ${noun}s`} value={search} onChange={(e) => onSearch(e.target.value)} leftIcon={<Search className="w-4 h-4" />} />
 
@@ -126,28 +144,34 @@ const ManageList: React.FC<ListProps> = ({ noun, items, search, onSearch, onAdd,
                     {it.short_code && <span className="text-xs text-[#687775]">({it.short_code})</span>}
                     <Badge variant={it.status === 'active' ? 'success' : 'secondary'}>{it.status === 'active' ? 'Active' : 'Inactive'}</Badge>
                   </span>
-                  <span className="flex flex-wrap gap-2 shrink-0">
-                    {onOpen && (
-                      <Button size="sm" variant="outline" icon={<Layers className="w-4 h-4" />} onClick={() => onOpen(it)}>
-                        Sections
+                  {readOnly ? (
+                    <span className="text-xs text-[#687775] font-medium px-2 py-1 bg-[#F5F8F7] border border-[#E1E8E4] rounded">
+                      Managed by College Admin
+                    </span>
+                  ) : (
+                    <span className="flex flex-wrap gap-2 shrink-0">
+                      {onOpen && (
+                        <Button size="sm" variant="outline" icon={<Layers className="w-4 h-4" />} onClick={() => onOpen(it)}>
+                          Sections
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={<Pencil className="w-4 h-4" />}
+                        onClick={() => {
+                          setEditing(it.id)
+                          setEditName(it.name)
+                          setEditCode(it.short_code ?? '')
+                        }}
+                      >
+                        Edit
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      icon={<Pencil className="w-4 h-4" />}
-                      onClick={() => {
-                        setEditing(it.id)
-                        setEditName(it.name)
-                        setEditCode(it.short_code ?? '')
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button size="sm" variant="outline" icon={<Power className="w-4 h-4" />} disabled={busy} onClick={() => onToggle(it)}>
-                      {it.status === 'active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                  </span>
+                      <Button size="sm" variant="outline" icon={<Power className="w-4 h-4" />} disabled={busy} onClick={() => onToggle(it)}>
+                        {it.status === 'active' ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </span>
+                  )}
                 </>
               )}
             </li>
@@ -166,7 +190,8 @@ export const CollegeStructureDialog: React.FC<{
   /** Defaults to the platform admin's own transport; a delegated institution admin passes
    * institutionAdminApi instead, which rides their ordinary teacher session. */
   api?: CollegeStructureApi
-}> = ({ college, onClose, onSessionExpired, api = adminApi }) => {
+  readOnlySections?: boolean
+}> = ({ college, onClose, onSessionExpired, api = adminApi, readOnlySections = true }) => {
   const [branch, setBranch] = useState<CollegeBranch | null>(null)
   const [branches, setBranches] = useState<CollegeBranch[] | null>(null)
   const [sections, setSections] = useState<CollegeSection[] | null>(null)
@@ -310,6 +335,7 @@ export const CollegeStructureDialog: React.FC<{
             search={sectionSearch}
             onSearch={setSectionSearch}
             busy={busy}
+            readOnly={readOnlySections}
             onAdd={(name) => run(() => api.createSection(branch.id, name), `Section ${name} added.`, loadSections)}
             onRename={(it, name) => run(() => api.updateSection(it.id, name), 'Section updated.', loadSections)}
             onToggle={(it) => requestToggle('section', it)}

@@ -81,8 +81,8 @@ export const releaseService = {
   },
 
   /** Returns the direct installer download URL for a platform. */
-  getDownloadUrl(platform: 'windows' | 'macos' | 'android' | 'ios'): string {
-    const GITHUB_REPO = 'https://github.com/yynvr1408/LanternEd'
-    return `${GITHUB_REPO}/releases/latest`
+  getDownloadUrl(platform?: 'windows' | 'macos' | 'android' | 'ios'): string {
+    const GITHUB_RELEASES = 'https://github.com/yynvr1408/LanternEd-app-releases/releases'
+    return GITHUB_RELEASES
   },
 }

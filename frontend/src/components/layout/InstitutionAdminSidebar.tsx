@@ -66,20 +66,8 @@ export const InstitutionAdminSidebar: React.FC = () => {
         </nav>
       </div>
 
-      <div className="pt-4 border-t border-[#E1E8E4] flex flex-col gap-2">
-        {isTeacher && (
-          <NavLink
-            to="/teacher/dashboard"
-            className="flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-semibold text-[#0F5B57] bg-[#DDF3EA]/60 hover:bg-[#DDF3EA] transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <BookMarked className="w-4 h-4" />
-              Teacher Console
-            </span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </NavLink>
-        )}
-        {isSuperAdmin && (
+      {isSuperAdmin && (
+        <div className="pt-4 border-t border-[#E1E8E4] flex flex-col gap-2">
           <NavLink
             to="/super-admin"
             className="flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-semibold text-[#7A3E00] bg-[#FFF8E7] hover:bg-[#FFEEC2] transition-colors"
@@ -90,8 +78,8 @@ export const InstitutionAdminSidebar: React.FC = () => {
             </span>
             <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </NavLink>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   )
 }

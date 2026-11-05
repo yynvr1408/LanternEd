@@ -1420,7 +1420,7 @@ def create_college_course(
     title: str,
     description: str | None = None,
     subject: str | None = None,
-    teacher_id: str,
+    teacher_id: str | None = None,
     branch_id: str | None = None,
     section_id: str | None = None,
     status: str = "published",
@@ -1428,14 +1428,21 @@ def create_college_course(
     from app.db.models.course import Course
     from app.db.models.enums import CourseStatus
     from app.db.models.section import Section
-    teacher = db.get(User, teacher_id)
-    if not teacher or teacher.college_id != college_id:
-        raise ValidationFailedError("Teacher must belong to this institution.")
+
+    assigned_teacher_id = teacher_id
+    if assigned_teacher_id:
+        teacher = db.get(User, assigned_teacher_id)
+        if not teacher or teacher.college_id != college_id:
+            raise ValidationFailedError("Teacher must belong to this institution.")
+    else:
+        # Decouple faculty assignment at creation: fallback to creator user id
+        assigned_teacher_id = actor_id
+
     course = Course(
         title=title.strip(),
         description=description.strip() if description else None,
         subject=subject.strip() if subject else None,
-        teacher_id=teacher_id,
+        teacher_id=assigned_teacher_id,
         status=CourseStatus(status) if isinstance(status, str) else status,
     )
     db.add(course)
@@ -1511,7 +1518,7 @@ def update_college_course(
     if not course:
         raise NotFoundError("Course not found.")
     teacher = db.get(User, course.teacher_id)
-    if not teacher or teacher.college_id != college_id:
+    if teacher and teacher.college_id and teacher.college_id != college_id:
         raise ForbiddenError("Course does not belong to this institution.")
 
     if title is not None and title.strip():
@@ -1570,7 +1577,7 @@ def delete_college_course(db: Session, actor_id: str, college_id: str, course_id
     if not course:
         raise NotFoundError("Course not found.")
     teacher = db.get(User, course.teacher_id)
-    if not teacher or teacher.college_id != college_id:
+    if teacher and teacher.college_id and teacher.college_id != college_id:
         raise ForbiddenError("Course does not belong to this institution.")
     audit_service.record(db, actor_id=actor_id, action="course_deleted", resource_type="course", resource_id=course.id)
     db.delete(course)

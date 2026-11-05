@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Building2,
   Check,
+  Clock,
   CheckCircle2,
   Copy,
   KeyRound,
@@ -319,6 +320,65 @@ export const AdminDashboardPage: React.FC<{ username: string; onSignedOut: () =>
   const [confirmDelete, setConfirmDelete] = useState<College | null>(null)
   const [deletionRequests, setDeletionRequests] = useState<Record<string, CollegeDeletionRequest>>({})
   const requestSeq = useRef(0)
+
+  // Session management: Idle timeout warning & silent background refresh
+  const [showIdleWarning, setShowIdleWarning] = useState(false)
+  const [idleSecondsRemaining, setIdleSecondsRemaining] = useState(300)
+  const lastActivityRef = useRef<number>(Date.now())
+
+  // Track user activity
+  useEffect(() => {
+    const handleUserActivity = () => {
+      lastActivityRef.current = Date.now()
+    }
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
+    events.forEach((evt) => window.addEventListener(evt, handleUserActivity, { passive: true }))
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleUserActivity))
+    }
+  }, [])
+
+  // Silent sliding-window refresh every 10 minutes if user was active recently
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      const idleMs = Date.now() - lastActivityRef.current
+      if (idleMs < 15 * 60 * 1000) {
+        adminApi.refresh().catch(() => {})
+      }
+    }, 10 * 60 * 1000)
+    return () => clearInterval(heartbeat)
+  }, [])
+
+  // Idle check every 5 seconds: after 25 minutes of inactivity, show warning modal
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      const idleMs = Date.now() - lastActivityRef.current
+      const idleSec = Math.floor(idleMs / 1000)
+      const IDLE_LIMIT = 25 * 60 // 25 minutes
+      const TERMINATE_LIMIT = 30 * 60 // 30 minutes
+
+      if (idleSec >= TERMINATE_LIMIT) {
+        setShowIdleWarning(false)
+        onSessionExpired()
+      } else if (idleSec >= IDLE_LIMIT) {
+        setShowIdleWarning(true)
+        setIdleSecondsRemaining(TERMINATE_LIMIT - idleSec)
+      } else {
+        setShowIdleWarning(false)
+      }
+    }, 5000)
+    return () => clearInterval(checkInterval)
+  }, [onSessionExpired])
+
+  const staySignedIn = async () => {
+    lastActivityRef.current = Date.now()
+    setShowIdleWarning(false)
+    try {
+      await adminApi.refresh()
+    } catch {
+      onSessionExpired()
+    }
+  }
 
   const guard = useCallback(
     (err: unknown) => {
@@ -809,6 +869,40 @@ export const AdminDashboardPage: React.FC<{ username: string; onSignedOut: () =>
             </Button>
             <Button variant="destructive" onClick={requestDeletion}>
               Request Deletion
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={showIdleWarning}
+        onClose={() => {}}
+        title="Session Inactivity Warning"
+        description="Your administrative session is about to expire."
+        maxWidth="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="p-3 bg-[#FEF6EE] border border-[#FDB022] rounded-xl flex items-start gap-3">
+            <Clock className="w-5 h-5 text-[#B54708] shrink-0 mt-0.5" />
+            <div className="text-xs text-[#B54708] space-y-1">
+              <p className="font-semibold text-sm">Session Idle Timeout</p>
+              <p>
+                You have been inactive for over 25 minutes. For security compliance and protection of institutional records, your session will automatically terminate in:
+              </p>
+              <p className="text-base font-bold font-mono text-[#7A271A]">
+                {Math.floor(idleSecondsRemaining / 60)}:{(idleSecondsRemaining % 60).toString().padStart(2, '0')}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-[#687775]">
+            Click <strong>Stay Signed In</strong> to refresh your session credentials and continue working, or sign out now.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={signOut}>
+              Sign Out
+            </Button>
+            <Button size="sm" onClick={staySignedIn}>
+              Stay Signed In
             </Button>
           </div>
         </div>

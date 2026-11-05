@@ -215,7 +215,7 @@ export const institutionAdminApi = {
       title: string
       description?: string
       subject?: string
-      teacher_id: string
+      teacher_id?: string
       branch_id?: string | null
       section_id?: string | null
       status?: string

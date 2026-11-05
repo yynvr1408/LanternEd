@@ -49,9 +49,10 @@ class Settings(BaseSettings):
     admin_username: str | None = None
     admin_password: str | None = None
     admin_reset_password_on_start: bool = False  # set true once to rotate the password to the current ADMIN_PASSWORD
-    admin_session_ttl_minutes: int = 120
+    admin_session_ttl_minutes: int = 720  # 12 hours sliding-window refresh token lifecycle
     admin_cookie_name: str = "lanterned_admin_session"
     admin_login_max_attempts: int = 5  # per client + username, and per client, per 15 minutes (anyone + username: 10x)
+    admin_enforce_single_session: bool = False  # institution security policy: false permits multi-device admin sessions
     # Transactional email via Resend (https://resend.com): preferred when set, because EmailJS's free tier caps at
     # 200 emails a month. EMAIL_FROM must be an address on a domain verified in Resend.
     resend_api_key: str | None = None
@@ -70,10 +71,9 @@ class Settings(BaseSettings):
     sentry_dsn: str | None = None  # error tracking; unset = off. Never sends request bodies, cookies or user details
     sentry_traces_sample_rate: float = 0.0
     livekit_token_ttl_minutes: int = 15  # join tokens are short-lived; the client re-fetches one via /join-token
-    # Single-active-admin-session policy: a new login is rejected while another admin session is
-    # still "fresh" (seen within this many seconds); an idle one is treated as dead and cleaned
-    # up, letting the new login through instead of permanently locking the admin out.
-    admin_idle_timeout_seconds: int = 120
+    # Admin session idle timeout: inactive sessions without user actions past this window (in seconds)
+    # are automatically invalidated (default: 30 minutes / 1800 seconds).
+    admin_idle_timeout_seconds: int = 1800
 
     database_url: str = "sqlite:///./dev.db"
     # SQLAlchemy's own defaults (5 + 10 = 15 concurrent DB-bound requests per process) — fine for

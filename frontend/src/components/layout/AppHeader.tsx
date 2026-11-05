@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Wifi, WifiOff, RefreshCw, LogOut, User as UserIcon, Menu } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNetworkStatus } from '../../context/NetworkContext'
@@ -26,6 +26,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [unsavedDrafts, setUnsavedDrafts] = useState<string[]>([])
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const isInstitutionRoute = location.pathname.startsWith('/institution')
+  const displayedRole = isInstitutionRoute
+    ? 'College Admin'
+    : user?.role === 'admin'
+    ? 'Super Admin'
+    : user?.role === 'teacher'
+    ? 'Teacher'
+    : user?.role === 'student'
+    ? 'Student'
+    : user?.role || ''
+
+  const brandLink = isInstitutionRoute
+    ? '/institution/dashboard'
+    : isTeacher
+    ? '/teacher/dashboard'
+    : '/student/dashboard'
 
   const handleLogoutClick = async () => {
     const check = await checkUnsavedWork()
@@ -66,7 +84,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
           )}
 
           <Link
-            to={isTeacher ? '/teacher/dashboard' : '/student/dashboard'}
+            to={brandLink}
             className="flex items-center gap-2.5 group"
           >
             <Logo size={32} />
@@ -76,8 +94,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
           </Link>
 
           {user && (
-            <Badge variant="secondary" size="sm" className="hidden sm:inline-flex uppercase text-xs tracking-wider">
-              {user.role}
+            <Badge
+              variant={isInstitutionRoute ? 'default' : 'secondary'}
+              size="sm"
+              className="hidden sm:inline-flex uppercase text-xs tracking-wider font-semibold"
+            >
+              {displayedRole}
             </Badge>
           )}
         </div>

@@ -328,7 +328,7 @@ class InstitutionCourseCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     subject: str | None = None
-    teacher_id: str
+    teacher_id: str | None = None
     branch_id: str | None = None
     section_id: str | None = None
     status: CourseStatus = CourseStatus.published
