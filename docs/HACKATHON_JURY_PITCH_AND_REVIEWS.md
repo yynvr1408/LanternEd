@@ -283,7 +283,7 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 >
 > Second, our production deployment is live right now: static PWA on Vercel, containerized backend on Render, PostgreSQL on Neon, and video egress into Cloudflare R2.
 >
-> Third, sustainability: through our cost model, we proved that by eliminating S3 egress fees with Cloudflare R2 and halving audio bitrates, a 1,000-student rural college can run LanternED for just $174 a month—less than 18 cents per student. LanternED is secure, tested across 450+ backend tests and 220+ frontend tests, and ready for deployment on Day One."*
+> Third, sustainability: through our cost model, we proved that by eliminating S3 egress fees with Cloudflare R2 and halving audio bitrates, a 1,000-student rural college can run LanternED for just $174 a month—less than 18 cents per student. LanternED is secure, tested across 650+ backend tests and 270 frontend tests (920+ automated tests total), and ready for deployment on Day One."*
 
 ---
 
@@ -292,7 +292,7 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 | Question | Winning Answer |
 |---|---|
 | *"How will you monetize or keep this sustainable for colleges that have no budget?"* | **Answer:** LanternED supports hybrid hosting. A college can run on our shared cloud tier for ~$0.17/student/month, or use our open-source Docker Compose self-hosting package (`deploy/self-hosted/`) on an on-premise refurbished server with local MinIO storage for $0 monthly cloud costs. |
-| *"Have you tested the application against real network drops and concurrency?"* | **Answer:** Yes. We built an automated test harness with Playwright (`playwright.offline.config.ts`, `playwright.real.config.ts`), a capacity load testing kit (`ops/loadtest/classday.js`), and a suite of 450+ unit and integration tests verifying offline download assembly, atomic sync, and scope enforcement. |
+| *"Have you tested the application against real network drops and concurrency?"* | **Answer:** Yes. We built an automated test harness with Playwright (`playwright.offline.config.ts`, `playwright.real.config.ts`), a capacity load testing kit (`ops/loadtest/classday.js`), and a suite of 920+ unit and integration tests verifying offline download assembly, atomic sync, and scope enforcement. |
 
 ---
 
@@ -302,7 +302,7 @@ Demonstrate production readiness, multilingual inclusivity (21 bundled locales +
 |---|---|
 | **Technical Complexity** | Custom LiveKit WebRTC tuning (24kbps Opus), vector data-channel whiteboard with re-hydration, Dexie.js IndexedDB v4 caching, HTTP byte-range resumable chunking with SHA-256 validation, and idempotent atomic offline sync. |
 | **Real-World Impact** | Democratizes education for millions of rural and tier-2/3 students affected by weak internet, power outages, expensive data caps, and shared devices. |
-| **Execution Quality** | Clean full-stack codebase (FastAPI + React 19 + TypeScript + Tailwind v4 + PostgreSQL), 38 database tables, 450+ automated tests, live production deployment on Vercel & Render. |
+| **Execution Quality** | Clean full-stack codebase (FastAPI + React 19 + TypeScript + Tailwind v4 + PostgreSQL), 38 database tables, 920+ automated tests, live production deployment on Vercel & Render. |
 | **Inclusivity & UX** | 21 pre-bundled zero-network locales, native RTL support, offline PWA installation, and shared-device privacy controls. |
 | **Viability & Scale** | Validated cost model ($174/mo per 1,000 students), zero-egress Cloudflare R2 storage architecture, and automated self-hosting Docker Compose suite. |
 

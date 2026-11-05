@@ -9,7 +9,7 @@
 [![Database](https://img.shields.io/badge/Neon-PostgreSQL%2018-00E599?logo=postgresql)](https://neon.tech)
 [![Object Storage](https://img.shields.io/badge/Cloudflare-R2%20Storage-F38020?logo=cloudflare)](https://www.cloudflare.com/products/r2/)
 [![WebRTC SFU](https://img.shields.io/badge/LiveKit-Cloud%20SFU-FF6359?logo=webrtc)](https://livekit.io)
-[![Test Suite](https://img.shields.io/badge/Automated%20Tests-897%20Passed-brightgreen.svg)](backend/)
+[![Test Suite](https://img.shields.io/badge/Automated%20Tests-920%20Passed-brightgreen.svg)](backend/)
 [![Cross-Platform](https://img.shields.io/badge/Platforms-Web%20%7C%20Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS-0F5B57.svg)](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
 
 > **LanternED is an offline-first, low-bandwidth, AI-augmented educational operating system engineered for colleges and polytechnics where internet connectivity is intermittent, congested, or cost-prohibitive. Built on an adaptive audio-first engine with local peer sync, split-screen rubric grading, and a lockdown examination suite, it bridges the digital divide without sacrificing university academic governance.**
@@ -301,21 +301,23 @@ npm run dev
 
 ## 10. Verification & Automated Test Suite
 
-LanternED maintains comprehensive test coverage across both backend and frontend layers:
+LanternED maintains comprehensive test coverage (**920 automated tests passing at 100%**) across both backend and frontend layers:
 
 ```bash
-# Verify Backend Python Syntax & Compilation
-python -m py_compile backend/app/main.py
-
-# Verify Alembic Migration Consistency
+# 1. Run Complete Backend Test Suite (650 tests passing)
 cd backend
-python -m alembic heads
+pytest -v
 
-# Verify Frontend Production Build
+# 2. Run Alembic Database Migration Consistency & Drift Check
+python -m alembic check
+
+# 3. Run Complete Frontend Test Suite (270 tests passing across 40 suites)
 cd ../frontend
+npm test -- --run
+
+# 4. Verify Production Build & Static Bundles (0 errors)
 npm run build
 ```
-
 ---
 
 ## 📄 License & Attribution
