@@ -5,7 +5,7 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationFailedError
 from app.db.base import utcnow
 from app.db.models.course import Course, CourseEnrollment
 from app.db.models.enums import EnrollmentStatus

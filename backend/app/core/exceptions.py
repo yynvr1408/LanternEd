@@ -26,6 +26,10 @@ class ValidationFailedError(AppError):
     code = "VALIDATION_FAILED"
 
 
+# Alias for compatibility
+ValidationError = ValidationFailedError
+
+
 class UnauthorizedError(AppError):
     status_code = status.HTTP_401_UNAUTHORIZED
     code = "UNAUTHORIZED"

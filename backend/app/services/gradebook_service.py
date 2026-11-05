@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, ValidationFailedError
 from app.db.base import utcnow
 from app.db.models.assignment import Assignment, AssignmentSubmission
 from app.db.models.classroom import Class, ClassParticipant
@@ -48,7 +48,7 @@ def update_gradebook_config(db: Session, course_id: str, payload: GradebookConfi
     # Validate weights sum
     total = sum(payload.weights.values())
     if abs(total - 1.0) > 0.05 and abs(total - 100.0) > 1.0:
-        raise ValidationError("Gradebook weights must sum to 100% (or 1.0).")
+        raise ValidationFailedError("Gradebook weights must sum to 100% (or 1.0).")
 
     normalized = {}
     for k, v in payload.weights.items():
