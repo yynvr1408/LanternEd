@@ -44,12 +44,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
   }, [resendCooldown])
 
   const finishSignIn = async (user: User) => {
+    // Platform / Super Admin
+    if (user.role === 'admin') {
+      if (from && from !== '/' && !from.startsWith('/login')) {
+        navigate(from, { replace: true })
+      } else {
+        navigate('/institution/dashboard', { replace: true })
+      }
+      return
+    }
+
+    // Institution Admin Portal
     if (portal === 'college-admin') {
       if (user.role !== 'teacher') {
         await logout()
         setChallenge(null)
         setPassword('')
-        setError('This portal is reserved for designated Institution Administrators. Please use your Student login portal.')
+        setError('This portal is reserved for designated Institution Administrators. Please use the Student login portal.')
         return
       }
       try {
@@ -76,6 +87,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
       }
     }
 
+    // Role-specific portal validation
     if (portal && user.role !== portal) {
       await logout()
       setChallenge(null)
@@ -85,12 +97,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ portal }) => {
       )
       return
     }
+
+    // Strict role redirection
     if (from && from !== '/' && !from.startsWith('/login')) {
       navigate(from, { replace: true })
     } else {
-      navigate(user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', {
-        replace: true,
-      })
+      if (user.role === 'teacher') {
+        navigate('/teacher/dashboard', { replace: true })
+      } else {
+        navigate('/student/dashboard', { replace: true })
+      }
     }
   }
 

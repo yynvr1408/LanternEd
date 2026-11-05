@@ -2,7 +2,7 @@ import re
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.db.models.enums import CollegeDeletionRequestStatus, CollegeRegistrationRequestStatus, CollegeStatus, UserRole, UserStatus
+from app.db.models.enums import CollegeDeletionRequestStatus, CollegeRegistrationRequestStatus, CollegeStatus, CourseStatus, UserRole, UserStatus
 from app.schemas.common import UtcDatetime
 
 
@@ -294,6 +294,57 @@ class PendingUserOut(BaseModel):
     email: str
     role: UserRole
     status: UserStatus
+    created_at: UtcDatetime
+    branch_id: str | None = None
+    branch_name: str | None = None
+    section_id: str | None = None
+    section_name: str | None = None
+    all_sections: bool = False
+
+
+class MemberProfileUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = Field(default=None, max_length=320)
+    branch_id: str | None = None
+    section_id: str | None = None
+    all_sections: bool | None = None
+
+
+class InstitutionCourseCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    subject: str | None = None
+    teacher_id: str
+    branch_id: str | None = None
+    section_id: str | None = None
+    status: CourseStatus = CourseStatus.published
+
+
+class InstitutionCourseUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    subject: str | None = None
+    teacher_id: str | None = None
+    branch_id: str | None = None
+    section_id: str | None = None
+    status: CourseStatus | None = None
+
+
+class InstitutionCourseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    description: str | None = None
+    subject: str | None = None
+    teacher_id: str
+    teacher_name: str | None = None
+    status: CourseStatus
+    branch_id: str | None = None
+    branch_name: str | None = None
+    section_id: str | None = None
+    section_name: str | None = None
+    enrollments_count: int = 0
     created_at: UtcDatetime
 
 

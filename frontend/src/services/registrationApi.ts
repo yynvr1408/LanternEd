@@ -59,7 +59,11 @@ export interface CollegeRegistrationRequestResult {
 
 /** Public, read live from the administrator-managed records: nothing here is hardcoded. */
 export const registrationApi = {
-  listColleges: () => apiRequest<RegistrationCollege[]>('/registration/colleges', { cache: 'no-store' }),
+  listColleges: (search?: string) =>
+    apiRequest<RegistrationCollege[]>(
+      `/registration/colleges${search && search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ''}`,
+      { cache: 'no-store' }
+    ),
   listBranches: (collegeId: string) =>
     apiRequest<RegistrationBranch[]>(`/registration/colleges/${encodeURIComponent(collegeId)}/branches`, { cache: 'no-store' }),
   listSections: (branchId: string) =>

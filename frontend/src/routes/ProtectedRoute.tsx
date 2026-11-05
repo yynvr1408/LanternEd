@@ -29,8 +29,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // If authenticated user tries to access a route of different role, redirect to their home
-    return <Navigate to={user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'} replace />
+    // Platform admin is permitted everywhere
+    if (user.role === 'admin') {
+      return <>{children}</>
+    }
+    // If authenticated user tries to access a route of different role, redirect to their designated home
+    const dest = user.role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard'
+    return <Navigate to={dest} replace />
   }
 
   return <>{children}</>
