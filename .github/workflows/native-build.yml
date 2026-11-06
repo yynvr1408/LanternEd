@@ -32,7 +32,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-Windows-Setup
-          path: frontend/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          path: frontend/src-tauri/target/**/bundle/nsis/*.exe
 
   # 2. macOS Desktop Build (Tauri 2.0 -> .dmg Universal Apple Silicon + Intel)
   build-desktop-macos:
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-macOS-Universal-DMG
-          path: frontend/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          path: frontend/src-tauri/target/**/bundle/dmg/*.dmg
 
   # 3. Android Mobile Build (Capacitor -> .apk)
   build-mobile-android:
@@ -117,7 +117,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-Android-Release-APK
-          path: frontend/android/app/build/outputs/apk/release/*.apk
+          path: frontend/android/app/build/outputs/apk/**/*.apk
 
   # 4. iOS Mobile Build (Capacitor -> iOS App & IPA)
   build-mobile-ios:
@@ -159,7 +159,7 @@ jobs:
     name: Publish to LanternEd-App-Releases Repository
     needs: [build-desktop-macos, build-desktop-windows, build-mobile-ios, build-mobile-android]
     runs-on: ubuntu-latest
-    if: success()
+    if: always() && !cancelled()
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
