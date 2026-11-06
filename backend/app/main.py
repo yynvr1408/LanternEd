@@ -56,17 +56,17 @@ async def lifespan(_app: FastAPI):
     if settings.is_production and (settings.session_secret == "dev-secret-change-me" or len(settings.session_secret) < 16):
         raise RuntimeError("SESSION_SECRET must be set to a real secret (16+ characters) in production.")
     if settings.is_production and not settings.teacher_invite_code:
-        logger.warning("TEACHER_INVITE_CODE is unset — teacher self-registration is closed in production.")
+        logger.warning("TEACHER_INVITE_CODE is unset - teacher self-registration is closed in production.")
     if settings.is_production and not os.environ.get("FORWARDED_ALLOW_IPS"):
         logger.warning(
-            "FORWARDED_ALLOW_IPS is not set — behind a reverse proxy every user would share one per-IP rate-limit bucket."
+            "FORWARDED_ALLOW_IPS is not set - behind a reverse proxy every user would share one per-IP rate-limit bucket."
         )
     if not settings.livekit_configured:
-        logger.warning("LiveKit is not configured — classroom start/join endpoints will return 503.")
+        logger.warning("LiveKit is not configured - classroom start/join endpoints will return 503.")
     if not settings.llm_configured:
-        logger.warning("No LLM provider configured — lecture summaries will use the labeled stub provider.")
+        logger.warning("No LLM provider configured - lecture summaries will use the labeled stub provider.")
     if not settings.email_configured:
-        logger.warning("No email provider configured (RESEND_API_KEY + EMAIL_FROM) — OTP emails will not be sent.")
+        logger.warning("No email provider configured (RESEND_API_KEY + EMAIL_FROM) - OTP emails will not be sent.")
     from app.db.base import Base
     from app.db.session import SessionLocal, engine
     import app.db.models  # noqa: F401
