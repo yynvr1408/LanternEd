@@ -48,6 +48,9 @@ Thumbs.db
 
 # Claude / Tool artifacts
 .claude/
+
+# Temporary video streams
+videos/*.webm
 .claude/settings.local.json
 
 # Scratch / non-repo artifacts

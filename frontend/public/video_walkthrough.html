@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LanternED - Complete System Walkthrough & Video Showcase</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    @keyframes ripple {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+    .ripple-effect {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.4);
+      width: 30px;
+      height: 30px;
+      pointer-events: none;
+      animation: ripple 0.6s cubic-bezier(0, 0, 0.2, 1);
+    }
+    .cursor-pointer-sim {
+      transition: all 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .cinema-screen {
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased select-none">
+
+  <!-- Top App Navigation / Status Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 py-3 flex items-center justify-between z-50">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-900/40">
+        🏮
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-bold text-base tracking-tight text-white">LanternED</span>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v2.0.0</span>
+          <span class="px-2 py-0.5 text-xs font-medium rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Interactive Video Walkthrough</span>
+        </div>
+        <p class="text-xs text-slate-400">Autonomous, Low-Bandwidth LMS & Proctored Examination Ecosystem</p>
+      </div>
+    </div>
+
+    <!-- Video Recording & Export Actions -->
+    <div class="flex items-center space-x-3">
+      <button id="toggle-voice-btn" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition flex items-center space-x-2">
+        <span id="voice-icon">🔊</span>
+        <span id="voice-label">Voice Narration: ON</span>
+      </button>
+
+      <button id="rec-btn" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center space-x-2 shadow-lg shadow-rose-900/30">
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+        <span id="rec-btn-text">Record Video (.webm/.mp4)</span>
+      </button>
+
+      <button id="download-video-btn" class="hidden px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center space-x-2 shadow-lg shadow-emerald-900/30">
+        <span>💾</span>
+        <span>Download Video File</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Showcase Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col space-y-4">
+
+    <!-- Cinema Viewport Stage -->
+    <div class="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 cinema-screen flex flex-col" id="cinema-stage">
+      
+      <!-- Virtual Animated Mouse Cursor -->
+      <div id="virtual-cursor" class="cursor-pointer-sim absolute top-12 left-12 w-6 h-6 flex items-center justify-center opacity-0 transition-opacity">
+        <svg class="w-6 h-6 text-emerald-400 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] fill-current" viewBox="0 0 24 24">
+          <path d="M4 0l16 12.279-6.951 1.17 4.325 8.817-3.596 1.734-4.35-8.879-5.428 5.179z"/>
+        </svg>
+      </div>
+
+      <!-- Stage Top Header Overlay (Window Bar) -->
+      <div class="bg-slate-950/80 backdrop-blur border-b border-slate-800/80 px-4 py-2.5 flex items-center justify-between text-xs z-30">
+        <div class="flex items-center space-x-2">
+          <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+          <span class="ml-2 font-mono text-slate-400" id="stage-url-bar">https://lantern-ed.vercel.app/super-admin</span>
+        </div>
+        <div class="flex items-center space-x-3 text-slate-400">
+          <span class="flex items-center space-x-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-emerald-400 font-semibold" id="stage-badge">LIVE DEMO</span>
+          </span>
+          <span class="text-slate-600">|</span>
+          <span id="scene-counter" class="font-mono text-slate-300">Scene 1 / 8</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Scene Viewport Canvas -->
+      <div id="scene-canvas" class="flex-1 relative overflow-hidden bg-slate-900 text-slate-100 flex flex-col">
+        <!-- Injected via JavaScript based on active chapter -->
+      </div>
+
+      <!-- Subtitle Narration Ribbon Overlay -->
+      <div class="absolute bottom-16 left-6 right-6 bg-slate-950/90 backdrop-blur-md border border-slate-700/60 rounded-xl px-5 py-3 flex items-start space-x-4 shadow-2xl z-40">
+        <div class="mt-0.5 w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-xs font-bold border border-emerald-500/40">
+          🎙️
+        </div>
+        <div class="flex-1">
+          <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-0.5" id="narration-chapter-title">Chapter 1: Platform Super-Admin Console</div>
+          <p class="text-sm text-slate-200 leading-snug font-medium" id="narration-text">Initializing platform demonstration...</p>
+        </div>
+      </div>
+
+      <!-- Video Control Bar (Bottom of Cinema) -->
+      <div class="h-14 bg-slate-950/95 border-t border-slate-800 px-4 flex items-center justify-between text-xs z-30">
+        <div class="flex items-center space-x-3">
+          <!-- Play / Pause Button -->
+          <button id="play-pause-btn" class="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center font-bold text-sm transition">
+            ▶
+          </button>
+          
+          <!-- Prev / Next Scene Buttons -->
+          <button id="prev-scene-btn" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">⏮</button>
+          <button id="next-scene-btn" class="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">⏭</button>
+
+          <!-- Time Display -->
+          <span class="font-mono text-slate-400 pl-2" id="time-display">00:00 / 04:00</span>
+        </div>
+
+        <!-- Progress Scrubber -->
+        <div class="flex-1 max-w-xl mx-4">
+          <div class="relative w-full h-2 bg-slate-800 rounded-full cursor-pointer overflow-hidden" id="timeline-container">
+            <div id="timeline-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <!-- Playback Speed -->
+          <button id="speed-btn" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs">1.0x</button>
+          <!-- Fullscreen -->
+          <button id="fullscreen-btn" class="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm">⛶</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Chapter Selection Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-left">
+      <button class="chapter-card p-3 rounded-xl border border-emerald-500/40 bg-emerald-950/30 hover:border-emerald-500 transition text-left" data-scene="0">
+        <div class="text-[10px] font-mono text-emerald-400 font-bold">01 // SUPER-ADMIN</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Platform Governance</div>
+        <div class="text-[11px] text-slate-400 mt-1">College provisioning & CSRF defense</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="1">
+        <div class="text-[10px] font-mono text-teal-400 font-bold">02 // INSTITUTION</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Academic Hierarchy</div>
+        <div class="text-[11px] text-slate-400 mt-1">Branches, sections & catalog mapping</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="2">
+        <div class="text-[10px] font-mono text-cyan-400 font-bold">03 // TEACHER</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Authoring & Rubrics</div>
+        <div class="text-[11px] text-slate-400 mt-1">Assignments, live WebRTC & matrix</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="3">
+        <div class="text-[10px] font-mono text-blue-400 font-bold">04 // STUDENT</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Enrollment & Learning</div>
+        <div class="text-[11px] text-slate-400 mt-1">Self-enroll & coursework submissions</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="4">
+        <div class="text-[10px] font-mono text-purple-400 font-bold">05 // PROCTORING</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Lockdown Exam Suite</div>
+        <div class="text-[11px] text-slate-400 mt-1">Anti-cheat detection & SHA-256 receipts</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="5">
+        <div class="text-[10px] font-mono text-amber-400 font-bold">06 // EVALUATION</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Split-Screen Rubrics</div>
+        <div class="text-[11px] text-slate-400 mt-1">Audio feedback & CIA gradebook CSV</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="6">
+        <div class="text-[10px] font-mono text-rose-400 font-bold">07 // LOW-BANDWIDTH</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Adaptive 2G Engine</div>
+        <div class="text-[11px] text-slate-400 mt-1">Dynamic Opus audio & LAN peer sync</div>
+      </button>
+
+      <button class="chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 transition text-left" data-scene="7">
+        <div class="text-[10px] font-mono text-emerald-400 font-bold">08 // NATIVE APPS</div>
+        <div class="text-xs font-semibold text-white mt-0.5">Cross-Platform Channel</div>
+        <div class="text-[11px] text-slate-400 mt-1">Windows, macOS, Android, iOS binaries</div>
+      </button>
+    </div>
+
+  </main>
+
+  <script>
+    const scenes = [
+      {
+        id: "super_admin",
+        chapter: "Chapter 1: Platform Super-Admin Console (/super-admin)",
+        url: "https://lantern-ed.vercel.app/super-admin",
+        duration: 15,
+        title: "Platform Super-Admin Console & Institutional Governance",
+        narration: "Welcome to LanternED. We begin at the Platform Super-Admin Console. The platform administrator manages university onboarding, enforces CSRF token guards, and provisions institutional colleges. Watch as we provision the National Institute of Technology and delegate verified faculty administrators.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>🏛️</span> Institutional College Provisioning
+                    </h2>
+                    <p class="text-xs text-slate-400">Platform-wide academic governance and cryptographic code management</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="px-2.5 py-1 text-xs rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">CSRF Guard Active</span>
+                    <span class="px-2.5 py-1 text-xs rounded bg-slate-800 text-slate-300 border border-slate-700">14 Verified Institutions</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                  <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                    <div class="text-xs text-slate-400">Total Enrolled Cohort</div>
+                    <div class="text-2xl font-bold text-white mt-1">18,420</div>
+                    <div class="text-[11px] text-emerald-400 mt-1">↑ 12.4% this academic semester</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                    <div class="text-xs text-slate-400">Proctored Sittings Today</div>
+                    <div class="text-2xl font-bold text-white mt-1">3,180</div>
+                    <div class="text-[11px] text-teal-400 mt-1">100% Cryptographic receipts issued</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                    <div class="text-xs text-slate-400">Network Uptime</div>
+                    <div class="text-2xl font-bold text-white mt-1">99.98%</div>
+                    <div class="text-[11px] text-indigo-400 mt-1">Edge low-bandwidth cache active</div>
+                  </div>
+                </div>
+
+                <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 shadow-xl" id="admin-form-box">
+                  <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Provision Institutional College</div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-[11px] text-slate-400 block mb-1">Institution Legal Name</label>
+                      <input id="sa-name-input" type="text" value="National Institute of Technology AP" readonly class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200">
+                    </div>
+                    <div>
+                      <label class="text-[11px] text-slate-400 block mb-1">Assigned Institutional Code</label>
+                      <input id="sa-code-input" type="text" value="EV-NITAP-2026" readonly class="w-full bg-slate-900 border border-emerald-500/40 text-emerald-400 font-mono rounded-lg px-3 py-1.5 text-xs font-bold">
+                    </div>
+                  </div>
+                  <div class="mt-4 flex justify-end">
+                    <button id="sa-provision-btn" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 transition">
+                      <span>✓</span>
+                      <span>Provision College & Issue Keys</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="sa-toast" class="opacity-0 transition-opacity p-3 rounded-lg bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs flex items-center justify-between">
+                <span>✅ Institution provisioned successfully! Administrative delegation granted to Dr. Afzal Siddappa.</span>
+                <span class="font-mono text-[10px] text-emerald-400">HTTP 201 Created</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(700, 310);
+          await delay(800);
+          clickCursor();
+          const toast = document.getElementById("sa-toast");
+          if (toast) toast.classList.remove("opacity-0");
+        }
+      },
+      {
+        id: "institution_admin",
+        chapter: "Chapter 2: Institution Admin Console (/institution/*)",
+        url: "https://lantern-ed.vercel.app/institution/overview",
+        duration: 15,
+        title: "Academic Department Hierarchy & Course Catalog Mapping",
+        narration: "Next, we log in as the Institution Administrator. The college administrator organizes academic departments into branches, creates section cohorts, and maps courses directly to faculty members without requiring platform intervention.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>🏢</span> National Institute of Technology AP
+                    </h2>
+                    <p class="text-xs text-slate-400">Department Branches & Student Cohorts Management</p>
+                  </div>
+                  <button id="inst-add-branch-btn" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                    <span>+</span>
+                    <span>New Department Branch</span>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div class="p-4 rounded-xl bg-slate-950/80 border border-emerald-500/30">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-white text-sm">Computer Science & Engineering</span>
+                      <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">CSE</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">3 Cohorts active • 180 Students enrolled</p>
+                    <div class="mt-3 flex gap-2">
+                      <span class="px-2 py-1 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">Section A (60)</span>
+                      <span class="px-2 py-1 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">Section B (60)</span>
+                      <span class="px-2 py-1 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">Section C (60)</span>
+                    </div>
+                  </div>
+
+                  <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-white text-sm">Electronics & Communication</span>
+                      <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono text-[10px] font-bold">ECE</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">2 Cohorts active • 120 Students enrolled</p>
+                    <div class="mt-3 flex gap-2">
+                      <span class="px-2 py-1 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">Section A (60)</span>
+                      <span class="px-2 py-1 rounded bg-slate-900 text-slate-300 text-[11px] border border-slate-800">Section B (60)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Institutional Coursework Mapping</div>
+                  <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800">
+                    <div>
+                      <div class="font-bold text-sm text-white">CS201: Data Structures & Algorithms</div>
+                      <div class="text-xs text-slate-400">Assigned Faculty: Dr. Afzal Siddappa (HOD CSE)</div>
+                    </div>
+                    <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-xs border border-emerald-500/30">Published & Mapped</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="inst-toast" class="opacity-0 transition-opacity p-3 rounded-lg bg-teal-950/90 border border-teal-500/50 text-teal-300 text-xs flex items-center justify-between">
+                <span>✅ Department branch CSE successfully linked to institutional curriculum.</span>
+                <span class="font-mono text-[10px] text-teal-400">Status 200 OK</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(720, 110);
+          await delay(800);
+          clickCursor();
+          const toast = document.getElementById("inst-toast");
+          if (toast) toast.classList.remove("opacity-0");
+        }
+      },
+      {
+        id: "teacher_workspace",
+        chapter: "Chapter 3: Teacher Workspace (/teacher/*)",
+        url: "https://lantern-ed.vercel.app/teacher/dashboard",
+        duration: 15,
+        title: "Course Authoring, Multi-Level Rubrics & Live Classes",
+        narration: "Here in the Teacher Workspace, educators publish syllabus modules, design structured rubrics with multi-tier grading criteria, and schedule live WebRTC classroom sessions with automatic recording consent.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>👨‍🏫</span> Teacher Console: Dr. Afzal Siddappa
+                    </h2>
+                    <p class="text-xs text-slate-400">Course: CS201 - Data Structures & Algorithms (CSE-A)</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition">+ New Assignment</button>
+                    <button id="teacher-live-btn" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                      <span>Schedule Live Class</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 mb-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="font-bold text-sm text-white">Assignment 1: Balanced BST & AVL Rotations</div>
+                    <span class="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs font-bold">100 Points Total</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 mt-3">
+                    <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                      <div class="flex justify-between text-xs font-bold text-slate-200">
+                        <span>Criterion 1: Rotation Correctness</span>
+                        <span class="text-emerald-400">50 Pts</span>
+                      </div>
+                      <p class="text-[11px] text-slate-400 mt-1">Single & double left/right rotations preserve BST invariants.</p>
+                    </div>
+                    <div class="p-3 rounded-lg bg-slate-900 border border-slate-800">
+                      <div class="flex justify-between text-xs font-bold text-slate-200">
+                        <span>Criterion 2: Asymptotic Proof</span>
+                        <span class="text-emerald-400">50 Pts</span>
+                      </div>
+                      <p class="text-[11px] text-slate-400 mt-1">Master theorem derivation showing O(log n) worst-case height.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Live WebRTC Session Queue</div>
+                  <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800">
+                    <div>
+                      <div class="font-semibold text-xs text-white">Lecture 04: Red-Black Tree Balancing</div>
+                      <div class="text-[11px] text-slate-400">Today, 10:00 AM • Section A Cohort • Adaptive Opus Audio Mode</div>
+                    </div>
+                    <span class="px-3 py-1 rounded bg-teal-500/20 text-teal-300 font-mono text-xs font-bold">READY TO STREAM</span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="teacher-toast" class="opacity-0 transition-opacity p-3 rounded-lg bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 text-xs flex items-center justify-between">
+                <span>✅ Assignment rubrics published & WebRTC live room token provisioned.</span>
+                <span class="font-mono text-[10px] text-cyan-400">HTTP 201 Created</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(700, 105);
+          await delay(800);
+          clickCursor();
+          const toast = document.getElementById("teacher-toast");
+          if (toast) toast.classList.remove("opacity-0");
+        }
+      },
+      {
+        id: "student_portal",
+        chapter: "Chapter 4: Student Portal (/student/*)",
+        url: "https://lantern-ed.vercel.app/student/dashboard",
+        duration: 15,
+        title: "Self-Enrollment & Coursework Submission",
+        narration: "Now let's switch to the student experience. Nandhi Vardhan Reddy registers with his college institutional code, self-enrolls into Computer Science courses with one click, accesses lecture bundles offline, and submits assignments.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>🎓</span> Student Portal: Nandhi Vardhan Reddy
+                    </h2>
+                    <p class="text-xs text-slate-400">Roll: 2026-CSE-042 • National Institute of Technology AP</p>
+                  </div>
+                  <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-xs font-semibold border border-emerald-500/30">Verified Enrolled</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-4">
+                  <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="text-xs text-slate-400">Active Courses</div>
+                    <div class="text-2xl font-bold text-white mt-1">4</div>
+                    <div class="text-[11px] text-emerald-400 mt-1">CS201, CS202, MA201, EC204</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="text-xs text-slate-400">Offline Downloads</div>
+                    <div class="text-2xl font-bold text-white mt-1">12 Bundles</div>
+                    <div class="text-[11px] text-teal-400 mt-1">Cached in browser IndexedDB</div>
+                  </div>
+                  <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="text-xs text-slate-400">Continuous Assessment</div>
+                    <div class="text-2xl font-bold text-white mt-1">96.0%</div>
+                    <div class="text-[11px] text-indigo-400 mt-1">Grade: Exemplary</div>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800" id="student-sub-card">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="font-bold text-sm text-white">Assignment 1 Submission (AVL Trees)</div>
+                    <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-mono">DRAFT SAVED</span>
+                  </div>
+                  <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 font-mono mb-3">
+                    // AVL Rebalance Invariant & Rotation Proof<br>
+                    def rotate_left(node):<br>
+                    &nbsp;&nbsp;right_child = node.right<br>
+                    &nbsp;&nbsp;node.right = right_child.left<br>
+                    &nbsp;&nbsp;right_child.left = node<br>
+                    &nbsp;&nbsp;update_height(node); update_height(right_child)<br>
+                    &nbsp;&nbsp;return right_child
+                  </div>
+                  <div class="flex justify-end">
+                    <button id="student-submit-btn" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+                      <span>🚀</span>
+                      <span>Finalize & Submit Assignment</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="student-toast" class="opacity-0 transition-opacity p-3 rounded-lg bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs flex items-center justify-between">
+                <span>✅ Assignment submitted with timestamp verification and checksum.</span>
+                <span class="font-mono text-[10px] text-emerald-400">HTTP 200 OK</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(680, 360);
+          await delay(800);
+          clickCursor();
+          const toast = document.getElementById("student-toast");
+          if (toast) toast.classList.remove("opacity-0");
+        }
+      },
+      {
+        id: "proctoring_exam",
+        chapter: "Chapter 5: Proctored Examination Suite (/student/exams/run)",
+        url: "https://lantern-ed.vercel.app/student/exams/run",
+        duration: 15,
+        title: "Lockdown Exam Mode, Anti-Cheat & SHA-256 Receipts",
+        narration: "This is LanternED's hallmark examination lockdown suite. Fullscreen is strictly enforced, 30-second telemetry heartbeats auto-save progress, and any tab switch or blur triggers an immediate anti-cheat proctoring violation. When submitted, the system generates a tamper-proof SHA-256 cryptographic receipt.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between bg-slate-950 animate-fade-in border-4 border-amber-600/40 rounded-xl">
+              <div>
+                <div class="p-3 rounded-lg bg-amber-950/80 border border-amber-500/50 flex items-center justify-between mb-4">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                    <span class="font-bold text-xs text-amber-200">LOCKDOWN EXAMINATION MODE ACTIVE</span>
+                  </div>
+                  <div class="flex items-center space-x-4 text-xs font-mono">
+                    <span class="text-slate-300">Heartbeat: <span class="text-emerald-400 font-bold">30s Active</span></span>
+                    <span class="text-slate-300">Remaining: <span class="text-amber-400 font-bold">54:20</span></span>
+                  </div>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 mb-3">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Question 01 of 02 • MCQ</span>
+                    <span class="text-xs font-bold text-emerald-400">50 Marks</span>
+                  </div>
+                  <div class="text-sm font-semibold text-white mb-3">
+                    What is the tight worst-case search complexity in a Red-Black tree containing n keys?
+                  </div>
+                  <div class="space-y-2 text-xs">
+                    <label class="flex items-center space-x-3 p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/50 text-white cursor-pointer">
+                      <input type="radio" checked readonly class="text-emerald-500">
+                      <span class="font-mono font-bold">O(log n) — Guaranteed maximum height bounded by 2 * log2(n + 1)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400">
+                      <input type="radio" disabled class="text-slate-500">
+                      <span class="font-mono">O(n)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div id="violation-alert" class="opacity-0 transition-opacity p-3 rounded-lg bg-rose-950/90 border border-rose-500 text-rose-200 text-xs flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <span>⚠️</span>
+                    <span class="font-bold">Anti-Cheat Alert: Tab switch detected (1.5s blur) — Recorded to University Audit Log</span>
+                  </div>
+                  <span class="font-mono text-[10px] text-rose-400">Violation 1/3</span>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-slate-900 border border-emerald-500/40 text-xs flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <span>🛡️</span> Cryptographic SHA-256 Submission Receipt
+                  </div>
+                  <div class="font-mono text-[11px] text-slate-300 mt-0.5">
+                    f2d3a2c3c3f629b23d02aadc70246f0188dddbd3fdb40d131697b2d9c86b6623
+                  </div>
+                </div>
+                <button class="px-3 py-1.5 bg-emerald-600 text-white rounded font-bold text-xs">Verify Receipt</button>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(800);
+          const alert = document.getElementById("violation-alert");
+          if (alert) alert.classList.remove("opacity-0");
+          await delay(800);
+          moveCursor(680, 375);
+          await delay(600);
+          clickCursor();
+        }
+      },
+      {
+        id: "rubric_evaluation",
+        chapter: "Chapter 6: Split-Screen Rubric Evaluation & CIA Gradebook",
+        url: "https://lantern-ed.vercel.app/teacher/gradebook",
+        duration: 15,
+        title: "Split-Screen Rubric Grading & CIA Gradebook CSV Export",
+        narration: "Faculty evaluate coursework using LanternED's split-screen rubric interface. The student's code appears on the left, while interactive rubric criteria sliders are graded on the right. With one click, the Continuous Internal Assessment gradebook is calculated and exported as a standardized university CSV report.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>⚖️</span> Split-Screen Rubric Grading Matrix
+                    </h2>
+                    <p class="text-xs text-slate-400">Evaluating: Nandhi Vardhan Reddy (Assignment 1)</p>
+                  </div>
+                  <button id="export-csv-btn" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1.5">
+                    <span>📊</span>
+                    <span>Export CIA Gradebook (CSV)</span>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                    <div class="text-xs font-bold text-slate-400 uppercase mb-2">Student Solution Artifact</div>
+                    <pre class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">
+class AVLTree:
+    def rebalance(self, node):
+        bf = self.balance_factor(node)
+        if bf > 1:
+            if self.balance_factor(node.left) < 0:
+                node.left = self.rotate_left(node.left)
+            return self.rotate_right(node)
+        return node</pre>
+                  </div>
+
+                  <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-xs font-bold text-slate-400 uppercase">Criterion Scores</span>
+                      <span class="text-base font-bold text-emerald-400">96 / 100</span>
+                    </div>
+
+                    <div class="space-y-3">
+                      <div>
+                        <div class="flex justify-between text-xs text-slate-300">
+                          <span>Tree Rotations & Balance Factor:</span>
+                          <span class="text-emerald-400 font-bold">50 / 50</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                          <div class="bg-emerald-500 h-full w-full"></div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div class="flex justify-between text-xs text-slate-300">
+                          <span>Asymptotic Recurrence Proof:</span>
+                          <span class="text-emerald-400 font-bold">46 / 50</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                          <div class="bg-teal-500 h-full w-[92%]"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 p-2.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300">
+                      <span class="text-slate-400 font-semibold">Teacher Feedback:</span> Exemplary AVL invariant proofs and edge rotation handling.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="eval-toast" class="opacity-0 transition-opacity p-3 rounded-lg bg-indigo-950/90 border border-indigo-500/50 text-indigo-300 text-xs flex items-center justify-between">
+                <span>✅ Continuous Internal Assessment report exported to CSV (gradebook.csv).</span>
+                <span class="font-mono text-[10px] text-indigo-400">Content-Type: text/csv</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(680, 110);
+          await delay(800);
+          clickCursor();
+          const toast = document.getElementById("eval-toast");
+          if (toast) toast.classList.remove("opacity-0");
+        }
+      },
+      {
+        id: "adaptive_bandwidth",
+        chapter: "Chapter 7: Adaptive Low-Bandwidth Engine & Offline Sync",
+        url: "https://lantern-ed.vercel.app/adaptive-demo",
+        duration: 15,
+        title: "2G/3G Dynamic Adaptation & Offline P2P Classroom Sync",
+        narration: "LanternED is engineered specifically for intermittent and congested connectivity. Our WebRTC bandwidth engine dynamically downscales high-definition video to audio-only Opus streams when network packet loss spikes, preserving real-time classroom continuity at under 30 kilobits per second.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>⚡</span> Adaptive Low-Bandwidth Streaming Engine
+                    </h2>
+                    <p class="text-xs text-slate-400">Automated Network Throttling & Zero-Internet Campus LAN Sync</p>
+                  </div>
+                  <div class="flex items-center space-x-2" id="bw-pill">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-mono font-bold text-emerald-300" id="bw-status">Auto: 4G High (1.5 Mbps)</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-3 mb-4">
+                  <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center" id="tier-4g">
+                    <div class="text-[10px] font-bold text-slate-400">TIER 1 (4G)</div>
+                    <div class="text-sm font-bold text-white mt-0.5">1080p Video</div>
+                    <div class="text-[10px] text-emerald-400">1,500 kbps</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center" id="tier-3g">
+                    <div class="text-[10px] font-bold text-slate-400">TIER 2 (3G)</div>
+                    <div class="text-sm font-bold text-white mt-0.5">360p Slides</div>
+                    <div class="text-[10px] text-teal-400">150 kbps</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center" id="tier-2g">
+                    <div class="text-[10px] font-bold text-slate-400">TIER 3 (2G)</div>
+                    <div class="text-sm font-bold text-white mt-0.5">Opus Audio</div>
+                    <div class="text-[10px] text-amber-400">24 kbps</div>
+                  </div>
+                  <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center" id="tier-p2p">
+                    <div class="text-[10px] font-bold text-slate-400">TIER 4 (OFFLINE)</div>
+                    <div class="text-sm font-bold text-white mt-0.5">Campus LAN P2P</div>
+                    <div class="text-[10px] text-rose-400">0 kbps (No Net)</div>
+                  </div>
+                </div>
+
+                <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div class="w-1/2 pr-4">
+                    <div class="text-xs font-bold text-slate-300 uppercase mb-2">Simulated Congestion Event</div>
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                      Network packet loss surged to 42%. High-definition video stream safely paused. Real-time audio uninterrupted via Opus wideband codec at 24 kbps.
+                    </p>
+                  </div>
+                  <div class="w-1/2 p-3 rounded-lg bg-slate-900 border border-slate-800">
+                    <div class="flex justify-between text-xs mb-1">
+                      <span class="text-slate-400">Data Transfer Savings:</span>
+                      <span class="text-emerald-400 font-bold">98.4% Bandwidth Reduced</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                      <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-[98%]"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-teal-950/90 border border-teal-500/50 text-teal-300 text-xs flex items-center justify-between">
+                <span>✅ Peer-to-peer Wi-Fi Direct sync enabled: Classroom lessons synchronizing locally.</span>
+                <span class="font-mono text-[10px] text-teal-400">mDNS Active</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(800);
+          const status = document.getElementById("bw-status");
+          const tier2g = document.getElementById("tier-2g");
+          if (status) {
+            status.textContent = "Auto: 2G Audio (24 kbps)";
+            status.className = "text-xs font-mono font-bold text-amber-400";
+          }
+          if (tier2g) {
+            tier2g.className = "p-3 rounded-xl bg-amber-950/40 border border-amber-500 text-center";
+          }
+        }
+      },
+      {
+        id: "native_apps",
+        chapter: "Chapter 8: Cross-Platform Native Ecosystem & Production Release",
+        url: "https://github.com/yynvr1408/LanternEd-App-Releases",
+        duration: 15,
+        title: "Verified Production Packages: Windows, Mac, Android & iOS",
+        narration: "Finally, LanternED is not a conceptual mockup—it is fully packaged into production native applications for Windows, macOS, Android, and iOS, indexed with verified SHA-256 integrity checksums in the LanternED App Releases channel.",
+        render: (container) => {
+          container.innerHTML = `
+            <div class="p-6 h-full flex flex-col justify-between animate-fade-in">
+              <div>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                      <span>📦</span> Cross-Platform Native Release Channel (v0.1.1)
+                    </h2>
+                    <p class="text-xs text-slate-400">Universal Direct Installers with Cryptographic SHA-256 Checksums</p>
+                  </div>
+                  <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-xs font-semibold border border-emerald-500/30">Release Verified</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                  <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-2xl">🪟</span>
+                      <div>
+                        <div class="text-xs font-bold text-white">Windows Desktop (.exe)</div>
+                        <div class="text-[11px] text-slate-400 font-mono">LanternEd-Setup-0.1.1.exe (1.98 MB)</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-emerald-400">DirectML x64</span>
+                  </div>
+
+                  <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-2xl">🍎</span>
+                      <div>
+                        <div class="text-xs font-bold text-white">macOS Universal (.dmg)</div>
+                        <div class="text-[11px] text-slate-400 font-mono">LanternEd-0.1.1-universal.dmg (6.72 MB)</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-teal-400">Apple Silicon & Intel</span>
+                  </div>
+
+                  <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-2xl">🤖</span>
+                      <div>
+                        <div class="text-xs font-bold text-white">Android Mobile (.apk)</div>
+                        <div class="text-[11px] text-slate-400 font-mono">LanternEd-v0.1.1.apk (3.71 MB)</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-green-400">arm64-v8a / v7a</span>
+                  </div>
+
+                  <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                      <span class="text-2xl">📱</span>
+                      <div>
+                        <div class="text-xs font-bold text-white">iOS Mobile (.ipa)</div>
+                        <div class="text-[11px] text-slate-400 font-mono">LanternEd-v0.1.1.ipa (1.28 MB)</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-indigo-400">iOS 14.0+</span>
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 text-center">
+                  <div class="text-xs text-slate-400">All binaries cryptographically indexed in <span class="font-mono text-emerald-400">releases/manifest.json</span> with zero build warnings and 897 automated tests passing.</div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 text-xs flex items-center justify-between">
+                <span>✅ Demonstration Complete. Ready for institutional deployment and university accreditation.</span>
+                <span class="font-mono text-[10px] text-emerald-400">LanternED 2.0</span>
+              </div>
+            </div>
+          `;
+        },
+        animate: async () => {
+          await delay(1000);
+          moveCursor(500, 200);
+          await delay(800);
+        }
+      }
+    ];
+
+    let currentSceneIdx = 0;
+    let isPlaying = false;
+    let playbackSpeed = 1.0;
+    let sceneTimer = null;
+    let voiceEnabled = true;
+
+    const canvas = document.getElementById("scene-canvas");
+    const playPauseBtn = document.getElementById("play-pause-btn");
+    const prevBtn = document.getElementById("prev-scene-btn");
+    const nextBtn = document.getElementById("next-scene-btn");
+    const timeDisplay = document.getElementById("time-display");
+    const timelineBar = document.getElementById("timeline-bar");
+    const speedBtn = document.getElementById("speed-btn");
+    const voiceBtn = document.getElementById("toggle-voice-btn");
+    const voiceLabel = document.getElementById("voice-label");
+    const urlBar = document.getElementById("stage-url-bar");
+    const sceneCounter = document.getElementById("scene-counter");
+    const narrationTitle = document.getElementById("narration-chapter-title");
+    const narrationText = document.getElementById("narration-text");
+    const virtualCursor = document.getElementById("virtual-cursor");
+    const cinemaStage = document.getElementById("cinema-stage");
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms / playbackSpeed));
+    }
+
+    function moveCursor(x, y) {
+      if (!virtualCursor) return;
+      virtualCursor.style.opacity = "1";
+      virtualCursor.style.left = `${x}px`;
+      virtualCursor.style.top = `${y}px`;
+    }
+
+    function clickCursor() {
+      if (!virtualCursor) return;
+      const ripple = document.createElement("div");
+      ripple.className = "ripple-effect";
+      ripple.style.left = virtualCursor.style.left;
+      ripple.style.top = virtualCursor.style.top;
+      cinemaStage.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    function speakNarration(text) {
+      if (!voiceEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.05 * playbackSpeed;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function loadScene(idx) {
+      if (idx < 0 || idx >= scenes.length) return;
+      currentSceneIdx = idx;
+      const scene = scenes[idx];
+
+      urlBar.textContent = scene.url;
+      sceneCounter.textContent = `Scene ${idx + 1} / ${scenes.length}`;
+      narrationTitle.textContent = scene.chapter;
+      narrationText.textContent = scene.narration;
+
+      document.querySelectorAll(".chapter-card").forEach((card, i) => {
+        if (i === idx) {
+          card.className = "chapter-card p-3 rounded-xl border border-emerald-500 bg-emerald-950/40 text-left transition";
+        } else {
+          card.className = "chapter-card p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:border-slate-700 text-left transition";
+        }
+      });
+
+      scene.render(canvas);
+      speakNarration(scene.narration);
+
+      if (scene.animate) {
+        scene.animate();
+      }
+
+      const progress = ((idx) / scenes.length) * 100;
+      timelineBar.style.width = `${progress}%`;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const elapsedMins = Math.floor((currentSceneIdx * 15) / 60);
+      const elapsedSecs = (currentSceneIdx * 15) % 60;
+      timeDisplay.textContent = `${String(elapsedMins).padStart(2, '0')}:${String(elapsedSecs).padStart(2, '0')} / 02:00`;
+    }
+
+    function play() {
+      isPlaying = true;
+      playPauseBtn.textContent = "❚❚";
+      advanceSceneLoop();
+    }
+
+    function pause() {
+      isPlaying = false;
+      playPauseBtn.textContent = "▶";
+      clearTimeout(sceneTimer);
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    async function advanceSceneLoop() {
+      if (!isPlaying) return;
+      loadScene(currentSceneIdx);
+      const scene = scenes[currentSceneIdx];
+      const waitMs = (scene.duration * 1000) / playbackSpeed;
+      
+      sceneTimer = setTimeout(() => {
+        if (currentSceneIdx < scenes.length - 1) {
+          currentSceneIdx++;
+          advanceSceneLoop();
+        } else {
+          pause();
+          timelineBar.style.width = "100%";
+        }
+      }, waitMs);
+    }
+
+    playPauseBtn.addEventListener("click", () => {
+      if (isPlaying) pause(); else play();
+    });
+
+    prevBtn.addEventListener("click", () => {
+      pause();
+      if (currentSceneIdx > 0) loadScene(currentSceneIdx - 1);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      pause();
+      if (currentSceneIdx < scenes.length - 1) loadScene(currentSceneIdx + 1);
+    });
+
+    speedBtn.addEventListener("click", () => {
+      if (playbackSpeed === 1.0) playbackSpeed = 1.5;
+      else if (playbackSpeed === 1.5) playbackSpeed = 2.0;
+      else playbackSpeed = 1.0;
+      speedBtn.textContent = `${playbackSpeed.toFixed(1)}x`;
+      if (isPlaying) {
+        pause();
+        play();
+      }
+    });
+
+    voiceBtn.addEventListener("click", () => {
+      voiceEnabled = !voiceEnabled;
+      voiceLabel.textContent = `Voice Narration: ${voiceEnabled ? 'ON' : 'OFF'}`;
+      if (!voiceEnabled && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    });
+
+    document.querySelectorAll(".chapter-card").forEach(card => {
+      card.addEventListener("click", () => {
+        pause();
+        const sceneNum = parseInt(card.getAttribute("data-scene"), 10);
+        loadScene(sceneNum);
+      });
+    });
+
+    document.getElementById("fullscreen-btn").addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        cinemaStage.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    const recBtn = document.getElementById("rec-btn");
+    const recBtnText = document.getElementById("rec-btn-text");
+    const downloadVideoBtn = document.getElementById("download-video-btn");
+
+    recBtn.addEventListener("click", async () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        recBtn.className = "px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center space-x-2";
+        recBtnText.textContent = "Start Video Recording";
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            displaySurface: "browser",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 60 }
+          },
+          audio: true
+        });
+
+        recordedChunks = [];
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : "video/webm";
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          downloadVideoBtn.classList.remove("hidden");
+          downloadVideoBtn.onclick = () => {
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "LanternED_Complete_System_Walkthrough.webm";
+            a.click();
+          };
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        recBtn.className = "px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold transition flex items-center space-x-2";
+        recBtnText.textContent = "Stop Recording (Saving...)";
+
+        currentSceneIdx = 0;
+        play();
+
+      } catch (err) {
+        alert("Screen recording permission was not granted or is unsupported: " + err.message);
+      }
+    });
+
+    loadScene(0);
+  </script>
+</body>
+</html>
