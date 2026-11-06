@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.permissions import require_role
 from app.db.models.enums import UserRole
 from app.db.models.user import User
+from app.db.models.college import College
 from app.dependencies import get_current_user, get_db
 from app.schemas.admin import (
     BranchCreate,
