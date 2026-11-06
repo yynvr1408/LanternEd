@@ -6,12 +6,12 @@ import { OfflineIndicator } from '../ui/OfflineIndicator'
 
 export const InstitutionAdminLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAF7] text-[#202B2A]">
+    <div className="h-screen flex flex-col bg-[#F8FAF7] text-[#202B2A] overflow-hidden">
       <OfflineIndicator />
       <AppHeader />
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         <InstitutionAdminSidebar />
-        <main className="flex-1 min-w-0 bg-[#F8FAF7]">
+        <main className="flex-1 min-w-0 bg-[#F8FAF7] overflow-y-auto">
           <Outlet />
         </main>
       </div>

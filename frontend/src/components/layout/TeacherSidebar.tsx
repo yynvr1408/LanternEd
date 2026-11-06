@@ -31,7 +31,7 @@ export const TeacherSidebar: React.FC = () => {
   const isInstitutionAdmin = useIsInstitutionAdmin()
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-[#F8FAF7] border-r border-[#E1E8E4] shrink-0 min-h-[calc(100vh-4rem)] p-4 justify-between">
+    <aside className="hidden lg:flex flex-col w-64 bg-[#F8FAF7] border-r border-[#E1E8E4] shrink-0 h-full overflow-y-auto p-4 justify-between">
       <div>
         <div className="text-xs font-bold text-[#687775] uppercase tracking-wider px-3 mb-2">
           Teacher Console

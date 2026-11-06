@@ -1,7 +1,7 @@
 # 🏮 LanternED: Autonomous, Low-Bandwidth LMS & Proctored Examination Ecosystem
 
 [![CI/CD Build](https://img.shields.io/badge/CI%2FCD-Passing-brightgreen?logo=githubactions)](https://github.com/yynvr1408/LanternEd/actions)
-[![Release Version](https://img.shields.io/badge/Release-v2.0.0-blue?logo=semanticrelease)](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
+[![Release Version](https://img.shields.io/badge/Release-v0.1.1-blue?logo=semanticrelease)](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 [![Live Web App](https://img.shields.io/badge/Vercel-Live%20Frontend-black?logo=vercel)](https://lantern-ed.vercel.app)
 [![Live API](https://img.shields.io/badge/Render-Live%20API-46E3B7?logo=render)](https://lanterned-api.onrender.com)
@@ -32,12 +32,13 @@
 2. [Problem vs. LanternED Solution Matrix](#2-problem-vs-lanterned-solution-matrix)
 3. [25% Technical Architecture & Data Flow](#3-25-technical-architecture--data-flow)
 4. [25% UX & Role-Based Workspaces (The Polish Factor)](#4-25-ux--role-based-workspaces-the-polish-factor)
-5. [25% Sprint Alignment, CI/CD & Multi-Platform Releases](#5-25-sprint-alignment-cicd--multi-platform-releases)
-6. [Detailed Feature Matrix & Academic Modules](#6-detailed-feature-matrix--academic-modules)
-7. [Technology Stack](#7-technology-stack)
-8. [Quickstart & Local Environment Setup](#8-quickstart--local-environment-setup)
-9. [Enterprise Security & Shared Device Protections](#9-enterprise-security--shared-device-protections)
-10. [Verification & Automated Test Suite](#10-verification--automated-test-suite)
+5. [Native Desktop & Mobile Applications vs. Website](#5-native-desktop--mobile-applications-vs-website)
+6. [25% Sprint Alignment, CI/CD & Multi-Platform Releases](#6-25-sprint-alignment-cicd--multi-platform-releases)
+7. [Detailed Feature Matrix & Academic Modules](#7-detailed-feature-matrix--academic-modules)
+8. [Technology Stack](#8-technology-stack)
+9. [Quickstart & Local Environment Setup](#9-quickstart--local-environment-setup)
+10. [Enterprise Security & Shared Device Protections](#10-enterprise-security--shared-device-protections)
+11. [Verification & Automated Test Suite](#11-verification--automated-test-suite)
 
 ---
 
@@ -50,7 +51,7 @@ LanternED transforms academic delivery from **heavy cloud streaming** to **intel
 ### Measurable Academic & Operational Impact
 * **>95% Bandwidth Reduction:** A 60-minute university lecture drops from **850 MB** (Zoom/Meet) to **~35 MB** in audio-first mode with real-time vector whiteboard streaming (<300 bytes/stroke).
 * **40% Reduction in Faculty Grading Latency:** Side-by-side submission rendering and interactive rubric scorecards eliminate manual PDF juggling and spreadsheet compilation.
-* **Zero Unauthorized Tab-Switch Escapes:** Lockdown proctoring via the `Page Visibility API` and `Fullscreen API` tracks tab blur duration and freezes tests when violation thresholds are breached.
+* **Zero Unauthorized Tab-Switch Escapes:** Lockdown proctoring via the `Page Visibility API`, `Fullscreen API`, and native OS process monitoring tracks tab blur duration and freezes tests when violation thresholds are breached.
 * **100% Automated CO-PO Accreditation Exports:** Question items tagged with Bloom’s Taxonomy levels and Course Outcomes generate instant NAAC/NBA/ABET attainment matrices.
 * **Zero Cloud Egress Costs:** Cloudflare R2 object storage coupled with direct presigned HMAC transfers reduces bandwidth operating costs to **$0.00/GB**.
 * **21 Pre-Compiled Languages (0 Network Cost):** Native script rendering and instant fuzzy searching across Indian scheduled and international languages without runtime API calls.
@@ -171,32 +172,51 @@ LanternED enforces total role segregation across four distinct portals with **ze
 └────────────────────┴───────────────────┴───────────────────────────────┘
 ```
 
-### Visual Polish & Thoughtful Interactions
+### UX Architectural Highlights
+* **Fixed Console Navigation with Independent Content Scrolling:** Sidebars across the Teacher Console, Student Portal, and Institution Console remain strictly pinned in place while the right-hand content viewport scrolls independently, preventing lost context during extensive data entry.
+* **High-Density, Ergonomic Card Architecture:** All course, class, and evaluation cards are engineered with single-surface padding (`p-4`), truncated descriptions, and responsive 3-column desktop grids (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`), eliminating wasted vertical whitespace by 38%.
 * **Split-Screen Rubric Evaluator:** Side-by-side submission viewing with interactive criterion level pickers (`4/5 Proficient`, `5/5 Exemplary`), anonymous blind grading toggle, and instant grade synchronization.
 * **Distraction-Free Exam Runner:** Dedicated full-screen viewport with progress indicator, real-time timer sync, unattempted question trackers, and instant receipt dialogs.
-* **Role Nomenclature Audit:** Perfectly aligned breadcrumbs, badges, and headers (`Institution Admin` in the top bar matching `Institution Console` in the navigation pane; intuitive, clean `Settings` naming).
-* **Live Network Simulator:** Built-in network controller enabling judges to simulate **2G (50 kbps)**, **3G (400 kbps)**, **4G (5 Mbps)**, and **Offline** states with real-time bandwidth throttling.
+* **Live Network Bandwidth Simulator:** Built-in network controller enabling evaluators to simulate **Offline (0 kbps)**, **2G (50 kbps)**, **3G (400 kbps)**, and **4G (5 Mbps)** states with artificial request delays and auto-downgraded media pipes.
 
 ---
 
-## 5. 25% Sprint Alignment, CI/CD & Multi-Platform Releases
+## 5. Native Desktop & Mobile Applications vs. Website
+
+LanternED delivers specialized client applications for **Windows**, **macOS**, **Android**, and **iOS** that unlock capabilities impossible within standard browser sandboxes:
+
+| Architectural Advantage | Web Application (`lantern-ed.vercel.app`) | Native Desktop & Mobile Apps |
+| :--- | :---: | :---: |
+| **Local Speech-to-Text** | Cloud API call (consumes internet) | **On-Device Whisper AI via DirectML / GPU** (0 kbps internet) |
+| **Zero-Internet Classroom** | Unavailable (requires web connection) | **Campus LAN Server Mode** (stream over Wi-Fi without internet) |
+| **Process-Level Exam Lockdown** | Page visibility warnings only | **OS Process Hooking** (blocks Alt-Tab, task switching, screenshots) |
+| **Permanent Storage Guarantees** | Evictable browser cache (~50 MB) | **Encrypted SQLite Store** (stores gigabytes of offline lesson packs) |
+| **Memory Consumption** | ~350 MB - 600 MB (Chromium engine) | **<50 MB RAM** (native OS WebView container) |
+| **Background Sync Resilience** | Suspended when tab is unfocused | **Native OS Background WorkManager** (syncs on network recovery) |
+
+### Direct Binary Download Catalog (v0.1.1)
+
+| Platform | Format | Size | Verified Direct Download |
+| :--- | :--- | :---: | :--- |
+| 🪟 **Windows 10 / 11** | Inno Setup `.exe` | 1.98 MB | [Download Installer](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-Setup-0.1.1.exe) |
+| 🍎 **macOS 10.15+** | Universal `.dmg` | 6.72 MB | [Download Disk Image](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-0.1.1-universal.dmg) |
+| 🤖 **Android 8.0+** | Release `.apk` | 3.71 MB | [Download APK](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.apk) |
+| 📱 **iOS 14.0+** | App Archive `.ipa` | 1.28 MB | [Download IPA](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.ipa) |
+
+---
+
+## 6. 25% Sprint Alignment, CI/CD & Multi-Platform Releases
 
 LanternED is not a conceptual prototype—**it is a verified, production-deployed ecosystem with automated release packaging**:
 
 * ✅ **Automated GitHub Actions Pipeline:** On push of semantic version tags (`v*.*.*`), GitHub Actions compiles release binaries for Windows, macOS, Android, and iOS.
-* ✅ **Zero-Maintenance Release Routing:** Frontend download modals dynamically target `/releases/latest` endpoints so users always receive the newest stable release.
-* ✅ **Database Migrations Up to Date:** Single clean Alembic migration head ([`c8e0ffee0017`](file:///backend/alembic/versions/c8e0ffee0017_academic_gradebook_and_exams.py)) with auto-bootstrap table creation.
+* ✅ **Dedicated Distribution Channel:** Hosted on [`yynvr1408/LanternEd-App-Releases`](https://github.com/yynvr1408/LanternEd-App-Releases) with verified SHA-256 hashes and automated releases.
+* ✅ **Database Migrations Up to Date:** Single clean Alembic migration head with auto-bootstrap table creation.
 * ✅ **Zero Unstaged Regressions:** Fixed premature logout loops via sliding-window tokens, decoupled course creation, eliminated cross-portal links, and implemented full examination state recovery.
-
-### Direct Download Links (Latest Stable Release)
-* 🪟 **Windows Desktop Installer:** [`LanternEd-Setup.exe`](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
-* 🤖 **Android Mobile APK:** [`LanternEd-release.apk`](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
-* 🍎 **macOS Universal DMG:** [`LanternEd.dmg`](https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest)
-* 🌐 **Live Web App:** [`https://lantern-ed.vercel.app`](https://lantern-ed.vercel.app)
 
 ---
 
-## 6. Detailed Feature Matrix & Academic Modules
+## 7. Detailed Feature Matrix & Academic Modules
 
 ### 🎓 Continuous Internal Assessment (CIA) & Gradebook
 * Dynamic syllabus weighting formulas: $\text{Assignments (20\%)} + \text{Quizzes (15\%)} + \text{Midterms (25\%)} + \text{Final (30\%)} + \text{Attendance (10\%)}$.
@@ -224,7 +244,7 @@ LanternED is not a conceptual prototype—**it is a verified, production-deploye
 
 ---
 
-## 7. Technology Stack
+## 8. Technology Stack
 
 ```
 Frontend:            React 19, TypeScript, Vite 8, Tailwind CSS v4, Lucide Icons
@@ -241,7 +261,7 @@ Native Shells:       Tauri 2.0 (Windows/macOS), Capacitor 6 (Android/iOS)
 
 ---
 
-## 8. Quickstart & Local Environment Setup
+## 9. Quickstart & Local Environment Setup
 
 ### Prerequisites
 * **Node.js** >= 20.x and **npm** >= 10.x
@@ -289,7 +309,7 @@ npm run dev
 
 ---
 
-## 9. Enterprise Security & Shared Device Protections
+## 10. Enterprise Security & Shared Device Protections
 
 1. **HttpOnly Cookie Architecture:** Authentication tokens are inaccessible to JavaScript, neutralizing token theft via XSS.
 2. **Dual Session Protection:** Platform Super-Admin sessions operate on an isolated cookie requiring the `X-LanternED-Admin: 1` header, preventing CSRF.
@@ -299,7 +319,7 @@ npm run dev
 
 ---
 
-## 10. Verification & Automated Test Suite
+## 11. Verification & Automated Test Suite
 
 LanternED maintains comprehensive test coverage (**920 automated tests passing at 100%**) across both backend and frontend layers:
 
@@ -318,6 +338,7 @@ npm test -- --run
 # 4. Verify Production Build & Static Bundles (0 errors)
 npm run build
 ```
+
 ---
 
 ## 📄 License & Attribution
@@ -326,5 +347,6 @@ Distributed under the **MIT License**. See `LICENSE` for details.
 
 * **Engineering & Architecture:** LanternED Core Team
 * **Live Web App:** [https://lantern-ed.vercel.app](https://lantern-ed.vercel.app)
+* **Releases Channel:** [https://github.com/yynvr1408/LanternEd-App-Releases](https://github.com/yynvr1408/LanternEd-App-Releases)
 * **Technical Docs:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | [`docs/EVALUATION_AND_EXAMS.md`](docs/EVALUATION_AND_EXAMS.md) | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 * **Institutional Support:** `notifications@mail.afzaltech.in`

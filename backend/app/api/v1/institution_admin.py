@@ -54,6 +54,13 @@ from app.services import billing_service, college_service, roster_service
 router = APIRouter(prefix="/institution-admin", tags=["institution-admin"])
 
 
+def _assert_can_manage_or_affiliated_teacher(db, user, college):
+    if not college_service.is_college_admin(db, user.id, college.id):
+        if user.role == UserRole.teacher and user.college_id == college.id:
+            return
+        college_service.assert_can_manage_college(db, user, college)
+
+
 def _require_admin_or_teacher(user: User) -> None:
     require_role(user, UserRole.teacher, UserRole.admin)
 
@@ -73,17 +80,21 @@ def my_admin_request(db: Session = Depends(get_db), user: User = Depends(get_cur
 
 @router.get("/colleges", response_model=list[CollegeOut])
 def list_my_colleges(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """The colleges this teacher is delegated to administer — empty for almost every teacher.
-    The frontend uses this to decide whether to show the institution-admin area at all."""
+    """The colleges this teacher is delegated to administer, or their affiliated college."""
     _require_admin_or_teacher(user)
-    return college_service.list_colleges_administered_by(db, user.id)
+    colleges = college_service.list_colleges_administered_by(db, user.id)
+    if not colleges and user.role == UserRole.teacher and user.college_id:
+        c = db.get(College, user.college_id)
+        if c:
+            colleges = [c]
+    return colleges
 
 
 @router.get("/colleges/{college_id}", response_model=CollegeOut)
 def get_my_college(college_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     return college
 
 
@@ -111,7 +122,7 @@ def list_my_branches(
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     return college_service.list_branches(db, college.id, active_only=False, search=search)
 
 
@@ -407,7 +418,7 @@ def list_my_college_courses(
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     return college_service.list_college_courses(db, college.id)
 
 
@@ -417,7 +428,7 @@ def create_my_college_course(
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     return college_service.create_college_course(
         db, user.id, college.id,
         title=payload.title,
@@ -436,7 +447,7 @@ def update_my_college_course(
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     return college_service.update_college_course(
         db, user.id, college.id, course_id,
         title=payload.title,
@@ -455,7 +466,7 @@ def delete_my_college_course(
 ):
     _require_admin_or_teacher(user)
     college = college_service.get_college_or_404(db, college_id)
-    college_service.assert_can_manage_college(db, user, college)
+    _assert_can_manage_or_affiliated_teacher(db, user, college)
     college_service.delete_college_course(db, user.id, college.id, course_id)
     return None
 

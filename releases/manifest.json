@@ -1,14 +1,14 @@
 {
   "version": "0.1.1",
-  "releaseDate": "2026-11-05T14:53:28.792299+00:00",
+  "releaseDate": "2026-11-06T01:30:00.000000+00:00",
   "releaseNotes": "LanternED v0.1.1: Institutional onboarding hierarchy, searchable campus selection, streamlined bandwidth simulation, and cross-platform native release distribution.",
   "platforms": {
     "windows": {
       "version": "0.1.1",
       "fileName": "LanternEd-Setup-0.1.1.exe",
       "installerType": "exe",
-      "downloadUrl": "/api/v1/releases/download/windows",
-      "fileSizeMb": 2.0,
+      "downloadUrl": "https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-Setup-0.1.1.exe",
+      "fileSizeMb": 1.98,
       "sha256": "473bc7353cf6fbf752345b9a477c0b01b35897a46e7df01188778756afa669a7",
       "minOsVersion": "Windows 10 / 11 (64-bit)",
       "arch": "x64"
@@ -17,9 +17,9 @@
       "version": "0.1.1",
       "fileName": "LanternEd-0.1.1-universal.dmg",
       "installerType": "dmg",
-      "downloadUrl": "/api/v1/releases/download/macos",
-      "fileSizeMb": 0.0,
-      "sha256": "2380bbb5ae64b6f85202d2627757a78d5ee86b58809e1d2fa6a072f31fada38e",
+      "downloadUrl": "https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-0.1.1-universal.dmg",
+      "fileSizeMb": 6.72,
+      "sha256": "a1302cde356516aa9b4cc7daef4b8a240cd4ee632817d11a6604cb3f1d767643",
       "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
       "arch": "Universal (Apple Silicon & Intel)"
     },
@@ -27,9 +27,9 @@
       "version": "0.1.1",
       "fileName": "LanternEd-v0.1.1.apk",
       "installerType": "apk",
-      "downloadUrl": "/api/v1/releases/download/android",
-      "fileSizeMb": 0.0,
-      "sha256": "734777ba3c3a1cc6585a0dfb695983ecb67db18922ab4988c16828fae17e956d",
+      "downloadUrl": "https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.apk",
+      "fileSizeMb": 3.71,
+      "sha256": "2a2ca081111041b2c09d81ac540aa544502d98b61e142e69692cf4f62efea890",
       "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
       "arch": "arm64-v8a, armeabi-v7a"
     },
@@ -37,9 +37,9 @@
       "version": "0.1.1",
       "fileName": "LanternEd-v0.1.1.ipa",
       "installerType": "ipa",
-      "downloadUrl": "/api/v1/releases/download/ios",
-      "fileSizeMb": 0.0,
-      "sha256": "788c528fd4fcd65ec8da28287c55eb2e9f04222969bb895cd201db38673dc954",
+      "downloadUrl": "https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.ipa",
+      "fileSizeMb": 1.28,
+      "sha256": "f84f61ab3c7ddbd18e81febf6f7529c63b29311a54ccbb8db5147b3701b74c16",
       "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
       "arch": "arm64"
     }
