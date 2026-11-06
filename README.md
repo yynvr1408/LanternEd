@@ -62,7 +62,7 @@ LanternED transforms academic delivery from **heavy cloud streaming** to **intel
 
 ## 2. ⏱️ 24-Hour Engineering Sprint Timeline (10:00 AM – 10:00 AM)
 
-LanternED was ideated, engineered, hardened, and deployed to production within an intensive **24-hour sprint**, kicking off at **10:00 AM yesterday** and completing at **10:00 AM today**. Every commit, module, and native build represents relentless execution:
+LanternED was ideated, engineered, hardened, and deployed to production within an intensive **24-hour sprint**, kicking off at **10:00 AM 5 Nov** and completing at **10:00 AM 6 Nov**. Every commit, module, and native build represents relentless execution:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
