@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ProtectedRoute } from './ProtectedRoute'
 import { StudentLayout } from '../components/layout/StudentLayout'
@@ -87,18 +87,20 @@ export const AppRoutes: React.FC = () => {
         {/* Root */}
         <Route path="/" element={renderRootRedirect()} />
 
-        {/* Public Authentication Routes */}
-        <Route path="/login" element={<LoginChoicePage />} />
-        <Route path="/login/student" element={<LoginPage portal="student" />} />
-        <Route path="/login/teacher" element={<LoginPage portal="teacher" />} />
-        <Route path="/login/college-admin" element={<LoginPage portal="college-admin" />} />
-        <Route path="/register" element={<RegisterChoicePage />} />
-        <Route path="/register/student" element={<RegisterPage portal="student" />} />
-        <Route path="/register/teacher" element={<RegisterPage portal="teacher" />} />
-        <Route path="/register/college" element={<CollegeRegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/verify-otp" element={<VerifyOtpPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Public Authentication Routes with full scrolling support */}
+        <Route element={<div className="h-full w-full overflow-y-auto"><Suspense fallback={<LoadingState />}><Outlet /></Suspense></div>}>
+          <Route path="/login" element={<LoginChoicePage />} />
+          <Route path="/login/student" element={<LoginPage portal="student" />} />
+          <Route path="/login/teacher" element={<LoginPage portal="teacher" />} />
+          <Route path="/login/college-admin" element={<LoginPage portal="college-admin" />} />
+          <Route path="/register" element={<RegisterChoicePage />} />
+          <Route path="/register/student" element={<RegisterPage portal="student" />} />
+          <Route path="/register/teacher" element={<RegisterPage portal="teacher" />} />
+          <Route path="/register/college" element={<CollegeRegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/verify-otp" element={<VerifyOtpPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Route>
 
         {/* Real-time Classroom Route (Shared, Role-Scoped) */}
         <Route

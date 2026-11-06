@@ -16,7 +16,8 @@ def get_token():
         db.query(models.user.UserSession).filter(models.user.UserSession.user_id == admin.id).update({'revoked_at': utcnow()})
         db.commit()
 
-    admin, token = admin_service.authenticate_admin(db, username='Edu2026@', password='Village@2026', client_ip='127.0.0.1')
+    admin_username = admin.email if admin else 'lanterned2026@'
+    admin, token = admin_service.authenticate_admin(db, username=admin_username, password='Village@2026', client_ip='127.0.0.1')
     print(token)
 
 if __name__ == "__main__":

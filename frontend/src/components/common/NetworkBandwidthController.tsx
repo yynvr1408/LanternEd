@@ -249,12 +249,21 @@ export const NetworkBandwidthController: React.FC = () => {
                 bottom: '12px',
                 left: '12px',
                 right: '12px',
+                maxHeight: 'calc(100dvh - 24px)',
+                zIndex: 9999,
+              }
+            : isExpanded
+            ? {
+                position: 'fixed',
+                left: `${Math.max(12, Math.min(typeof window !== 'undefined' ? window.innerWidth - 396 : 400, position.x))}px`,
+                top: `${Math.max(12, Math.min(typeof window !== 'undefined' ? window.innerHeight - 600 : 300, position.y))}px`,
+                maxHeight: 'calc(100vh - 24px)',
                 zIndex: 9999,
               }
             : {
                 position: 'fixed',
-                left: `${position.x}px`,
-                top: `${position.y}px`,
+                left: `${Math.max(12, Math.min(typeof window !== 'undefined' ? window.innerWidth - 200 : 200, position.x))}px`,
+                top: `${Math.max(12, Math.min(typeof window !== 'undefined' ? window.innerHeight - 70 : 100, position.y))}px`,
                 zIndex: 9999,
               }
         }
@@ -344,10 +353,11 @@ export const NetworkBandwidthController: React.FC = () => {
 
             {/* Scrollable Controller Body */}
             <div
-              className="p-3.5 space-y-3 text-xs overflow-y-auto overscroll-contain flex-1"
+              className="p-3.5 space-y-3 text-xs overflow-y-auto overscroll-contain flex-1 min-h-0"
               style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#2DBE8B #121A19',
+                WebkitOverflowScrolling: 'touch',
               }}
             >
               {/* 1. DUAL-MODE SWITCHER SEGMENTED CONTROL */}

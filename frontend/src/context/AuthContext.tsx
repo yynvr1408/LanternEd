@@ -36,7 +36,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(authService.getStoredUser())
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isLoading, setIsLoading] = useState<boolean>(() => !authService.getStoredUser())
   const [isSharedDevice, setIsSharedDeviceState] = useState<boolean>(authService.isSharedDevice())
 
   const setSharedDevice = (enabled: boolean) => {

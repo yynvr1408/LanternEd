@@ -69,7 +69,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#FFFFFF] border-b border-[#E1E8E4] h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between shadow-[0_1px_2px_rgba(32,43,42,0.03)]">
+      <header className="shrink-0 z-30 bg-[#FFFFFF] border-b border-[#E1E8E4] h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between shadow-[0_1px_2px_rgba(32,43,42,0.03)]">
         {/* Left: Menu toggle (mobile teacher) + Brand */}
         <div className="flex items-center gap-3">
           {onToggleMobileMenu && (
