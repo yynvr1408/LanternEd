@@ -94,4 +94,19 @@ export const releaseService = {
     }
     return `${GITHUB_RELEASES_BASE}/latest`
   },
+
+  /** Returns direct raw asset mirror URL from the release distribution repository. */
+  getRawDownloadUrl(platform?: 'windows' | 'macos' | 'android' | 'ios'): string {
+    const RAW_BASE = 'https://raw.githubusercontent.com/yynvr1408/LanternEd-App-Releases/main'
+    const paths: Record<string, string> = {
+      windows: `windows/LanternEd-Setup-${APP_CURRENT_VERSION}.exe`,
+      macos: `macos/LanternEd-${APP_CURRENT_VERSION}-universal.dmg`,
+      android: `android/LanternEd-v${APP_CURRENT_VERSION}.apk`,
+      ios: `ios/LanternEd-v${APP_CURRENT_VERSION}.ipa`,
+    }
+    if (platform && paths[platform]) {
+      return `${RAW_BASE}/${paths[platform]}`
+    }
+    return RAW_BASE
+  },
 }
