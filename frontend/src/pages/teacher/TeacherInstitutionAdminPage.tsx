@@ -1171,141 +1171,61 @@ export const TeacherInstitutionAdminPage: React.FC<TeacherInstitutionAdminPagePr
               description="Click 'Create Course' to set up a new branch-mapped course."
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               {courses
                 .filter((c) => !courseFilterBranch || c.branch_id === courseFilterBranch)
                 .map((c) => (
-                  <Card key={c.id}>
-                    <CardContent className="p-4 flex flex-col justify-between h-full gap-3">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-sm font-bold text-[#202B2A]">{c.title}</h3>
-                          <Badge variant={c.status === 'published' ? 'success' : 'secondary'} size="sm">
-                            {c.status}
-                          </Badge>
-                        </div>
-                        {c.subject && <p className="text-xs font-medium text-[#0F5B57] mt-0.5">{c.subject}</p>}
-                        {c.description && (
-                          <p className="text-xs text-[#687775] mt-1 line-clamp-2">{c.description}</p>
+                  <div key={c.id} className="bg-[#FFFFFF] border border-[#E1E8E4] rounded-xl p-4 flex flex-col justify-between h-full hover:border-[#CBD7D1] hover:shadow-[0_4px_12px_rgba(32,43,42,0.06)] transition-all shadow-[0_1px_3px_rgba(32,43,42,0.03)] group">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="text-sm font-bold text-[#202B2A] line-clamp-1 group-hover:text-[#0F5B57] transition-colors">{c.title}</h3>
+                        <Badge variant={c.status === 'published' ? 'success' : 'secondary'} size="sm" className="text-[10px] uppercase font-semibold">
+                          {c.status}
+                        </Badge>
+                      </div>
+                      {c.subject && <p className="text-[11px] font-medium text-[#0F5B57] mb-1">{c.subject}</p>}
+                      {c.description && (
+                        <p className="text-xs text-[#687775] line-clamp-2 leading-relaxed mb-3">{c.description}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1.5 text-[11px] text-[#687775]">
+                        <span className="flex items-center gap-1 bg-[#F8FAF7] border border-[#CBD7D1] px-2 py-0.5 rounded-md font-medium text-[#202B2A]">
+                          <GraduationCap className="w-3 h-3 text-[#0F5B57]" />
+                          <span className="truncate max-w-[130px]">{c.teacher_name || 'Unassigned'}</span>
+                        </span>
+                        {c.branch_name && (
+                          <span className="flex items-center gap-1 bg-[#DDF3EA] text-[#0F5B57] font-semibold px-2 py-0.5 rounded-md border border-[#CBD7D1]/50">
+                            <GitBranch className="w-3 h-3" />
+                            <span className="truncate max-w-[120px]">{c.branch_name}</span>
+                          </span>
                         )}
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#687775]">
-                          <span className="flex items-center gap-1 bg-[#F8FAF7] border border-[#CBD7D1] px-2 py-0.5 rounded">
-                            <GraduationCap className="w-3 h-3 text-[#0F5B57]" />
-                            {c.teacher_name || 'Assigned Teacher'}
-                          </span>
-                          {c.branch_name && (
-                            <span className="flex items-center gap-1 bg-[#DDF3EA] text-[#0F5B57] font-semibold px-2 py-0.5 rounded">
-                              <GitBranch className="w-3 h-3" />
-                              {c.branch_name}
-                            </span>
-                          )}
-                          <span className="bg-[#F8FAF7] border border-[#CBD7D1] px-2 py-0.5 rounded">
-                            {c.enrollments_count} Student(s)
-                          </span>
-                        </div>
+                        <span className="bg-[#F8FAF7] border border-[#CBD7D1] px-2 py-0.5 rounded-md font-medium">
+                          {c.enrollments_count} {c.enrollments_count === 1 ? 'Student' : 'Students'}
+                        </span>
                       </div>
+                    </div>
 
-                      <div className="pt-3 border-t border-[#E1E8E4] flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          icon={<Pencil className="w-3.5 h-3.5" />}
-                          onClick={() => openEditCourseModal(c)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-[#B42318] hover:bg-[#FDE8E7]"
-                          icon={<Trash2 className="w-3.5 h-3.5" />}
-                          onClick={() => setDeletingCourse(c)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <div className="pt-3 mt-3 border-t border-[#E1E8E4] flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        icon={<Pencil className="w-3 h-3" />}
+                        onClick={() => openEditCourseModal(c)}
+                        className="h-7 text-xs px-2.5"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-[#B42318] hover:bg-[#FDE8E7] h-7 text-xs px-2.5"
+                        icon={<Trash2 className="w-3 h-3" />}
+                        onClick={() => setDeletingCourse(c)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ------------------------------------------------------------- */}
-      {/* TAB 4: TEACHERS DIRECTORY (SEPARATE VIEW & BRANCH MAPPING) */}
-      {/* ------------------------------------------------------------- */}
-      {currentTab === 'teachers' && (
-        <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-[#202B2A]">Enrolled Teachers Directory</h2>
-            <p className="text-xs text-[#687775]">
-              View all faculty members, update profiles, reassign branches, and manage teaching scopes.
-            </p>
-          </div>
-
-          {membersLoading ? (
-            <LoadingState message="Loading teachers..." />
-          ) : teachers.length === 0 ? (
-            <EmptyState
-              icon={<GraduationCap className="w-6 h-6" />}
-              title="No teachers enrolled"
-              description="Pending teacher registrations will appear under the Approvals tab."
-            />
-          ) : (
-            <div className="flex flex-col gap-2">
-              {teachers.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white border border-[#CBD7D1] rounded-xl shadow-2xs"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-[#202B2A]">{m.full_name}</p>
-                      <Badge variant={m.status === 'active' ? 'success' : 'warning'} size="sm">
-                        {m.status}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-[#687775]">{m.email}</p>
-                    <div className="mt-1 flex items-center gap-2 text-[11px]">
-                      <span className="font-semibold text-[#0F5B57] bg-[#DDF3EA] px-2 py-0.5 rounded">
-                        Branch: {m.branch_name || 'Unassigned'}
-                      </span>
-                      <span className="text-[#687775] bg-[#F8FAF7] border border-[#CBD7D1] px-2 py-0.5 rounded">
-                        {m.all_sections ? 'All Sections (Branch-Wide)' : m.section_name || 'No Section'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      icon={<Pencil className="w-3.5 h-3.5" />}
-                      onClick={() => openEditMemberModal(m)}
-                    >
-                      Edit &amp; Reassign
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      icon={m.status === 'suspended' ? <PlayCircle className="w-3.5 h-3.5" /> : <PauseCircle className="w-3.5 h-3.5" />}
-                      onClick={() => handleToggleSuspendMember(m)}
-                    >
-                      {m.status === 'suspended' ? 'Reactivate' : 'Suspend'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-[#B42318] hover:bg-[#FDE8E7]"
-                      icon={<UserMinus className="w-3.5 h-3.5" />}
-                      onClick={() => setRemovingMember(m)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </div>

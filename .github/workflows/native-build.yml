@@ -104,8 +104,12 @@ jobs:
           mkdir -p app/build/outputs/apk/release
           apk_file=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -n "$apk_file" ]; then
-            cp "$apk_file" app/build/outputs/apk/LanternEd-v0.1.1.apk
-            cp "$apk_file" app/build/outputs/apk/release/app-release.apk
+            if [ "$apk_file" != "app/build/outputs/apk/LanternEd-v0.1.1.apk" ]; then
+              cp "$apk_file" app/build/outputs/apk/LanternEd-v0.1.1.apk
+            fi
+            if [ "$apk_file" != "app/build/outputs/apk/release/app-release.apk" ]; then
+              cp "$apk_file" app/build/outputs/apk/release/app-release.apk
+            fi
           fi
       - name: Report Android Failure to Summary
         if: failure()

@@ -79,7 +79,7 @@ export const StudentCoursesPage: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <SkeletonCard />
           <SkeletonCard />
         </div>
@@ -94,7 +94,7 @@ export const StudentCoursesPage: React.FC = () => {
           }
         />
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCourses.map((course) => (
             <CourseCard
               key={course.id}

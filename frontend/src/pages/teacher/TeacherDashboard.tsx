@@ -257,7 +257,7 @@ export const TeacherDashboard: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -266,7 +266,7 @@ export const TeacherDashboard: React.FC = () => {
               No classes scheduled yet. Click 'Schedule Class' above to create one.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {classes.slice(0, 2).map((cls) => (
                 <ClassCard
                   key={cls.id}
@@ -293,7 +293,7 @@ export const TeacherDashboard: React.FC = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {courses.slice(0, 2).map((course) => (
               <CourseCard key={course.id} course={course} isTeacher={true} />
             ))}

@@ -260,7 +260,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -272,7 +272,7 @@ export const StudentDashboard: React.FC = () => {
               description="Courses will appear here once loaded or when online connectivity returns."
             />
           ) : (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {courses.slice(0, 2).map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))}
@@ -295,7 +295,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -307,7 +307,7 @@ export const StudentDashboard: React.FC = () => {
               description="Upcoming interactive lectures will be posted by your teachers."
             />
           ) : (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {classes.slice(0, 2).map((cls) => (
                 <ClassCard key={cls.id} classroom={cls} />
               ))}
@@ -330,7 +330,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -342,7 +342,7 @@ export const StudentDashboard: React.FC = () => {
               description="Recordings will appear here after live lectures or when published by your teachers."
             />
           ) : (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {recordings.slice(0, 2).map((rec) => (
                 <div
                   key={rec.id}
@@ -413,7 +413,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {isLoading ? (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
               <SkeletonCard />
             </div>
@@ -423,7 +423,7 @@ export const StudentDashboard: React.FC = () => {
               All assignments have been submitted. Great job!
             </div>
           ) : (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {pendingAssignments.map((a) => (
                 <AssignmentCard key={a.id} assignment={a} draft={drafts[a.id]} />
               ))}
@@ -441,7 +441,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
 
           {teachersStatus === 'loading' ? (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <SkeletonCard />
             </div>
           ) : teachersStatus === 'error' ? (
@@ -456,7 +456,7 @@ export const StudentDashboard: React.FC = () => {
               description="Once an administrator or teacher is assigned to your section, they'll appear here."
             />
           ) : (
-            <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+            <div className="grid flex-1 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {collegeTeachers.map((t) => (
                 <div
                   key={t.id}

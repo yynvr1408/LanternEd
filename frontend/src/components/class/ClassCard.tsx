@@ -43,9 +43,9 @@ export const ClassCard: React.FC<ClassCardProps> = ({
   })
 
   return (
-    <Card className="flex flex-col h-full border-[#E1E8E4]">
-      <CardHeader className="flex items-center justify-between gap-2">
-        <Badge variant="outline" size="sm" className="font-mono">
+    <Card className="flex flex-col h-full border-[#E1E8E4] hover:border-[#CBD7D1] transition-all shadow-[0_1px_3px_rgba(32,43,42,0.03)] hover:shadow-[0_4px_12px_rgba(32,43,42,0.06)]">
+      <CardHeader className="flex items-center justify-between gap-2 p-3.5 sm:p-4">
+        <Badge variant="outline" size="sm" className="font-mono text-[11px] font-semibold text-[#0F5B57] bg-[#DDF3EA]/60 border-[#0F5B57]/20">
           {classroom.course_code || 'EDU'}
         </Badge>
         <Badge
@@ -53,23 +53,24 @@ export const ClassCard: React.FC<ClassCardProps> = ({
             isLive ? 'live' : isScheduled ? 'secondary' : isEnded ? 'default' : isCancelled ? 'error' : 'outline'
           }
           size="sm"
+          className="text-[11px] uppercase tracking-wider font-semibold"
         >
           {classroom.status}
         </Badge>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col">
-        <h3 className="font-bold text-base text-[#202B2A] line-clamp-2 mb-2">
+      <CardContent className="flex-1 flex flex-col p-3.5 sm:p-4 gap-2">
+        <h3 className="font-bold text-sm sm:text-[15px] text-[#202B2A] line-clamp-2 leading-snug">
           {classroom.title}
         </h3>
         {classroom.course_title && (
-          <p className="text-xs text-[#687775] mb-2">
+          <p className="text-xs text-[#687775]">
             Course: <strong className="font-semibold text-[#202B2A]">{classroom.course_title}</strong>
           </p>
         )}
 
         {classroom.section_name && (
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold bg-[#DDF3EA] text-[#0F5B57] px-2 py-0.5 rounded-md border border-[#CBD7D1]">
               Section: {classroom.section_name}
             </span>
@@ -77,32 +78,33 @@ export const ClassCard: React.FC<ClassCardProps> = ({
         )}
 
         {classroom.branch_name && (
-          <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold bg-[#DDF3EA] text-[#0F5B57] px-2 py-0.5 rounded-md border border-[#CBD7D1]">
               Branch: {classroom.branch_name}
             </span>
           </div>
         )}
 
-        <div className="flex flex-col gap-1.5 text-xs text-[#687775] mt-auto pt-2 border-t border-[#E1E8E4]">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 shrink-0 text-[#687775]" />
+        <div className="flex items-center gap-3 text-xs text-[#687775] mt-auto pt-2 border-t border-[#E1E8E4]">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 shrink-0 text-[#0F5B57]" />
             <span>{formattedDate}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 shrink-0 text-[#687775]" />
+          <span className="text-[#CBD7D1]">•</span>
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 shrink-0 text-[#0F5B57]" />
             <span>{formattedTime}</span>
           </div>
         </div>
       </CardContent>
 
-      <CardFooter className="flex-wrap gap-2">
+      <CardFooter className="flex-wrap gap-2 p-3.5 sm:p-4 bg-[#F8FAF7]">
         {/* Student actions */}
         {!isTeacher && (
           <>
             {isLive ? (
               <Link to={`/classroom/${classroom.id}`} className="w-full sm:w-auto">
-                <Button size="sm" variant="primary" icon={<Video className="w-3.5 h-3.5" />}>
+                <Button size="sm" variant="primary" icon={<Video className="w-3.5 h-3.5" />} className="h-8 text-xs font-semibold">
                   Join Live Room
                 </Button>
               </Link>
@@ -112,7 +114,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
               <span className="text-xs text-[#B42318] italic">This class was cancelled</span>
             ) : (
               <Link to={`/student/classes/${classroom.id}/summary`} className="w-full sm:w-auto">
-                <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5" />}>
+                <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5" />} className="h-8 text-xs">
                   Lecture Summary
                 </Button>
               </Link>
@@ -132,6 +134,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                     isLoading={isStarting}
                     onClick={() => onStart(classroom.id)}
                     icon={<Play className="w-3.5 h-3.5" />}
+                    className="h-8 text-xs font-semibold"
                   >
                     Start Class
                   </Button>
@@ -147,6 +150,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                       }
                     }}
                     icon={<XCircle className="w-3.5 h-3.5" />}
+                    className="h-8 text-xs"
                   >
                     Cancel
                   </Button>
@@ -157,7 +161,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
             {isLive && (
               <div className="flex items-center gap-2">
                 <Link to={`/classroom/${classroom.id}`}>
-                  <Button size="sm" variant="primary" icon={<Video className="w-3.5 h-3.5" />}>
+                  <Button size="sm" variant="primary" icon={<Video className="w-3.5 h-3.5" />} className="h-8 text-xs font-semibold">
                     Enter Room
                   </Button>
                 </Link>
@@ -168,6 +172,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
                     isLoading={isEnding}
                     onClick={() => onEnd(classroom.id)}
                     icon={<StopCircle className="w-3.5 h-3.5" />}
+                    className="h-8 text-xs"
                   >
                     End Class
                   </Button>
@@ -177,7 +182,7 @@ export const ClassCard: React.FC<ClassCardProps> = ({
 
             {isEnded && (
               <Link to="/teacher/summaries">
-                <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5" />}>
+                <Button size="sm" variant="secondary" icon={<Sparkles className="w-3.5 h-3.5" />} className="h-8 text-xs">
                   Review Summary
                 </Button>
               </Link>
