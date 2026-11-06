@@ -102,10 +102,15 @@ jobs:
           chmod +x ./gradlew
           (./gradlew assembleRelease --stacktrace || ./gradlew assembleDebug --stacktrace) 2>&1 | tee gradle_build.log
           mkdir -p app/build/outputs/apk/release
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF" ]; then
+            VERSION="0.1.1"
+          fi
           apk_file=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -n "$apk_file" ]; then
-            if [ "$apk_file" != "app/build/outputs/apk/LanternEd-v0.1.1.apk" ]; then
-              cp "$apk_file" app/build/outputs/apk/LanternEd-v0.1.1.apk
+            target_apk="app/build/outputs/apk/LanternEd-v${VERSION}.apk"
+            if [ "$apk_file" != "$target_apk" ]; then
+              cp "$apk_file" "$target_apk"
             fi
             if [ "$apk_file" != "app/build/outputs/apk/release/app-release.apk" ]; then
               cp "$apk_file" app/build/outputs/apk/release/app-release.apk
@@ -143,6 +148,10 @@ jobs:
         run: npx cap sync ios
       - name: Build iOS Xcode App & Package
         run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF" ]; then
+            VERSION="0.1.1"
+          fi
           cd ios/App
           if [ -d "App.xcworkspace" ]; then
             xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO SYMROOT="$(pwd)/build" clean build
@@ -152,7 +161,7 @@ jobs:
           mkdir -p build/Release-iphoneos/Payload
           cp -r build/Release-iphoneos/App.app build/Release-iphoneos/Payload/
           cd build/Release-iphoneos
-          zip -r LanternEd-v0.1.1.ipa Payload
+          zip -r "LanternEd-v${VERSION}.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: LanternEd-iOS-Build
@@ -195,15 +204,21 @@ jobs:
           path: releases/ios/
       - name: Normalize Downloaded Artifacts
         run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF" ]; then
+            VERSION=$(python -c "import json; print(json.load(open('releases/manifest.json'))['version'])")
+          fi
+          echo "Normalizing downloaded artifacts for version v${VERSION}..."
           for p in windows macos android ios; do
             if [ -d "releases/$p" ]; then
               find "releases/$p" -mindepth 2 -type f -exec mv {} "releases/$p/" \; || true
             fi
           done
-          if [ ! -f "releases/android/LanternEd-v0.1.1.apk" ]; then
+          target_apk="releases/android/LanternEd-v${VERSION}.apk"
+          if [ ! -f "$target_apk" ]; then
             apk_file=$(find releases/android -name "*.apk" | head -n 1)
             if [ -n "$apk_file" ]; then
-              cp "$apk_file" releases/android/LanternEd-v0.1.1.apk
+              cp "$apk_file" "$target_apk"
             fi
           fi
       - name: Update Manifest and Checksums
@@ -221,16 +236,36 @@ jobs:
             --git-remote "https://${APP_RELEASES_TOKEN}@github.com/yynvr1408/LanternEd-App-Releases.git" \
             --push
 
+      - name: Extract Release Notes from CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "$GITHUB_REF" ]; then
+            VERSION=$(python -c "import json; print(json.load(open('releases/manifest.json'))['version'])")
+          fi
+          python -c "
+          import re
+          from pathlib import Path
+          txt = Path('CHANGELOG.md').read_text(encoding='utf-8')
+          m = re.search(r'##\s*\[v?' + re.escape('${VERSION}') + r'\][^\n]*\n([\s\S]*?)(?=\n##\s*\[|\Z)', txt)
+          notes = m.group(1).strip() if m else 'LanternED v${VERSION} cross-platform release'
+          Path('release_notes.md').write_text(notes, encoding='utf-8')
+          "
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          name: LanternED v${{ steps.changelog.outputs.version }}
+          body_path: release_notes.md
           files: |
             releases/windows/*
             releases/macos/*
             releases/android/*
             releases/ios/*
             releases/manifest.json
-          generate_release_notes: true
+            CHANGELOG.md
+          generate_release_notes: false
