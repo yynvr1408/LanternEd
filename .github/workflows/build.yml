@@ -186,13 +186,20 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease bundleRelease --stacktrace
 
-      # --- iOS (Capacitor v8 + Xcode SPM, unsigned archive, no publish) ---
-      - name: Sync web-dist & archive unsigned iOS app (no publish)
+      # --- iOS (Capacitor v8 + Xcode SPM, unsigned build, no publish) ---
+      - name: Sync web-dist & build unsigned iOS app (no publish)
         if: matrix.platform == 'ios'
         run: |
           npx cap sync ios
           cd ios/App
-          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGNING_IDENTITY="" \
-            SYMROOT="$(pwd)/build" clean archive -archivePath "$(pwd)/build/LanternEd.xcarchive"
+          if [ -d "App.xcworkspace" ]; then
+            xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+              SYMROOT="$(pwd)/build" clean build
+          else
+            xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+              SYMROOT="$(pwd)/build" clean build
+          fi

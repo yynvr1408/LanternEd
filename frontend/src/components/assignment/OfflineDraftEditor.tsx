@@ -43,17 +43,19 @@ export const OfflineDraftEditor: React.FC<OfflineDraftEditorProps> = ({
 
   const isServerSubmitted = Boolean(assignment.my_submission)
   const autoSaveTimerRef = useRef<number | null>(null)
+  const hasEditedRef = useRef<boolean>(false)
 
   // Load existing draft or server submission on mount
   useEffect(() => {
     let isMounted = true
+    hasEditedRef.current = false
 
     async function loadInitial() {
       // If already submitted on server, set content
       if (assignment.my_submission) {
         // The server already holds this submission, so a leftover local copy is not unsynced work.
         await db.assignmentDrafts.delete(assignment.id).catch(() => undefined)
-        if (isMounted) {
+        if (isMounted && !hasEditedRef.current) {
           setContent(assignment.my_submission.content)
           setSaveStatus('server_confirmed')
         }
@@ -62,7 +64,7 @@ export const OfflineDraftEditor: React.FC<OfflineDraftEditorProps> = ({
 
       // Check IndexedDB draft
       const localDraft = await syncManager.getDraft(assignment.id)
-      if (isMounted && localDraft) {
+      if (isMounted && localDraft && !hasEditedRef.current) {
         setDraft(localDraft)
         setContent(localDraft.content)
         setLastSavedAt(localDraft.savedAt)
@@ -86,6 +88,7 @@ export const OfflineDraftEditor: React.FC<OfflineDraftEditorProps> = ({
 
   // Handle typing with debounced auto-save to IndexedDB ("Saved on this device")
   const handleChange = (newContent: string) => {
+    hasEditedRef.current = true
     setContent(newContent)
 
     if (isServerSubmitted) return
@@ -113,6 +116,11 @@ export const OfflineDraftEditor: React.FC<OfflineDraftEditorProps> = ({
 
   // Handle manual / explicit submission
   const handleSubmit = async () => {
+    hasEditedRef.current = true
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = null
+    }
     if (!content.trim()) {
       setErrorMessage('Please enter your response before submitting.')
       return
@@ -145,14 +153,14 @@ export const OfflineDraftEditor: React.FC<OfflineDraftEditorProps> = ({
         if (err instanceof ApiError && !err.isNetworkError) {
           // The server answered and refused (deadline, closed assignment, not enrolled...). Queuing it would
           // just be refused again, so tell the student instead of pretending it will be retried.
-          setErrorMessage(err.message)
           const refusal = err.code === 'SUBMISSION_EXPIRED' || err.code === 'ASSIGNMENT_CLOSED' ? 'expired' : err.status === 409 ? 'conflict' : null
-          setSaveStatus(refusal ?? 'error')
           if (refusal) {
-            // Keep the text AND the refusal on this device (a reload must not lose either).
+            // Keep the text AND the refusal on this device before showing the terminal badge so IndexedDB stays consistent.
             const kept = await syncManager.recordRefusal(assignment.id, user.id, assignment.course_id, assignment.title, content, refusal, err.message)
             setDraft(kept)
           }
+          setErrorMessage(err.message)
+          setSaveStatus(refusal ?? 'error')
         } else {
           // Connectivity problem: keep the work safe in the offline queue.
           console.warn('Online submit failed, enqueuing for offline retry:', err)
