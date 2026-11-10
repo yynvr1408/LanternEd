@@ -23,10 +23,18 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (System.getenv("ANDROID_KEYSTORE_PATH") && file(System.getenv("ANDROID_KEYSTORE_PATH")).exists()) {
+            release {
+                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.findByName("release") ?: signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

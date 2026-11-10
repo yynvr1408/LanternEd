@@ -1,0 +1,51 @@
+name: Multi-Platform Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Targets to build ('all' or comma-separated subset: windows,macos,ios,android)"
+        required: true
+        default: "all"
+        type: string
+      bump:
+        description: "SemVer bump to compute from the latest release tag"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
+      draft:
+        description: "Create release as a draft on yynvr1408/LanternEd-App-Releases"
+        required: true
+        default: true
+        type: boolean
+      prerelease:
+        description: "Mark release as prerelease"
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      targets: ${{ inputs.targets || 'all' }}
+      bump: ${{ github.event_name == 'push' && 'none' || inputs.bump }}
+      tag: ${{ github.event_name == 'push' && github.ref_name || '' }}
+      draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+      prerelease: ${{ (github.event_name == 'workflow_dispatch' && inputs.prerelease) || (github.event_name == 'push' && contains(github.ref_name, '-')) }}
+    secrets: inherit

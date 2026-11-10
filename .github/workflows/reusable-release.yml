@@ -1,0 +1,583 @@
+name: Reusable 4-Platform Release Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      targets:
+        description: "Targets to build ('all' or comma-separated subset: windows,macos,ios,android)"
+        required: false
+        default: "all"
+        type: string
+      bump:
+        description: "SemVer bump type (patch, minor, major, none)"
+        required: false
+        default: "patch"
+        type: string
+      tag:
+        description: "Explicit tag (set on tag-triggered releases)"
+        required: false
+        default: ""
+        type: string
+      draft:
+        description: "Publish GitHub Release as draft"
+        required: false
+        default: true
+        type: boolean
+      prerelease:
+        description: "Mark GitHub Release as prerelease"
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      RELEASES_TOKEN:
+        description: "Fine-grained PAT with Contents Read & Write scoped to yynvr1408/LanternEd-App-Releases"
+        required: false
+      APP_RELEASES_TOKEN:
+        description: "Legacy fallback token name for yynvr1408/LanternEd-App-Releases if RELEASES_TOKEN is unset"
+        required: false
+      TAURI_SIGNING_PRIVATE_KEY:
+        required: false
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
+        required: false
+      APPLE_CERTIFICATE:
+        required: false
+      APPLE_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_SIGNING_IDENTITY:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      APPLE_IOS_CERTIFICATE_BASE64:
+        required: false
+      APPLE_IOS_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_IOS_PROVISIONING_PROFILE_BASE64:
+        required: false
+      APPLE_IOS_EXPORT_OPTIONS_PLIST:
+        required: false
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+
+jobs:
+  # Job 1: Compute SemVer, generate Conventional Commits changelog, sync versions, test & build web dist/
+  prepare:
+    name: Job 1 - Prepare Version, Changelog & Web Dist
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      prev_tag: ${{ steps.ver.outputs.prev_tag }}
+      version_code: ${{ steps.ver.outputs.version_code }}
+      is_prerelease: ${{ steps.ver.outputs.is_prerelease }}
+      matrix: ${{ steps.mat.outputs.matrix }}
+      source_sha: ${{ github.sha }}
+      is_tag_trigger: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Compute target SemVer and build code
+        id: ver
+        run: |
+          python scripts/ci_release.py next-version \
+            --bump "${{ inputs.bump }}" \
+            --explicit-tag "${{ inputs.tag }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Compute target platform matrix
+        id: mat
+        run: |
+          python scripts/ci_release.py matrix \
+            --targets "${{ inputs.targets }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Generate Conventional Commits release notes
+        run: |
+          PRESERVE_FLAG=""
+          if [ -n "${{ inputs.tag }}" ]; then
+            PRESERVE_FLAG="--preserve-existing"
+          fi
+          python scripts/ci_release.py generate-changelog \
+            --version "${{ steps.ver.outputs.version }}" \
+            --prev-tag "${{ steps.ver.outputs.prev_tag }}" \
+            --output-notes release-notes.md \
+            $PRESERVE_FLAG
+
+      - name: Synchronize SemVer across web, desktop, Android, iOS, and manifest
+        run: |
+          python scripts/ci_release.py sync-version \
+            --version "${{ steps.ver.outputs.version }}" \
+            --version-code "${{ steps.ver.outputs.version_code }}"
+
+      - name: Install, lint, typecheck, test & build web dist bundle
+        working-directory: frontend
+        run: |
+          npm ci
+          npx oxlint
+          npx tsc -b
+          npx vitest run
+          npx vite build
+          test -f dist/index.html
+
+      - name: Upload web-dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release-notes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  # Job 2: Build all requested native/desktop targets from the exact same web-dist artifact
+  build-platforms:
+    name: Job 2 - Build ${{ matrix.target.platform }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ${{ matrix.target.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Sync target SemVer into platform configs
+        run: |
+          python scripts/ci_release.py sync-version \
+            --version "${{ needs.prepare.outputs.version }}" \
+            --version-code "${{ needs.prepare.outputs.version_code }}"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Download shared web-dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+
+      - name: Verify shared web-dist bundle
+        working-directory: frontend
+        run: test -f dist/index.html
+
+      # --- Windows Desktop (.exe / .msi via Tauri v2) ---
+      - name: Setup Rust toolchain (Windows)
+        if: matrix.target.platform == 'windows'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies (Windows)
+        if: matrix.target.platform == 'windows'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Build Windows desktop installer (Tauri v2)
+        if: matrix.target.platform == 'windows'
+        working-directory: frontend
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          # Never pass empty secret env vars to builders; enable signing only when configured
+          for v in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            if [ -z "${!v:-}" ]; then unset "$v"; fi
+          done
+          SIGN_FLAG="--no-sign"
+          if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+            SIGN_FLAG=""
+          fi
+          npx tauri build --ci \
+            --config "$GITHUB_WORKSPACE/frontend/src-tauri/tauri.ci.conf.json" \
+            --target x86_64-pc-windows-msvc \
+            --bundles nsis,msi \
+            $SIGN_FLAG
+
+          mkdir -p "$GITHUB_WORKSPACE/staged/windows"
+          find src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -maxdepth 1 -type f -name "*.exe" -exec cp {} "$GITHUB_WORKSPACE/staged/windows/" \;
+          find src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi -maxdepth 1 -type f -name "*.msi" -exec cp {} "$GITHUB_WORKSPACE/staged/windows/" \; || true
+          ls -lh "$GITHUB_WORKSPACE/staged/windows"
+
+      # --- macOS Desktop (.dmg / .app.zip via Tauri v2 Universal) ---
+      - name: Setup Rust toolchain (macOS)
+        if: matrix.target.platform == 'macos'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Cache Rust dependencies (macOS)
+        if: matrix.target.platform == 'macos'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Build macOS desktop bundle (Tauri v2 Universal)
+        if: matrix.target.platform == 'macos'
+        working-directory: frontend
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for v in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v:-}" ]; then unset "$v"; fi
+          done
+          SIGN_FLAG="--no-sign"
+          if [ -n "${APPLE_CERTIFICATE:-}" ] || [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
+            SIGN_FLAG=""
+          fi
+          npx tauri build --ci \
+            --config "$GITHUB_WORKSPACE/frontend/src-tauri/tauri.ci.conf.json" \
+            --target universal-apple-darwin \
+            --bundles dmg,app \
+            $SIGN_FLAG
+
+          mkdir -p "$GITHUB_WORKSPACE/staged/macos"
+          find src-tauri/target/universal-apple-darwin/release/bundle/dmg -maxdepth 1 -type f -name "*.dmg" -exec cp {} "$GITHUB_WORKSPACE/staged/macos/" \;
+          APP_BUNDLE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -maxdepth 1 -type d -name "*.app" | head -n 1 || true)
+          if [ -n "$APP_BUNDLE" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$GITHUB_WORKSPACE/staged/macos/LanternEd-${{ needs.prepare.outputs.version }}-macos-universal.app.zip"
+          fi
+          ls -lh "$GITHUB_WORKSPACE/staged/macos"
+
+      # --- Android Mobile (.apk / .aab via Capacitor v8 + Gradle) ---
+      - name: Setup Java 21 (Android)
+        if: matrix.target.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK (Android)
+        if: matrix.target.platform == 'android'
+        run: |
+          mkdir -p "$ANDROID_HOME/licenses"
+          printf "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n84831b9409646a918e30573bab4c9c91346d8abd\nd56f5187479451eabf01fb78af6dfcb131a6481e\n" > "$ANDROID_HOME/licenses/android-sdk-license"
+          printf "\n856480a6d0fa0783cf76ced1ad3687d49e8b173e\n2fa2d1802312d4d745eb17750882e92860f0b26f\n" > "$ANDROID_HOME/licenses/android-googletv-license"
+          if [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then
+            export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+            yes | sdkmanager --licenses >/dev/null || true
+            sdkmanager "platforms;android-36" "build-tools;36.0.0" || true
+          fi
+
+      - name: Sync web-dist & build Android APK/AAB
+        if: matrix.target.platform == 'android'
+        working-directory: frontend
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          npx cap sync android
+          mkdir -p android/app
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "Using production Android release keystore."
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+          else
+            echo "Production Android keystore not configured; falling back to debug keystore."
+            unset ANDROID_KEYSTORE_PATH ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD
+            if [ ! -f android/app/debug.keystore ]; then
+              keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            fi
+          fi
+
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease bundleRelease --stacktrace
+
+          mkdir -p "$GITHUB_WORKSPACE/staged/android"
+          APK_FILE=$(find app/build/outputs/apk -type f -name "*.apk" | head -n 1 || true)
+          AAB_FILE=$(find app/build/outputs/bundle -type f -name "*.aab" | head -n 1 || true)
+          if [ -n "$APK_FILE" ]; then
+            cp "$APK_FILE" "$GITHUB_WORKSPACE/staged/android/LanternEd-v${{ needs.prepare.outputs.version }}.apk"
+          fi
+          if [ -n "$AAB_FILE" ]; then
+            cp "$AAB_FILE" "$GITHUB_WORKSPACE/staged/android/LanternEd-v${{ needs.prepare.outputs.version }}.aab"
+          fi
+          ls -lh "$GITHUB_WORKSPACE/staged/android"
+
+      # --- iOS Mobile (.ipa / .xcarchive.zip via Capacitor v8 + Xcode) ---
+      - name: Sync web-dist & build iOS archive/IPA
+        if: matrix.target.platform == 'ios'
+        working-directory: frontend
+        env:
+          APPLE_IOS_CERTIFICATE_BASE64: ${{ secrets.APPLE_IOS_CERTIFICATE_BASE64 }}
+          APPLE_IOS_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_IOS_CERTIFICATE_PASSWORD }}
+          APPLE_IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_IOS_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_IOS_EXPORT_OPTIONS_PLIST: ${{ secrets.APPLE_IOS_EXPORT_OPTIONS_PLIST }}
+        run: |
+          npx cap sync ios
+          cd ios/App
+          mkdir -p "$GITHUB_WORKSPACE/staged/ios"
+          ARCHIVE_PATH="$(pwd)/build/LanternEd.xcarchive"
+
+          if [ -n "${APPLE_IOS_CERTIFICATE_BASE64:-}" ] && [ -n "${APPLE_IOS_PROVISIONING_PROFILE_BASE64:-}" ]; then
+            echo "Production iOS signing secrets detected; building signed archive and IPA."
+            KEYCHAIN_PATH="$RUNNER_TEMP/ios-signing.keychain-db"
+            KEYCHAIN_PASS="ci-temp-keychain-pass"
+            security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN_PATH"
+            echo "$APPLE_IOS_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/ios-cert.p12"
+            security import "$RUNNER_TEMP/ios-cert.p12" -P "${APPLE_IOS_CERTIFICATE_PASSWORD:-}" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+            security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+            mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+            echo "$APPLE_IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/ci.mobileprovision"
+
+            xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+              -destination 'generic/platform=iOS' \
+              SYMROOT="$(pwd)/build" clean archive -archivePath "$ARCHIVE_PATH"
+
+            if [ -n "${APPLE_IOS_EXPORT_OPTIONS_PLIST:-}" ]; then
+              echo "$APPLE_IOS_EXPORT_OPTIONS_PLIST" | base64 --decode > "$RUNNER_TEMP/ExportOptions.plist"
+              xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" \
+                -exportPath "$(pwd)/build/export" \
+                -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+              IPA_FILE=$(find "$(pwd)/build/export" -maxdepth 1 -type f -name "*.ipa" | head -n 1 || true)
+              if [ -n "$IPA_FILE" ]; then
+                cp "$IPA_FILE" "$GITHUB_WORKSPACE/staged/ios/LanternEd-v${{ needs.prepare.outputs.version }}.ipa"
+              fi
+            fi
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          else
+            echo "iOS production certificates not configured; building unsigned xcarchive and IPA."
+            xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGNING_IDENTITY="" \
+              SYMROOT="$(pwd)/build" clean archive -archivePath "$ARCHIVE_PATH"
+
+            mkdir -p build/Payload
+            cp -R "$ARCHIVE_PATH/Products/Applications/App.app" build/Payload/App.app
+            (cd build && zip -qry "$GITHUB_WORKSPACE/staged/ios/LanternEd-v${{ needs.prepare.outputs.version }}.ipa" Payload)
+          fi
+
+          if [ -d "$ARCHIVE_PATH" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "$ARCHIVE_PATH" "$GITHUB_WORKSPACE/staged/ios/LanternEd-v${{ needs.prepare.outputs.version }}-ios.xcarchive.zip"
+          fi
+          ls -lh "$GITHUB_WORKSPACE/staged/ios"
+
+      - name: Upload staged platform artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-${{ matrix.target.platform }}
+          path: staged/${{ matrix.target.platform }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # Job 3: Collect all platform builds, generate checksums + release-manifest.json, commit [skip ci], and publish unified release
+  publish-release:
+    name: Job 3 - Publish Unified Release
+    needs: [prepare, build-platforms]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout main with full git history
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download release-notes artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+
+      - name: Download all platform build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: platform-*
+          path: downloaded-platforms
+
+      - name: Sync version files, update CHANGELOG.md, and stage unified release assets
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          VERSION_CODE="${{ needs.prepare.outputs.version_code }}"
+          PREV_TAG="${{ needs.prepare.outputs.prev_tag }}"
+          SOURCE_SHA="${{ needs.prepare.outputs.source_sha }}"
+          IS_TAG_TRIGGER="${{ needs.prepare.outputs.is_tag_trigger }}"
+
+          PRESERVE_FLAG=""
+          if [ "$IS_TAG_TRIGGER" = "true" ]; then
+            PRESERVE_FLAG="--preserve-existing"
+          fi
+
+          python scripts/ci_release.py sync-version \
+            --version "$VERSION" \
+            --version-code "$VERSION_CODE"
+
+          python scripts/ci_release.py generate-changelog \
+            --version "$VERSION" \
+            --prev-tag "$PREV_TAG" \
+            --head-ref "$SOURCE_SHA" \
+            --output-notes release-notes.md \
+            --update-changelog \
+            $PRESERVE_FLAG
+
+          python scripts/ci_release.py stage-release \
+            --input-dir downloaded-platforms \
+            --output-dir release-staging \
+            --version "$VERSION" \
+            --tag "$TAG" \
+            --commit "$SOURCE_SHA"
+
+          ls -lh release-staging
+          cat release-staging/SHA256SUMS.txt
+
+      - name: Commit version bump + CHANGELOG.md and push tag
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for f in \
+            CHANGELOG.md \
+            frontend/package.json \
+            frontend/package-lock.json \
+            frontend/src-tauri/tauri.conf.json \
+            frontend/src-tauri/Cargo.toml \
+            frontend/android/app/build.gradle \
+            frontend/ios/App/App.xcodeproj/project.pbxproj \
+            frontend/src/services/releaseService.ts \
+            windows_launcher/setup.iss \
+            releases/manifest.json \
+            releases/*/release.json; do
+            if [ -e "$f" ]; then
+              git add "$f"
+            fi
+          done
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): prepare ${TAG} [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            git tag -a "${TAG}" -m "LanternED ${TAG}"
+            git push origin "refs/tags/${TAG}"
+          fi
+
+      - name: Publish unified 4-platform release to yynvr1408/LanternEd-App-Releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.APP_RELEASES_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::RELEASES_TOKEN secret is not configured. Add a fine-grained PAT with Contents Read & Write scoped to yynvr1408/LanternEd-App-Releases."
+            exit 1
+          fi
+
+          TAG="${{ needs.prepare.outputs.tag }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          RELEASE_REPO="yynvr1408/LanternEd-App-Releases"
+
+          DRAFT_BOOL="false"
+          if [ "${{ inputs.draft }}" = "true" ]; then
+            DRAFT_BOOL="true"
+          fi
+          PRE_BOOL="false"
+          if [ "${{ inputs.prerelease }}" = "true" ] || [ "${{ needs.prepare.outputs.is_prerelease }}" = "true" ]; then
+            PRE_BOOL="true"
+          fi
+
+          # Run gh from an isolated temp directory outside the source git checkout
+          STAGE_TEMP="$RUNNER_TEMP/gh-release"
+          rm -rf "$STAGE_TEMP"
+          mkdir -p "$STAGE_TEMP"
+          cp release-staging/* "$STAGE_TEMP/"
+          cp release-notes.md "$STAGE_TEMP/release-notes.md"
+
+          cd "$STAGE_TEMP"
+          FILES=(*)
+          ASSET_FILES=()
+          for f in "${FILES[@]}"; do
+            if [ "$f" != "release-notes.md" ]; then
+              ASSET_FILES+=("$f")
+            fi
+          done
+
+          if gh release view "$TAG" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --repo "$RELEASE_REPO" \
+              --title "LanternED v${VERSION}" \
+              --notes-file release-notes.md \
+              --draft="$DRAFT_BOOL" \
+              --prerelease="$PRE_BOOL"
+            gh release upload "$TAG" "${ASSET_FILES[@]}" \
+              --repo "$RELEASE_REPO" \
+              --clobber
+          else
+            gh release create "$TAG" "${ASSET_FILES[@]}" \
+              --repo "$RELEASE_REPO" \
+              --title "LanternED v${VERSION}" \
+              --notes-file release-notes.md \
+              --draft="$DRAFT_BOOL" \
+              --prerelease="$PRE_BOOL"
+          fi

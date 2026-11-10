@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/releases", tags=["releases"])
@@ -158,9 +158,20 @@ def download_platform_release(platform: str):
         )
 
     file_name = platform_info.get("fileName")
+    if not file_name:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No filename configured for platform '{platform}'.",
+        )
     file_path = RELEASES_ROOT / p / file_name
 
     if not file_path.exists():
+        version = str(platform_info.get("version") or manifest.get("version") or "").lstrip("v")
+        if version:
+            release_url = (
+                f"https://github.com/yynvr1408/LanternEd-App-Releases/releases/download/v{version}/{file_name}"
+            )
+            return RedirectResponse(url=release_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Release binary '{file_name}' not yet uploaded to server releases repository.",
