@@ -1,45 +1,45 @@
 {
-  "version": "0.1.1",
-  "releaseDate": "2026-11-06T01:30:00.000000+00:00",
+  "version": "0.1.6",
+  "releaseDate": "2026-11-10T13:47:29.929858+00:00",
   "releaseNotes": "LanternED v0.1.1: Institutional onboarding hierarchy, searchable campus selection, streamlined bandwidth simulation, and cross-platform native release distribution.",
   "platforms": {
     "windows": {
-      "version": "0.1.1",
-      "fileName": "LanternEd-Setup-0.1.1.exe",
+      "version": "0.1.6",
+      "fileName": "LanternEd-Setup-0.1.6.exe",
       "installerType": "exe",
       "downloadUrl": "/api/v1/releases/download/windows",
-      "fileSizeMb": 2.0,
-      "sha256": "473bc7353cf6fbf752345b9a477c0b01b35897a46e7df01188778756afa669a7",
+      "fileSizeMb": 2.5,
+      "sha256": "2378ccd2a1302f4148972d4f9b5607efeaa9bda6d7904a1b4cf7093322aa8a25",
       "minOsVersion": "Windows 10 / 11 (64-bit)",
       "arch": "x64"
     },
     "macos": {
-      "version": "0.1.1",
-      "fileName": "LanternEd-0.1.1-universal.dmg",
+      "version": "0.1.6",
+      "fileName": "LanternEd-0.1.6-universal.dmg",
       "installerType": "dmg",
       "downloadUrl": "/api/v1/releases/download/macos",
-      "fileSizeMb": 6.7,
-      "sha256": "a1302cde356516aa9b4cc7daef4b8a240cd4ee632817d11a6604cb3f1d767643",
+      "fileSizeMb": 6.8,
+      "sha256": "e3f3127e7fd61386d36aef8e84b4ab8b73f3bd2d02caaa1a429d9e2b3dc4fd53",
       "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
       "arch": "Universal (Apple Silicon & Intel)"
     },
     "android": {
-      "version": "0.1.1",
-      "fileName": "LanternEd-v0.1.1.apk",
+      "version": "0.1.6",
+      "fileName": "LanternEd-v0.1.6.apk",
       "installerType": "apk",
       "downloadUrl": "/api/v1/releases/download/android",
       "fileSizeMb": 3.7,
-      "sha256": "2a2ca081111041b2c09d81ac540aa544502d98b61e142e69692cf4f62efea890",
+      "sha256": "14bb5d705c6a363bce457661dade0815ce197e7cdc47dbc45fd61f97487be9a7",
       "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
       "arch": "arm64-v8a, armeabi-v7a"
     },
     "ios": {
-      "version": "0.1.1",
-      "fileName": "LanternEd-v0.1.1.ipa",
+      "version": "0.1.6",
+      "fileName": "LanternEd-v0.1.6.ipa",
       "installerType": "ipa",
       "downloadUrl": "/api/v1/releases/download/ios",
       "fileSizeMb": 1.3,
-      "sha256": "f84f61ab3c7ddbd18e81febf6f7529c63b29311a54ccbb8db5147b3701b74c16",
+      "sha256": "dfc9a808b3f4e5d0e8f0598e1692bf4911013351c9f943b3e63f7705144c3acc",
       "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
       "arch": "arm64"
     }

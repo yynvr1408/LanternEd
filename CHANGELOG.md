@@ -5,6 +5,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v0.1.6] — 2026-11-10
+
+### Added
+
+- **ux:** pin fixed console sidebar navigation, responsive bandwidth controller, 3.5min master walkthrough, and rich 24hr timeline README (`4b83a13`)
+- **demo:** add comprehensive test data for all platform actions and single walkthrough video automation (`b66b111`)
+- **showcase:** add interactive HTML video showcase and render MP4 full system walkthrough (`c733caf`)
+
+### Fixed
+
+- **ci:** await refusal persistence in OfflineDraftEditor and use clean build for unsigned iOS (`30f5b84`)
+- **backend:** replace em-dashes in startup warnings with standard hyphens for Windows encoding compatibility (`bcd5a53`)
+- **ui/ux:** make bandwidth controller fully responsive and scrollable, overhaul native apps download workflow with phone QR and setup guides (`daaa610`)
+- **institution:** permit affiliated faculty course authoring, pin fixed sidebars, update v0.1.1 releases & expand README (`8aa7d70`)
+
+### Changed / Maintenance
+
+- remove deprecated windows_launcher and walkthrough mp4 (`0f9780d`)
+- **release:** add 4-platform build validation, SemVer changelog, and unified release pipeline (`b526f95`)
+- **e2e:** add comprehensive 4-dashboard lifecycle audit and fix College model import (`14458a5`)
+- Clarify sprint timeline with exact dates (`3d18c8b`)
+- **readme:** add 24-hr engineering sprint timeline, radical impact metrics & automated release manager (`3d87fc9`)
+
+---
+
 ## [v0.1.2] — 2026-11-05
 
 ### 🛡️ Security, Registration Policy & Cross-Platform CI Hardening

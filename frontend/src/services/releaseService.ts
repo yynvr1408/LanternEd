@@ -45,7 +45,7 @@ export interface UpdateCheckResult {
   is_critical?: boolean
 }
 
-export const APP_CURRENT_VERSION = '0.1.1'
+export const APP_CURRENT_VERSION = '0.1.6'
 
 export const releaseService = {
   getCurrentVersion(): string {
