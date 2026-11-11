@@ -54,7 +54,7 @@ import { useBackgroundBlur } from '../../hooks/useBackgroundBlur'
 import { SummaryViewer } from '../../components/summary/SummaryViewer'
 import { Sheet, Badge, Button, LoadingState, ErrorState } from '../../components/ui'
 import { lanClassroomService } from '../../services/lanClassroomService'
-import type { LanClassroomSession } from '../../services/platformAdapter'
+import { platformAdapter, type LanClassroomSession } from '../../services/platformAdapter'
 
 /**
  * Low-bandwidth-first room config. LiveKit's own defaults are tuned for a general video-call
@@ -444,6 +444,28 @@ const ClassroomStage: React.FC<{
       t_ms: Math.max(0, Date.now() - classStartedAtRef.current),
       msg: message,
     })
+    if (lanClassroomService.isLanModeActive()) {
+      lanClassroomService.broadcast({
+        type: 'whiteboard-sync',
+        senderId: 'teacher',
+        senderName: classroom.teacher_name || 'Teacher',
+        payload: message,
+      })
+    }
+  }, [classroom.teacher_name])
+
+  // Keep device screen awake during live class across Windows, macOS, Android, and iOS
+  useEffect(() => {
+    let sentinel: WakeLockSentinel | null = null
+    let mounted = true
+    platformAdapter.requestWakeLock().then((s) => {
+      if (mounted) sentinel = s
+      else if (s) void platformAdapter.releaseWakeLock(s)
+    })
+    return () => {
+      mounted = false
+      void platformAdapter.releaseWakeLock(sentinel)
+    }
   }, [])
 
   useEffect(() => {
@@ -554,8 +576,9 @@ const ClassroomStage: React.FC<{
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#121A19] text-[#FFFFFF] overflow-hidden">
-      {/* Top Header */}
-      <div className="bg-[#121A19] border-b border-[#202B2A] h-14 px-4 flex items-center justify-between shrink-0">
+      {/* Top Header (safe-top keeps iOS notch & Android status bar clear) */}
+      <div className="bg-[#121A19] border-b border-[#202B2A] safe-top shrink-0">
+      <div className="h-14 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
@@ -619,6 +642,7 @@ const ClassroomStage: React.FC<{
             LIVE
           </Badge>
         </div>
+      </div>
       </div>
 
       {/* Teacher quick HTTPS live note bar (feeds TextFallbackPanel students on 2G/UDP-blocked links) */}

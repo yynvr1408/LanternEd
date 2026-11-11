@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button'
 import { StorageMeter } from '../../components/download/StorageMeter'
 import { Download, RefreshCw } from 'lucide-react'
 import { platformAdapter } from '../../services/platformAdapter'
+import { releaseService } from '../../services/releaseService'
 import { AppDownloadModal } from '../../components/common/AppDownloadModal'
 import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 import { PrivacyControls } from '../../components/profile/PrivacyControls'
@@ -24,6 +25,8 @@ export const StudentProfilePage: React.FC = () => {
   const [isDownloadOpen, setIsDownloadOpen] = useState(false)
   const [isUpdateOpen, setIsUpdateOpen] = useState(false)
   const isNative = platformAdapter.isNative()
+  const currentVersion = releaseService.getCurrentVersion()
+  const uxProfile = platformAdapter.getPlatformUxProfile()
 
   return (
     <PageContainer
@@ -105,22 +108,22 @@ export const StudentProfilePage: React.FC = () => {
               <span>LanternEd Application & Updates</span>
             </div>
             <Badge variant="secondary" size="sm">
-              v0.1.0
+              v{currentVersion} • {uxProfile.label}
             </Badge>
           </CardHeader>
           <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
             <div>
               <p className="font-semibold text-[#202B2A]">
-                {isNative ? 'Native Application Installed' : 'Browser Web Application'}
+                {isNative ? `Native ${uxProfile.label} Installed` : `${uxProfile.label}`}
               </p>
               <p className="text-xs text-[#687775] mt-0.5">
                 {isNative
-                  ? 'Running on hardware-accelerated desktop/mobile shell with offline campus LAN mode.'
-                  : 'Install the native app for offline lesson revision and low-bandwidth live classes.'}
+                  ? `${uxProfile.canDiscoverLan ? 'Campus Wi-Fi LAN discovery, wake lock, and offline sync active.' : 'Offline micro-pack sync and Campus LAN classroom ready.'} Shortcut modifier: ${uxProfile.shortcutModifier}.`
+                  : 'Install the native app for Windows, macOS, Android, or iOS for hardware wake lock and Campus LAN classrooms.'}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isNative ? (
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {isNative && (
                 <Button
                   size="sm"
                   variant="primary"
@@ -129,16 +132,15 @@ export const StudentProfilePage: React.FC = () => {
                 >
                   Check for Updates
                 </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  icon={<Download className="w-3.5 h-3.5" />}
-                  onClick={() => setIsDownloadOpen(true)}
-                >
-                  Download App
-                </Button>
               )}
+              <Button
+                size="sm"
+                variant={isNative ? 'outline' : 'primary'}
+                icon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => setIsDownloadOpen(true)}
+              >
+                {isNative ? 'All Platforms' : 'Download App'}
+              </Button>
             </div>
           </CardContent>
         </Card>

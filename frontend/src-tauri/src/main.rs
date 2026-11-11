@@ -359,6 +359,40 @@ async fn handle_client(
     let _ = stream.write_all(resp.as_bytes()).await;
 }
 
+fn resolve_whisper_command() -> Option<String> {
+    if let Ok(cmd) = std::env::var("LANTERNED_WHISPER_CMD") {
+        let trimmed = cmd.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("whisper-cli"));
+            candidates.push(dir.join("whisper-cli.exe"));
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        candidates.push(std::path::PathBuf::from("/opt/homebrew/bin/whisper-cli"));
+        candidates.push(std::path::PathBuf::from("/usr/local/bin/whisper-cli"));
+        candidates.push(std::path::PathBuf::from("/opt/homebrew/bin/whisper-cpp"));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        candidates.push(std::path::PathBuf::from("C:\\Program Files\\whisper.cpp\\whisper-cli.exe"));
+    }
+
+    for cand in candidates {
+        if cand.is_file() {
+            return Some(cand.to_string_lossy().to_string());
+        }
+    }
+    None
+}
+
 #[tauri::command]
 async fn local_transcribe_audio(
     recording_id: String,
@@ -367,11 +401,11 @@ async fn local_transcribe_audio(
     let byte_count = audio_bytes.len();
     let estimated_duration = ((byte_count / (16 * 1024)) as u32).max(15);
 
-    if let (Ok(cmd), Ok(model)) = (
-        std::env::var("LANTERNED_WHISPER_CMD"),
+    if let (Some(cmd), Ok(model)) = (
+        resolve_whisper_command(),
         std::env::var("LANTERNED_WHISPER_MODEL"),
     ) {
-        if !cmd.trim().is_empty() && !model.trim().is_empty() {
+        if !model.trim().is_empty() {
             let tmp_path = std::env::temp_dir().join(format!("lanterned_{}.wav", recording_id));
             if tokio::fs::write(&tmp_path, &audio_bytes).await.is_ok() {
                 let tmp_str = tmp_path.to_string_lossy().to_string();
@@ -400,7 +434,7 @@ async fn local_transcribe_audio(
 
     Ok(TranscribeResult {
         transcript: format!(
-            "Local Whisper CLI not configured for recording {}. Configure LANTERNED_WHISPER_CMD and LANTERNED_WHISPER_MODEL for offline inference.",
+            "Local Whisper CLI not configured for recording {}. Configure LANTERNED_WHISPER_CMD (or Homebrew whisper-cli) and LANTERNED_WHISPER_MODEL for offline inference.",
             recording_id
         ),
         duration_seconds: estimated_duration,
@@ -574,11 +608,12 @@ async fn get_lan_server_stats(
 
 #[tauri::command]
 fn get_device_metrics() -> DeviceMetrics {
+    let has_gpu_accel = cfg!(target_os = "macos") && std::env::consts::ARCH == "aarch64";
     DeviceMetrics {
         os_name: std::env::consts::OS.to_string(),
         arch: std::env::consts::ARCH.to_string(),
         cpu_cores: num_cpus::get_physical(),
-        has_gpu_acceleration: false,
+        has_gpu_acceleration: has_gpu_accel,
         is_battery_saving: false,
     }
 }
@@ -588,6 +623,34 @@ mod num_cpus {
         std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(4)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn websocket_accept_matches_rfc6455_vector() {
+        // Canonical RFC 6455 Section 1.3 test vector
+        assert_eq!(
+            websocket_accept_key("dGhlIHNhbXBsZSBub25jZQ=="),
+            "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+        );
+    }
+
+    #[test]
+    fn device_metrics_reports_valid_host_info() {
+        let m = get_device_metrics();
+        assert!(!m.os_name.is_empty());
+        assert!(!m.arch.is_empty());
+        assert!(m.cpu_cores >= 1);
+    }
+
+    #[test]
+    fn local_ip_returns_non_empty_addr() {
+        let ip = detect_local_ip();
+        assert!(!ip.is_empty());
     }
 }
 

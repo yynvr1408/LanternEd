@@ -9,6 +9,8 @@ import { TextFallbackPanel } from '../components/class/TextFallbackPanel'
 import { RecordedLecturePlayer } from '../components/recording/RecordedLecturePlayer'
 import { summaryService } from '../services/summaryService'
 import { lanClassroomService } from '../services/lanClassroomService'
+import { platformAdapter } from '../services/platformAdapter'
+import { releaseService } from '../services/releaseService'
 import type { Recording, Summary } from '../types'
 
 describe('Core resilience upgrades', () => {
@@ -19,6 +21,7 @@ describe('Core resilience upgrades', () => {
 
   afterEach(() => {
     delete (window as any).__TAURI__
+    delete (window as any).Capacitor
     vi.restoreAllMocks()
   })
 
@@ -184,5 +187,126 @@ describe('Core resilience upgrades', () => {
 
     await waitFor(() => expect(invoke).toHaveBeenCalledWith('broadcast_lan_message', expect.any(Object)))
     await lanClassroomService.stopSession('cls-lan')
+  })
+
+  it('supports Android and iOS Capacitor LanternNative LAN, discovery, wake lock, speech, and Share Sheet', async () => {
+    const startLanClassroomServer = vi.fn(async (args: any) => ({
+      classId: args.classId,
+      title: args.title,
+      localIp: '10.0.0.15',
+      port: 8443,
+      wsUrl: 'ws://10.0.0.15:8443/lan-room',
+      httpUrl: 'http://10.0.0.15:8443',
+      connectedStudents: 0,
+    }))
+    const registerLanPack = vi.fn(async (args: any) => ({
+      url: `http://10.0.0.15:8443/packs/${args.packId}`,
+    }))
+    const broadcastLanMessage = vi.fn(async () => ({ sent: 2 }))
+    const stopLanClassroomServer = vi.fn(async () => undefined)
+    const discoverLanRooms = vi.fn(async () => ({
+      rooms: [{ name: 'LanternEd-cls', localIp: '10.0.0.15', port: 8443, wsUrl: 'ws://10.0.0.15:8443/lan-room', httpUrl: 'http://10.0.0.15:8443' }],
+    }))
+    const setWakeLock = vi.fn(async () => ({ enabled: true }))
+    const shareContent = vi.fn(async () => ({ shared: true }))
+    const getDeviceMetrics = vi.fn(async () => ({
+      osName: 'ios',
+      osVersion: '18.1',
+      model: 'iPhone',
+      cpuCores: 6,
+      hasGpuAcceleration: true,
+      batteryLevel: 85,
+      isCharging: false,
+      freeStorageMb: 4096,
+      localIp: '10.0.0.15',
+    }))
+
+    ;(window as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'ios',
+      Plugins: {
+        LanternNative: {
+          startLanClassroomServer,
+          registerLanPack,
+          broadcastLanMessage,
+          stopLanClassroomServer,
+          discoverLanRooms,
+          setWakeLock,
+          shareContent,
+          getDeviceMetrics,
+        },
+      },
+    }
+
+    const caps = await platformAdapter.getDeviceCapabilities()
+    expect(caps.isIOS).toBe(true)
+    expect(caps.hasLocalLanServer).toBe(true)
+    expect(caps.batteryLevel).toBe(85)
+    expect(platformAdapter.getPlatformUxProfile('macos').shortcutModifier).toBe('⌘')
+    expect(platformAdapter.getPlatformUxProfile('android').shortcutModifier).toBe('Ctrl')
+
+    const session = await lanClassroomService.startSession('cls-ios', 'Mobile Lab', 'Dr. Rao')
+    expect(session.localIp).toBe('10.0.0.15')
+    expect(await lanClassroomService.discoverRooms()).toHaveLength(1)
+    expect(await lanClassroomService.sharePackOverLan('pack-ios', new Blob(['hello']), 'abc')).toBe(
+      'http://10.0.0.15:8443/packs/pack-ios'
+    )
+
+    await platformAdapter.requestWakeLock()
+    await platformAdapter.releaseWakeLock(null)
+    expect(setWakeLock).toHaveBeenCalledWith({ enabled: true })
+    expect(setWakeLock).toHaveBeenCalledWith({ enabled: false })
+
+    const shared = await platformAdapter.shareArtifact({
+      title: 'Summary',
+      text: 'Notes',
+      fileName: 'notes.txt',
+      contentType: 'text/plain',
+      blob: new Blob(['Notes'], { type: 'text/plain' }),
+    })
+    expect(shared).toBe(true)
+    expect(shareContent).toHaveBeenCalled()
+
+    await lanClassroomService.stopSession('cls-ios')
+    expect(stopLanClassroomServer).toHaveBeenCalled()
+  })
+
+  it('detects updates across all 4 OS targets via GitHub manifest fallback and resolves relative URLs', async () => {
+    ;(window as any).__TAURI__ = { invoke: vi.fn() }
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any) => {
+      const url = String(input)
+      if (url.includes('/api/v1/releases/check-update')) {
+        return new Response(JSON.stringify({ has_update: false, current_version: '0.1.0', latest_version: '0.1.0', platform: 'macos' }), { status: 200 })
+      }
+      if (url.includes('/api/v1/releases/manifest')) {
+        return new Response('unavailable', { status: 503 })
+      }
+      return new Response(
+        JSON.stringify({
+          version: '0.2.0',
+          releaseDate: '2026-11-11T00:00:00Z',
+          releaseNotes: '4-platform native upgrade',
+          platforms: {
+            macos: {
+              version: '0.2.0',
+              fileName: 'LanternEd-0.2.0-universal.dmg',
+              installerType: 'dmg',
+              downloadUrl: '/api/v1/releases/download/macos',
+              fileSizeMb: 7.2,
+              sha256: 'deadbeef',
+              minOsVersion: 'macOS 10.15+',
+              arch: 'Universal',
+            },
+          },
+        }),
+        { status: 200 }
+      )
+    })
+
+    const res = await releaseService.checkForUpdates('0.1.6', 'macos')
+    expect(res.has_update).toBe(true)
+    expect(res.latest_version).toBe('0.2.0')
+    expect(res.download_url).toContain('LanternEd-0.2.0-universal.dmg')
+    expect(fetchSpy).toHaveBeenCalled()
   })
 })

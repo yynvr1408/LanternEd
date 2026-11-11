@@ -392,7 +392,11 @@ def cmd_sync_version(args: argparse.Namespace) -> None:
 
 
 def cmd_verify_versions(args: argparse.Namespace) -> None:
-    clean_ver = args.version.lstrip("v")
+    if args.version:
+        clean_ver = args.version.lstrip("v")
+    else:
+        pkg = json.loads(PKG_JSON_PATH.read_text(encoding="utf-8"))
+        clean_ver = str(pkg["version"]).lstrip("v")
     code = args.version_code or compute_version_code(clean_ver)
     verify_all_versions(clean_ver, code)
     print(f"[OK] Verified all platform configs match version {clean_ver} (build code {code}).")
@@ -1156,6 +1160,17 @@ def cmd_stage_release(args: argparse.Namespace) -> None:
     if MANIFEST_PATH.exists():
         manifest_data["version"] = clean_ver
         manifest_data["releaseDate"] = built_at
+        notes_file = getattr(args, "notes_file", None)
+        if notes_file and Path(notes_file).exists():
+            raw_notes = Path(notes_file).read_text(encoding="utf-8").strip()
+            bullets = [
+                ln.lstrip("- ").strip()
+                for ln in raw_notes.splitlines()
+                if ln.strip().startswith("- ")
+            ]
+            if bullets:
+                summary = "; ".join(bullets[:4])
+                manifest_data["releaseNotes"] = f"LanternED v{clean_ver}: {summary}"
         MANIFEST_PATH.write_text(json.dumps(manifest_data, indent=2) + "\n", encoding="utf-8")
 
     print(f"[OK] Staged {len(checksum_lines)} artifact(s) + SHA256SUMS.txt + release-manifest.json in {output_dir}")
@@ -1183,7 +1198,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_sync.set_defaults(func=cmd_sync_version)
 
     p_ver = sub.add_parser("verify-versions", help="Verify all platform configs match expected version")
-    p_ver.add_argument("--version", required=True)
+    p_ver.add_argument("--version", default="")
     p_ver.add_argument("--version-code", type=int, default=None)
     p_ver.set_defaults(func=cmd_verify_versions)
 
@@ -1202,6 +1217,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_stg.add_argument("--version", required=True)
     p_stg.add_argument("--tag", required=True)
     p_stg.add_argument("--commit", required=True)
+    p_stg.add_argument("--notes-file", default="")
     p_stg.set_defaults(func=cmd_stage_release)
 
     p_inst = sub.add_parser("install-local-releases", help="Copy built installers into releases/<plat>/, update hashes, and keep latest N versions")

@@ -15,6 +15,7 @@ import {
 import { examService, type ExamStartResponse, type QuestionItemStudentView } from '../../services/examService'
 import { ApiError } from '../../services/apiClient'
 import { syncManager } from '../../services/syncManager'
+import { platformAdapter } from '../../services/platformAdapter'
 import { useAuth } from '../../context/AuthContext'
 import { useSync } from '../../context/SyncContext'
 import { Badge, Button, Dialog, LoadingState } from '../../components/ui'
@@ -135,10 +136,15 @@ export const StudentExamRunnerPage: React.FC = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleWindowBlur)
+    let sentinel: WakeLockSentinel | null = null
+    platformAdapter.requestWakeLock().then((s) => {
+      sentinel = s
+    })
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleWindowBlur)
+      void platformAdapter.releaseWakeLock(sentinel)
     }
   }, [isLoading, examData, submittedReceipt])
 

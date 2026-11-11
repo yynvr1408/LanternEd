@@ -72,7 +72,22 @@
 	<string>LanternEd requires camera access to allow teachers and students to participate in live video classrooms.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>LanternEd requires microphone access to enable live voice interaction and on-device lecture recording.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>LanternEd uses Apple on-device speech recognition to transcribe lectures locally without internet bandwidth usage.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>LanternEd requires local network permissions to discover campus Wi-Fi peers for zero-internet classroom streaming.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_lanterned._tcp</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

@@ -22,6 +22,7 @@ import { api } from '../../services/apiClient'
 import { downloadManager } from '../../services/downloadManager'
 import { playbackStore } from '../../services/playbackStore'
 import { syncManager } from '../../services/syncManager'
+import { platformAdapter } from '../../services/platformAdapter'
 import { Whiteboard } from '../class/whiteboard/Whiteboard'
 import { apply, emptyBoard, type Message as WhiteboardMessage } from '../class/whiteboard/protocol'
 import { Button } from '../ui/Button'
@@ -74,6 +75,20 @@ export const RecordedLecturePlayer: React.FC<RecordedLecturePlayerProps> = ({
       active = false
     }
   }, [recording.id, recording.duration_seconds, initialPositionSeconds])
+
+  useEffect(() => {
+    if (!isPlaying) return
+    let sentinel: WakeLockSentinel | null = null
+    let mounted = true
+    platformAdapter.requestWakeLock().then((s) => {
+      if (mounted) sentinel = s
+      else if (s) void platformAdapter.releaseWakeLock(s)
+    })
+    return () => {
+      mounted = false
+      void platformAdapter.releaseWakeLock(sentinel)
+    }
+  }, [isPlaying])
 
   // 1. Resolve media source (check offline IndexedDB blob first)
   useEffect(() => {

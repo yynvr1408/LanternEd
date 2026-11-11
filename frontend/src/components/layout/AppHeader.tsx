@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Wifi, WifiOff, RefreshCw, LogOut, User as UserIcon, Menu } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, LogOut, User as UserIcon, Menu, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useNetworkStatus } from '../../context/NetworkContext'
 import { useSync } from '../../context/SyncContext'
 import { SyncStatusModal } from '../ui/SyncStatusModal'
+import { AppUpdateModal } from '../common/AppUpdateModal'
+import { platformAdapter } from '../../services/platformAdapter'
+import { releaseService } from '../../services/releaseService'
 import { Badge } from '../ui/Badge'
 
 import { Dialog } from '../ui/Dialog'
@@ -22,11 +25,44 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
   const { isOnline, quality } = useNetworkStatus()
   const { pendingCount } = useSync()
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [availableUpdateVer, setAvailableUpdateVer] = useState<string | null>(null)
   const [showLogoutWarning, setShowLogoutWarning] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [unsavedDrafts, setUnsavedDrafts] = useState<string[]>([])
   const navigate = useNavigate()
   const location = useLocation()
+
+  useEffect(() => {
+    if (!platformAdapter.isNative() || !isOnline) return
+    try {
+      if (localStorage.getItem('lanterned_auto_update_check') === 'false') return
+      const cached = sessionStorage.getItem('lanterned_available_update_ver')
+      if (cached !== null) {
+        if (cached) setAvailableUpdateVer(cached)
+        return
+      }
+    } catch {
+      // storage blocked
+    }
+    let active = true
+    releaseService
+      .checkForUpdates()
+      .then((res) => {
+        if (!active) return
+        const nextVer = res.has_update ? res.latest_version : ''
+        if (nextVer) setAvailableUpdateVer(nextVer)
+        try {
+          sessionStorage.setItem('lanterned_available_update_ver', nextVer)
+        } catch {
+          // ignore
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [isOnline])
 
   const isInstitutionRoute = location.pathname.startsWith('/institution')
   const displayedRole = isInstitutionRoute
@@ -69,7 +105,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
 
   return (
     <>
-      <header className="shrink-0 z-30 bg-[#FFFFFF] border-b border-[#E1E8E4] h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between shadow-[0_1px_2px_rgba(32,43,42,0.03)]">
+      <div className="shrink-0 z-30 bg-[#FFFFFF] border-b border-[#E1E8E4] safe-top shadow-[0_1px_2px_rgba(32,43,42,0.03)]">
+      <header className="h-14 sm:h-16 px-4 sm:px-6 flex items-center justify-between">
         {/* Left: Menu toggle (mobile teacher) + Brand */}
         <div className="flex items-center gap-3">
           {onToggleMobileMenu && (
@@ -126,6 +163,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
               {isOnline ? (quality === 'poor' ? 'Low Bandwidth' : 'Online') : 'Offline'}
             </span>
           </div>
+
+          {availableUpdateVer && (
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#DDF3EA] text-[#0F5B57] border border-[#0F5B57]/30 hover:bg-[#CBEBD9] transition-colors cursor-pointer"
+              title={`Update to LanternED v${availableUpdateVer}`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Update v{availableUpdateVer}</span>
+            </button>
+          )}
 
           {/* Sync Queue Trigger */}
           <button
@@ -186,10 +235,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleMobileMenu }) => {
           )}
         </div>
       </header>
+      </div>
 
       <SyncStatusModal
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
+      />
+
+      <AppUpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
       />
 
       {/* Sign-out confirmation */}

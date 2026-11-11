@@ -101,11 +101,11 @@
 
 /* Safe area insets for mobile devices */
 .safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .safe-top {
-  padding-top: env(safe-area-inset-top, 16px);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Clean calm scrollbars matching Knowledge Teal warm surfaces */

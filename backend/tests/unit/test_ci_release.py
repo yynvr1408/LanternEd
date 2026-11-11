@@ -245,3 +245,63 @@ def test_select_releases_to_prune_keeps_latest_two_and_preserves_tag():
     kept2, to_delete2 = mod.select_releases_to_prune(releases, keep=2, preserve_tag="v0.2.0-draft")
     assert kept2 == ["v0.2.0-draft", "v0.1.6"]
     assert to_delete2 == ["v0.1.5", "v0.1.4", "v0.1.1"]
+
+
+def test_stage_release_updates_manifest_notes_and_verify_versions_defaults(tmp_path, monkeypatch):
+    mod = _load_module()
+
+    rel_files = [
+        "releases/manifest.json",
+        "releases/windows/release.json",
+        "frontend/package.json",
+        "frontend/src-tauri/tauri.conf.json",
+        "frontend/src-tauri/Cargo.toml",
+        "frontend/android/app/build.gradle",
+        "frontend/ios/App/App.xcodeproj/project.pbxproj",
+        "frontend/src/services/releaseService.ts",
+    ]
+    for rf in rel_files:
+        src = ROOT_DIR / rf
+        if src.exists():
+            dst = tmp_path / rf
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+
+    monkeypatch.setattr(mod, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(mod, "FRONTEND_DIR", tmp_path / "frontend")
+    monkeypatch.setattr(mod, "RELEASES_DIR", tmp_path / "releases")
+    monkeypatch.setattr(mod, "MANIFEST_PATH", tmp_path / "releases" / "manifest.json")
+    monkeypatch.setattr(mod, "PKG_JSON_PATH", tmp_path / "frontend" / "package.json")
+    monkeypatch.setattr(mod, "PKG_LOCK_PATH", tmp_path / "frontend" / "package-lock.json")
+    monkeypatch.setattr(mod, "TAURI_CONF_PATH", tmp_path / "frontend" / "src-tauri" / "tauri.conf.json")
+    monkeypatch.setattr(mod, "CARGO_TOML_PATH", tmp_path / "frontend" / "src-tauri" / "Cargo.toml")
+    monkeypatch.setattr(mod, "ANDROID_GRADLE_PATH", tmp_path / "frontend" / "android" / "app" / "build.gradle")
+    monkeypatch.setattr(mod, "IOS_PBXPROJ_PATH", tmp_path / "frontend" / "ios" / "App" / "App.xcodeproj" / "project.pbxproj")
+    monkeypatch.setattr(mod, "RELEASE_SERVICE_PATH", tmp_path / "frontend" / "src" / "services" / "releaseService.ts")
+
+    mod.sync_all_versions("0.3.0", 300)
+    import argparse
+
+    # Empty --version defaults cleanly to frontend/package.json version
+    mod.cmd_verify_versions(argparse.Namespace(version="", version_code=None))
+
+    in_dir = tmp_path / "dl"
+    pdir = in_dir / "platform-android"
+    pdir.mkdir(parents=True, exist_ok=True)
+    (pdir / "app-release.apk").write_bytes(b"apk-bytes")
+    notes_file = tmp_path / "notes.md"
+    notes_file.write_text("### Added\n\n- **mobile:** Android & iOS native LAN bridge (`abc1234`)\n", encoding="utf-8")
+
+    mod.cmd_stage_release(
+        argparse.Namespace(
+            input_dir=str(in_dir),
+            output_dir=str(tmp_path / "staged"),
+            version="0.3.0",
+            tag="v0.3.0",
+            commit="abc1234",
+            notes_file=str(notes_file),
+        )
+    )
+    updated_man = json.loads((tmp_path / "releases" / "manifest.json").read_text(encoding="utf-8"))
+    assert updated_man["version"] == "0.3.0"
+    assert "Android & iOS native LAN bridge" in updated_man["releaseNotes"]

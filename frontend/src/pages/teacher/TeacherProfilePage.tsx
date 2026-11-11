@@ -3,6 +3,7 @@ import { User, Mail, Shield, LogOut, CheckCircle2, Download, RefreshCw } from 'l
 import { useAuth } from '../../context/AuthContext'
 import { useNetworkStatus } from '../../context/NetworkContext'
 import { platformAdapter } from '../../services/platformAdapter'
+import { releaseService } from '../../services/releaseService'
 import { AppDownloadModal } from '../../components/common/AppDownloadModal'
 import { AppUpdateModal } from '../../components/common/AppUpdateModal'
 import { PrivacyControls } from '../../components/profile/PrivacyControls'
@@ -17,6 +18,8 @@ export const TeacherProfilePage: React.FC = () => {
   const { user, logout } = useAuth()
   const { isOnline, quality, latencyMs } = useNetworkStatus()
   const isNative = platformAdapter.isNative()
+  const currentVersion = releaseService.getCurrentVersion()
+  const uxProfile = platformAdapter.getPlatformUxProfile()
   const [isDownloadOpen, setIsDownloadOpen] = useState(false)
   const [isUpdateOpen, setIsUpdateOpen] = useState(false)
 
@@ -103,22 +106,22 @@ export const TeacherProfilePage: React.FC = () => {
               <span>LanternEd Instructor Desktop & Mobile Apps</span>
             </div>
             <Badge variant="secondary" size="sm">
-              v0.1.0
+              v{currentVersion} • {uxProfile.label}
             </Badge>
           </CardHeader>
           <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
             <div>
               <p className="font-semibold text-[#202B2A]">
-                {isNative ? 'Native Application Installed' : 'Browser Web Application'}
+                {isNative ? `Native ${uxProfile.label} Installed` : uxProfile.label}
               </p>
               <p className="text-xs text-[#687775] mt-0.5">
                 {isNative
-                  ? 'Running on high-performance native desktop/mobile client. Live lecture capture with hardware acceleration.'
-                  : 'Install the native app for offline lesson preparation, direct WebRTC streaming, and instant notifications.'}
+                  ? 'Campus LAN Classroom Hub hosting, micro-pack distribution, and local transcription enabled across Windows, macOS, Android, and iOS.'
+                  : 'Install the native desktop or mobile app for zero-internet Campus LAN classroom hosting and direct updates.'}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {isNative ? (
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {isNative && (
                 <Button
                   size="sm"
                   variant="primary"
@@ -127,16 +130,15 @@ export const TeacherProfilePage: React.FC = () => {
                 >
                   Check for Updates
                 </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  icon={<Download className="w-3.5 h-3.5" />}
-                  onClick={() => setIsDownloadOpen(true)}
-                >
-                  Download App
-                </Button>
               )}
+              <Button
+                size="sm"
+                variant={isNative ? 'outline' : 'primary'}
+                icon={<Download className="w-3.5 h-3.5" />}
+                onClick={() => setIsDownloadOpen(true)}
+              >
+                {isNative ? 'All Platforms' : 'Download App'}
+              </Button>
             </div>
           </CardContent>
         </Card>

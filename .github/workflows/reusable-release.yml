@@ -226,6 +226,11 @@ jobs:
         with:
           workspaces: frontend/src-tauri
 
+      - name: Run Windows Tauri Rust unit tests
+        if: matrix.target.platform == 'windows'
+        working-directory: frontend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Build Windows desktop installer (Tauri v2)
         if: matrix.target.platform == 'windows'
         working-directory: frontend
@@ -264,6 +269,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri
+
+      - name: Run macOS Tauri Rust unit tests
+        if: matrix.target.platform == 'macos'
+        working-directory: frontend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Build macOS desktop bundle (Tauri v2 Universal)
         if: matrix.target.platform == 'macos'
@@ -344,6 +354,7 @@ jobs:
 
           cd android
           chmod +x ./gradlew
+          ./gradlew testDebugUnitTest --stacktrace
           ./gradlew assembleRelease bundleRelease --stacktrace
 
           mkdir -p "$GITHUB_WORKSPACE/staged/android"
@@ -498,7 +509,8 @@ jobs:
             --output-dir release-staging \
             --version "$VERSION" \
             --tag "$TAG" \
-            --commit "$SOURCE_SHA"
+            --commit "$SOURCE_SHA" \
+            --notes-file release-notes.md
 
           KEEP_N="${{ inputs.keep_releases || '2' }}"
           python scripts/ci_release.py install-local-releases \
@@ -551,13 +563,69 @@ jobs:
             git push origin "refs/tags/${TAG}"
           fi
 
-      - name: Publish unified 4-platform release to yynvr1408/LanternEd-App-Releases (keep latest 2)
+      - name: Publish unified 4-platform release to GitHub Releases (${{ github.repository }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          KEEP_N="${{ inputs.keep_releases || '2' }}"
+
+          DRAFT_BOOL="false"
+          if [ "${{ inputs.draft }}" = "true" ]; then
+            DRAFT_BOOL="true"
+          fi
+          PRE_BOOL="false"
+          if [ "${{ inputs.prerelease }}" = "true" ] || [ "${{ needs.prepare.outputs.is_prerelease }}" = "true" ]; then
+            PRE_BOOL="true"
+          fi
+
+          STAGE_TEMP="$RUNNER_TEMP/gh-source-release"
+          rm -rf "$STAGE_TEMP"
+          mkdir -p "$STAGE_TEMP"
+          cp release-staging/* "$STAGE_TEMP/"
+          cp release-notes.md "$STAGE_TEMP/release-notes.md"
+
+          cd "$STAGE_TEMP"
+          ASSET_FILES=()
+          for f in *; do
+            if [ "$f" != "release-notes.md" ]; then
+              ASSET_FILES+=("$f")
+            fi
+          done
+
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --repo "${{ github.repository }}" \
+              --title "LanternED v${VERSION}" \
+              --notes-file release-notes.md \
+              --draft="$DRAFT_BOOL" \
+              --prerelease="$PRE_BOOL"
+            gh release upload "$TAG" "${ASSET_FILES[@]}" \
+              --repo "${{ github.repository }}" \
+              --clobber
+          else
+            gh release create "$TAG" "${ASSET_FILES[@]}" \
+              --repo "${{ github.repository }}" \
+              --title "LanternED v${VERSION}" \
+              --notes-file release-notes.md \
+              --draft="$DRAFT_BOOL" \
+              --prerelease="$PRE_BOOL"
+          fi
+
+          cd "$GITHUB_WORKSPACE"
+          python scripts/ci_release.py prune-github-releases \
+            --repo "${{ github.repository }}" \
+            --keep "$KEEP_N" \
+            --preserve-tag "$TAG" || true
+
+      - name: Mirror unified 4-platform release to yynvr1408/LanternEd-App-Releases (keep latest 2)
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.APP_RELEASES_TOKEN }}
         run: |
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::RELEASES_TOKEN secret is not configured. Add a fine-grained PAT with Contents Read & Write scoped to yynvr1408/LanternEd-App-Releases."
-            exit 1
+            echo "::notice::RELEASES_TOKEN secret not configured; skipped external mirror to yynvr1408/LanternEd-App-Releases (source GitHub Release and local releases/ were updated)."
+            exit 0
           fi
 
           TAG="${{ needs.prepare.outputs.tag }}"

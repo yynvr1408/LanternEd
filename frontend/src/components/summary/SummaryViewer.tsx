@@ -12,6 +12,7 @@ import {
   Layers,
   Volume2,
   StopCircle,
+  Share2,
 } from 'lucide-react'
 import type { Summary } from '../../types'
 import { Badge } from '../ui/Badge'
@@ -22,6 +23,7 @@ import { Flashcards, OfflineQuiz } from './Flashcards'
 import { useReadAloud } from '../../hooks/useReadAloud'
 import { exportSummary, buildSummaryBlocks } from '../../utils/summaryExport'
 import { downloadManager } from '../../services/downloadManager'
+import { platformAdapter } from '../../services/platformAdapter'
 import type { SummaryQuizQuestion } from '../../types'
 
 export interface SummaryViewerProps {
@@ -112,6 +114,19 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
     setExporting(false)
   }
 
+  const handleNativeShare = async () => {
+    const blocks = buildSummaryBlocks(summary)
+    const text = blocks.map((b) => (b.kind === 'bullet' ? `- ${b.text}` : b.text)).join('\n')
+    const blob = new Blob([text], { type: 'text/plain' })
+    await platformAdapter.shareArtifact({
+      title: 'LanternED Lecture Summary',
+      text: summary.overview || text.slice(0, 300),
+      fileName: `lanterned-summary-${summary.class_id}.txt`,
+      contentType: 'text/plain',
+      blob,
+    })
+  }
+
   return (
     <div className={`flex flex-col gap-4 ${isCompact ? 'text-xs' : 'text-sm'}`}>
       {/* Header bar */}
@@ -185,6 +200,14 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
             icon={<Download className="w-3.5 h-3.5" />}
           >
             Download Notes
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void handleNativeShare()}
+            icon={<Share2 className="w-3.5 h-3.5" />}
+          >
+            Share Note
           </Button>
 
           {isTeacher && onReview && (

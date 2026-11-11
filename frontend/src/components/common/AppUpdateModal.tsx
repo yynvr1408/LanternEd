@@ -22,7 +22,13 @@ const AUTO_UPDATE_KEY = 'lanterned_auto_update_check'
 export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose }) => {
   const currentVersion = releaseService.getCurrentVersion()
   const os = platformAdapter.getOperatingSystem()
+  const uxProfile = platformAdapter.getPlatformUxProfile(os)
   const isNative = platformAdapter.isNative()
+  const targetPlat = (['windows', 'macos', 'android', 'ios'].includes(os) ? os : 'windows') as
+    | 'windows'
+    | 'macos'
+    | 'android'
+    | 'ios'
 
   const [isChecking, setIsChecking] = useState(false)
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null)
@@ -99,7 +105,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
                 </span>
               </div>
               <p className="text-[#687775]">
-                Target Platform: <strong className="capitalize text-[#202B2A]">{os}</strong> (
+                Target App: <strong className="text-[#202B2A]">{uxProfile.label}</strong> (
                 {isNative ? 'Native Client Shell' : 'Progressive Web App'})
               </p>
             </div>
@@ -158,12 +164,28 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
                 </div>
               )}
 
+              <p className="text-[11px] text-[#687775] leading-relaxed">
+                {uxProfile.updateChannelNote}
+              </p>
+
+              {updateResult.sha256 && (
+                <p className="text-[10px] font-mono text-[#687775] break-all">
+                  SHA-256: {updateResult.sha256}
+                </p>
+              )}
+
               <div className="flex items-center justify-between pt-1">
                 <span className="text-[#687775]">
                   Size: {updateResult.file_size_mb ? `${updateResult.file_size_mb} MB` : 'Latest installer package'}
                 </span>
                 <a
-                  href={updateResult.download_url || releaseService.getDownloadUrl(os as any)}
+                  href={releaseService.resolveDownloadUrl(
+                    updateResult.download_url,
+                    targetPlat,
+                    updateResult.latest_version
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0F5B57] hover:bg-[#123B39] text-white font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />

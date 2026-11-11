@@ -6,7 +6,7 @@
  * live captions, and cached lesson packs stream across local network sockets without cloud egress.
  */
 
-import { platformAdapter, type LanClassroomSession } from './platformAdapter'
+import { platformAdapter, type LanClassroomSession, type LanDiscoveredRoom } from './platformAdapter'
 
 export interface LanPeerMessage {
   type: 'whiteboard-sync' | 'chat-msg' | 'roster-ping' | 'audio-status' | 'caption-chunk'
@@ -122,6 +122,14 @@ class LanClassroomManager {
     } else if (this.activeSession?.isRunning) {
       void platformAdapter.broadcastLanMessage(serialized)
     }
+  }
+
+  async discoverRooms(timeoutMs = 2200): Promise<LanDiscoveredRoom[]> {
+    return platformAdapter.discoverLanRooms(timeoutMs)
+  }
+
+  getConnectedRoomUrl(): string | null {
+    return this.socket ? this.socket.url : null
   }
 
   onMessage(callback: (msg: LanPeerMessage) => void): () => void {

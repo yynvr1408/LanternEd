@@ -82,7 +82,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       minOs: winInfo?.minOsVersion || 'Windows 10 / 11 (64-bit)',
       arch: winInfo?.arch || 'x64 (DirectML Hardware Accelerated)',
       sha256: winInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
-      releaseDownloadUrl: releaseService.getDownloadUrl('windows'),
+      releaseDownloadUrl: releaseService.resolveDownloadUrl(winInfo?.downloadUrl, 'windows', activeVersion),
       rawDownloadUrl: releaseService.getRawDownloadUrl('windows'),
       steps: [
         { title: 'Download Setup Executable', desc: `Click Download to receive ${winInfo?.fileName || `LanternEd-Setup-${activeVersion}.exe`}.` },
@@ -105,7 +105,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       minOs: macInfo?.minOsVersion || 'macOS 10.15+ (Catalina through Sequoia)',
       arch: macInfo?.arch || 'Universal Binary (Apple Silicon M1/M2/M3 & Intel)',
       sha256: macInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
-      releaseDownloadUrl: releaseService.getDownloadUrl('macos'),
+      releaseDownloadUrl: releaseService.resolveDownloadUrl(macInfo?.downloadUrl, 'macos', activeVersion),
       rawDownloadUrl: releaseService.getRawDownloadUrl('macos'),
       steps: [
         { title: 'Download Universal DMG', desc: `Get ${macInfo?.fileName || `LanternEd-${activeVersion}-universal.dmg`}.` },
@@ -113,10 +113,10 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
         { title: 'Hardware-Accelerated Metal Run', desc: 'Native Apple Silicon & Intel support with microphone & camera entitlements.' },
       ],
       features: [
-        'Native Apple Silicon & Metal hardware acceleration for low battery usage',
-        'Campus LAN zero-internet classroom streaming on school Wi-Fi',
-        'Background offline sync of course resources and lecture recordings',
-        'Secure App Sandbox with camera and microphone entitlements',
+        'Local Whisper speech-to-text (Homebrew / bundled whisper-cli) with Apple Silicon Metal metrics',
+        'Zero-internet Campus LAN classroom host + micro-pack HTTP relay over school Wi-Fi',
+        'Background offline sync of course resources, exams, and lecture recordings',
+        'Secure macOS App Sandbox with camera, microphone, speech, and Bonjour entitlements',
       ],
     },
     android: {
@@ -128,7 +128,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       minOs: andInfo?.minOsVersion || 'Android 8.0+ (Oreo through Android 15)',
       arch: andInfo?.arch || 'Universal ARM (arm64-v8a, armeabi-v7a)',
       sha256: andInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
-      releaseDownloadUrl: releaseService.getDownloadUrl('android'),
+      releaseDownloadUrl: releaseService.resolveDownloadUrl(andInfo?.downloadUrl, 'android', activeVersion),
       rawDownloadUrl: releaseService.getRawDownloadUrl('android'),
       steps: [
         { title: 'Download APK Package', desc: `Tap Download Installer (${andInfo?.fileName || `LanternEd-v${activeVersion}.apk`}) or scan the QR code.` },
@@ -136,10 +136,10 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
         { title: 'Install & Learn Offline', desc: 'Tap Install; launch LanternEd for cellular data saving & offline sync.' },
       ],
       features: [
-        'Cellular data saving with automatic audio-only stream fallback (94% data savings)',
-        'Offline video and interactive lesson playback with zero buffering',
-        'Local Wi-Fi peer discovery for connected classroom sessions',
-        'Low battery drain with Android background sync integration',
+        'Android NSD Wi-Fi peer room discovery & zero-internet Campus LAN classroom hosting',
+        'Audio + Whiteboard micro-pack offline downloads with resilient exam draft sync',
+        'Native screen wake-lock during live classes, proctored exams, and lecture replay',
+        'Android FileProvider Share Sheet export for lecture notes and summaries',
       ],
     },
     ios: {
@@ -151,7 +151,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       minOs: iosInfo?.minOsVersion || 'iOS 14.0+ (iPhone & iPad)',
       arch: iosInfo?.arch || '64-bit ARM (arm64)',
       sha256: iosInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
-      releaseDownloadUrl: releaseService.getDownloadUrl('ios'),
+      releaseDownloadUrl: releaseService.resolveDownloadUrl(iosInfo?.downloadUrl, 'ios', activeVersion),
       rawDownloadUrl: releaseService.getRawDownloadUrl('ios'),
       steps: [
         { title: 'Download IPA Package', desc: `Download ${iosInfo?.fileName || `LanternEd-v${activeVersion}.ipa`}.` },
@@ -159,10 +159,10 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
         { title: 'Optimized for iPad & iPhone', desc: 'Responsive Split View and background audio streaming out-of-the-box.' },
       ],
       features: [
-        'Optimized for iPhone notch, Dynamic Island, and iPad Split View',
-        'Adaptive low-bitrate audio streaming for high packet-loss networks',
-        'Downloadable lesson packs for completely offline revision',
-        'Local campus network discovery with Apple Bonjour / mDNS',
+        'Optimized for iPhone notch, Dynamic Island, safe areas, and iPad Share Sheet',
+        'Apple Network/Bonjour (_lanterned._tcp) Campus LAN room hosting & discovery',
+        'On-device SFSpeechRecognizer support, background audio playback, and wake lock',
+        'Micro-pack offline downloads and resilient offline exam synchronization',
       ],
     },
   }

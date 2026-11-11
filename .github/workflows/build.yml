@@ -20,16 +20,21 @@ env:
   PUBLISH_DISABLED: "true"
 
 jobs:
-  # Stage 1: Build and test the core web bundle once into dist/
+  # Stage 1: Verify 4-app SemVer parity, test & build core web bundle once into dist/
   web-build:
     name: Stage 1 - Web Build & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify SemVer parity across Windows, macOS, Android, iOS & Manifest
+        run: python scripts/ci_release.py verify-versions
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,21 +44,27 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install web dependencies
+        working-directory: frontend
         run: npm ci
 
       - name: Lint web codebase
+        working-directory: frontend
         run: npx oxlint
 
       - name: Typecheck TypeScript
+        working-directory: frontend
         run: npx tsc -b
 
       - name: Run web unit tests
+        working-directory: frontend
         run: npx vitest run
 
       - name: Build production web dist bundle
+        working-directory: frontend
         run: npx vite build
 
       - name: Verify dist output
+        working-directory: frontend
         run: test -f dist/index.html
 
       - name: Upload web-dist artifact
@@ -64,7 +75,7 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  # Stage 2: Validate all 4 platform wrappers against the exact same web-dist artifact (no publish)
+  # Stage 2: Test & validate all 4 native wrappers against the exact same web-dist artifact (no publish)
   validate-platforms:
     name: Stage 2 - ${{ matrix.label }}
     needs: web-build
@@ -112,7 +123,7 @@ jobs:
       - name: Verify downloaded web-dist bundle
         run: test -f dist/index.html
 
-      # --- Windows (Tauri v2, --no-sign, no publish) ---
+      # --- Windows (Tauri v2, Rust tests + --no-sign build) ---
       - name: Setup Rust toolchain (Windows)
         if: matrix.platform == 'windows'
         uses: dtolnay/rust-toolchain@stable
@@ -123,6 +134,10 @@ jobs:
         with:
           workspaces: frontend/src-tauri
 
+      - name: Run Windows Tauri Rust unit tests
+        if: matrix.platform == 'windows'
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Package Windows desktop app (no publish)
         if: matrix.platform == 'windows'
         run: |
@@ -131,8 +146,12 @@ jobs:
             --target x86_64-pc-windows-msvc \
             --bundles nsis,msi \
             --no-sign
+          mkdir -p "$GITHUB_WORKSPACE/staged/windows"
+          find src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -maxdepth 1 -type f -name "*.exe" -exec cp {} "$GITHUB_WORKSPACE/staged/windows/" \;
+          find src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi -maxdepth 1 -type f -name "*.msi" -exec cp {} "$GITHUB_WORKSPACE/staged/windows/" \; || true
+          ls -lh "$GITHUB_WORKSPACE/staged/windows"
 
-      # --- macOS (Tauri v2 Universal, --no-sign, no publish) ---
+      # --- macOS (Tauri v2 Universal, Rust tests + --no-sign build) ---
       - name: Setup Rust toolchain (macOS)
         if: matrix.platform == 'macos'
         uses: dtolnay/rust-toolchain@stable
@@ -145,6 +164,10 @@ jobs:
         with:
           workspaces: frontend/src-tauri
 
+      - name: Run macOS Tauri Rust unit tests
+        if: matrix.platform == 'macos'
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Package macOS desktop app (no publish)
         if: matrix.platform == 'macos'
         run: |
@@ -153,8 +176,15 @@ jobs:
             --target universal-apple-darwin \
             --bundles dmg,app \
             --no-sign
+          mkdir -p "$GITHUB_WORKSPACE/staged/macos"
+          find src-tauri/target/universal-apple-darwin/release/bundle/dmg -maxdepth 1 -type f -name "*.dmg" -exec cp {} "$GITHUB_WORKSPACE/staged/macos/" \;
+          APP_BUNDLE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -maxdepth 1 -type d -name "*.app" | head -n 1 || true)
+          if [ -n "$APP_BUNDLE" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$GITHUB_WORKSPACE/staged/macos/LanternEd-macos-universal.app.zip"
+          fi
+          ls -lh "$GITHUB_WORKSPACE/staged/macos"
 
-      # --- Android (Capacitor v8 + Gradle, debug fallback signing, no publish) ---
+      # --- Android (Capacitor v8 + JUnit unit tests + Gradle APK/AAB) ---
       - name: Setup Java 21 (Android)
         if: matrix.platform == 'android'
         uses: actions/setup-java@v4
@@ -178,15 +208,22 @@ jobs:
             keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Sync web-dist & build Android APK/AAB (no publish)
+      - name: Sync web-dist, run Android native JUnit tests & build APK/AAB (no publish)
         if: matrix.platform == 'android'
         run: |
           npx cap sync android
           cd android
           chmod +x ./gradlew
+          ./gradlew testDebugUnitTest --stacktrace
           ./gradlew assembleRelease bundleRelease --stacktrace
+          mkdir -p "$GITHUB_WORKSPACE/staged/android"
+          APK_FILE=$(find app/build/outputs/apk -type f -name "*.apk" | head -n 1 || true)
+          AAB_FILE=$(find app/build/outputs/bundle -type f -name "*.aab" | head -n 1 || true)
+          if [ -n "$APK_FILE" ]; then cp "$APK_FILE" "$GITHUB_WORKSPACE/staged/android/"; fi
+          if [ -n "$AAB_FILE" ]; then cp "$AAB_FILE" "$GITHUB_WORKSPACE/staged/android/"; fi
+          ls -lh "$GITHUB_WORKSPACE/staged/android"
 
-      # --- iOS (Capacitor v8 + Xcode SPM, unsigned build, no publish) ---
+      # --- iOS (Capacitor v8 + Xcode Swift native plugin + SPM, unsigned build, no publish) ---
       - name: Sync web-dist & build unsigned iOS app (no publish)
         if: matrix.platform == 'ios'
         run: |
@@ -203,3 +240,15 @@ jobs:
               CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
               SYMROOT="$(pwd)/build" clean build
           fi
+          mkdir -p "$GITHUB_WORKSPACE/staged/ios" build/Release-iphoneos/Payload
+          cp -R build/Release-iphoneos/App.app build/Release-iphoneos/Payload/
+          (cd build/Release-iphoneos && zip -qry "$GITHUB_WORKSPACE/staged/ios/LanternEd-ios-unsigned.ipa" Payload)
+          ls -lh "$GITHUB_WORKSPACE/staged/ios"
+
+      - name: Upload validated native installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-${{ matrix.platform }}
+          path: staged/${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 3
