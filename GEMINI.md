@@ -42,14 +42,14 @@ Offline-first, low-bandwidth LMS, live classroom, and proctored examination plat
 ## Offline-First, Sync & Bandwidth Architecture
 
 - **Workbox PWA** (`frontend/vite.config.ts`): Precaches static shell assets only. `navigateFallbackDenylist` blocks `/api/`, `/health`, `/ready`, `/docs`, `/openapi.json` — API payloads are never cached in the service worker.
-- **IndexedDB (`LanternEDDB` v4, `frontend/src/db/db.ts`)**: 10 tables (`downloadedResources`, `downloadedRecordings`, `downloadedSummaries`, `downloadJobs`, `downloadParts`, `playbackPositions`, `cachedLessonMetadata`, `cachedSummaries`, `assignmentDrafts`, `syncOperations`).
+- **IndexedDB (`LanternEDDB` v5, `frontend/src/db/db.ts`)**: 11 tables (`downloadedResources`, `downloadedRecordings`, `downloadedSummaries`, `downloadJobs`, `downloadParts`, `playbackPositions`, `cachedLessonMetadata`, `cachedSummaries`, `assignmentDrafts`, `examDrafts`, `syncOperations`).
   - `db.claimDataOwner(userId)` wipes all cached data and downloads if a different account logs into the same browser profile.
-  - `AuthContext.logout` always clears `assignmentDrafts` + `syncOperations`, and clears downloads/caches when `isSharedDevice` (`lanterned_shared_device`) is enabled.
+  - `AuthContext.logout` always clears `assignmentDrafts`, `examDrafts`, and `syncOperations`, and clears downloads/caches when `isSharedDevice` (`lanterned_shared_device`) is enabled.
 - **Resumable Verified Downloads** (`frontend/src/services/downloadEngine.ts`): Fetches byte-range chunks into `downloadParts` and validates byte count + SHA-256 checksum before marking completed.
 - **Idempotent Sync** (`frontend/src/services/syncManager.ts` -> `POST /api/v1/sync/operations` -> `backend/app/services/synchronization_service.py`):
   - Enforces DB uniqueness on `(user_id, operation_id)` (`uq_user_operation`).
   - Stores canonical `payload_hash`; reusing an `operation_id` with a different payload returns `conflict` (`OPERATION_ID_REUSED`).
-  - Commits side effect + `SyncOperation` record atomically in one transaction.
+  - Commits side effect + `SyncOperation` record atomically in one transaction (`assignment_submission`, `exam_submit` with offline proctoring telemetry & grace window, and `recording_progress`).
   - Supports `offline_submission_grace_hours` (default 24h) using `min(client_updated_at, utcnow())`.
 - **Bandwidth Simulation**: `NetworkContext.tsx` + `NetworkBandwidthController.tsx` drives `window.__LANTERNED_SIMULATED_KBPS__` (`0` fails fast with offline `ApiError`; `1..300` adds simulated latency in `apiClient.ts`).
 
@@ -74,7 +74,7 @@ Offline-first, low-bandwidth LMS, live classroom, and proctored examination plat
 
 ## Known Implementation Boundaries & Test Gotchas
 
-- **Native Tauri / LAN Commands Are Stubs**: `frontend/src-tauri/src/main.rs` commands (`local_transcribe_audio`, `start_lan_classroom_server`, `stop_lan_classroom_server`, `get_device_metrics`) and `lanClassroomService.ts` currently return placeholder responses (e.g., hardcoded `192.168.1.100`, static transcript text) rather than running `whisper-rs` or a live LAN WebSocket server.
+- **Native Tauri / LAN Capabilities**: `frontend/src-tauri/src/main.rs` embeds a real `tokio` RFC-6455 WebSocket + HTTP pack relay server (`start_lan_classroom_server`, `broadcast_lan_message`, `register_lan_pack`, `get_lan_server_stats`) bound to the host's detected LAN IP, while `local_transcribe_audio` invokes `LANTERNED_WHISPER_CMD`/`LANTERNED_WHISPER_MODEL` when configured (reporting explicit `isStub: true` otherwise). `get_device_metrics` still defaults `has_gpu_acceleration=false`.
 - **Test Isolation (`backend/tests/conftest.py`)**: Before importing `app.*`, `conftest.py` forces `APP_ENV=test`, temp SQLite DB (unless `TEST_DATABASE_URL` is set), `STORAGE_BACKEND=local`, `FRONTEND_ORIGIN=http://localhost:5173`, disables college/OTP registration gates, and sets empty strings `""` for all third-party API keys so a local `backend/.env` cannot leak real credentials into tests.
 - **Single-Table Receipt Hash**: `exam_service.submit_exam_attempt` computes and returns `receipt_hash` in `ExamSubmitResponse`; `ExamAttempt` itself does not have a `receipt_hash` column.
 - **Wrapper Version Drift in Docs**: `frontend/package.json` uses `@capacitor/*` `^8.6.0` (some older comments/docs still say Capacitor 6).

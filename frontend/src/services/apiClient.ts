@@ -371,6 +371,7 @@ function mapRecording(r: Raw, courses: CourseIndex): Recording {
     user_progress_seconds: r.progress_seconds ?? 0,
     user_completed: Boolean(r.completed),
     transcript: r.transcript ?? undefined,
+    whiteboard_timeline: Array.isArray(r.whiteboard_timeline) ? r.whiteboard_timeline : undefined,
     error_message: r.error_message ?? undefined,
   }
 }
@@ -378,7 +379,10 @@ function mapRecording(r: Raw, courses: CourseIndex): Recording {
 function mapSummary(s: Raw, courseId = ''): Summary {
   const c = s.content_json || {}
   // The backend stores definitions as plain strings ("Term: meaning"); the viewer wants term/definition pairs.
-  const definitions = (c.definitions || []).map((d: string) => {
+  const definitions = (c.definitions || []).map((d: any) => {
+    if (d && typeof d === 'object') {
+      return { term: String(d.term ?? ''), definition: String(d.definition ?? '') }
+    }
     const i = String(d).indexOf(':')
     return i > 0 ? { term: d.slice(0, i).trim(), definition: d.slice(i + 1).trim() } : { term: String(d), definition: '' }
   })
@@ -393,6 +397,8 @@ function mapSummary(s: Raw, courseId = ''): Summary {
     definitions,
     examples: c.examples,
     revision_questions: c.revision_questions,
+    quiz_questions: Array.isArray(c.quiz_questions) ? c.quiz_questions : undefined,
+    target_language: c.target_language,
     generator: s.generator ?? c.source ?? undefined,
     teacher_edited: Boolean(c.teacher_edited),
     audio_recap_key: s.audio_recap_key,
@@ -433,7 +439,11 @@ function mapAssignment(a: Raw, courses: CourseIndex, mine?: Raw | null, submissi
   }
 }
 
-const SYNC_OPERATION_TYPE: Record<string, string> = { submit_assignment: 'assignment_submission' }
+const SYNC_OPERATION_TYPE: Record<string, string> = {
+  submit_assignment: 'assignment_submission',
+  exam_submit: 'exam_submit',
+  recording_progress: 'recording_progress',
+}
 
 // =============================================================================
 // TYPED API
@@ -646,8 +656,24 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ position_seconds: positionSeconds, completed }),
     }),
-  downloadRecordingBundle: (recordingId: string) => apiBlobRequest(`/recordings/${recordingId}/bundle`),
-  downloadClassBundle: (classId: string) => apiBlobRequest(`/classes/${classId}/bundle`),
+  downloadRecordingBundle: (recordingId: string, mode: 'full' | 'micro' = 'full') =>
+    apiBlobRequest(`/recordings/${recordingId}/bundle?mode=${mode}`),
+  downloadClassBundle: (classId: string, mode: 'full' | 'micro' = 'full') =>
+    apiBlobRequest(`/classes/${classId}/bundle?mode=${mode}`),
+  pushWhiteboardEvents: (classId: string, events: Array<{ t_ms: number; msg: Record<string, any> }>) =>
+    apiRequest<{ class_id: string; recorded_events: number }>(`/classes/${classId}/whiteboard-events`, {
+      method: 'POST',
+      body: JSON.stringify({ events }),
+    }),
+  pushLiveCaption: (classId: string, text: string, author?: string) =>
+    apiRequest<{ seq: number; kind: string; text: string; author?: string; at: string }>(`/classes/${classId}/live-captions`, {
+      method: 'POST',
+      body: JSON.stringify({ text, author }),
+    }),
+  getClassFallbackFeed: (classId: string, sinceSeq: number = 0) =>
+    apiRequest<{ class_id: string; latest_seq: number; events: Array<Record<string, any>> }>(
+      `/classes/${classId}/fallback-feed?since_seq=${sinceSeq}`
+    ),
   togglePublishRecording: async (recordingId: string) => {
     const current = await apiRequest<Raw>(`/recordings/${recordingId}`)
     const updated = await apiRequest<Raw>(`/recordings/${recordingId}/publish`, {
@@ -863,16 +889,43 @@ export const api = {
     (await apiRequest<Raw[]>(`/assignments/${assignmentId}/submissions`)).filter((s) => s.status === 'submitted').map(mapSubmission),
 
   // --- Idempotent sync ---
-  toServerOperation: (op: Pick<SyncOperation, 'id' | 'operationType' | 'entityId' | 'payload' | 'createdAt'>) => ({
-    operation_id: op.id,
-    operation_type: SYNC_OPERATION_TYPE[op.operationType] ?? op.operationType,
-    entity_id: op.entityId,
-    payload: { answer: { text: op.payload?.content ?? '' } },
-    client_updated_at: op.createdAt,
-  }),
+  toServerOperation: (op: Pick<SyncOperation, 'id' | 'operationType' | 'entityId' | 'payload' | 'createdAt'>) => {
+    let payload: Record<string, any>
+    if (op.operationType === 'exam_submit') {
+      payload = {
+        attempt_id: op.payload?.attempt_id ?? '',
+        final_answers: op.payload?.final_answers ?? {},
+        offline_events: op.payload?.offline_events ?? [],
+      }
+    } else if (op.operationType === 'recording_progress') {
+      payload = {
+        position_seconds: op.payload?.position_seconds ?? 0,
+        completed: Boolean(op.payload?.completed),
+      }
+    } else {
+      payload = { answer: { text: op.payload?.content ?? '' } }
+    }
+    return {
+      operation_id: op.id,
+      operation_type: SYNC_OPERATION_TYPE[op.operationType] ?? op.operationType,
+      entity_id: op.entityId,
+      payload,
+      client_updated_at: op.createdAt,
+    }
+  },
   syncOperations: (operations: SyncOperation[]) =>
-    apiRequest<{ results: Array<{ operation_id: string; status: string; server_entity_id?: string; error_code?: string; message?: string }> }>(
-      '/sync/operations',
-      { method: 'POST', body: JSON.stringify({ operations: operations.map((op) => api.toServerOperation(op)) }) }
-    ),
+    apiRequest<{
+      results: Array<{
+        operation_id: string
+        status: string
+        server_entity_id?: string
+        receipt_hash?: string
+        auto_graded_score?: number
+        error_code?: string
+        message?: string
+      }>
+    }>('/sync/operations', {
+      method: 'POST',
+      body: JSON.stringify({ operations: operations.map((op) => api.toServerOperation(op)) }),
+    }),
 }

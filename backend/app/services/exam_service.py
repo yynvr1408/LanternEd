@@ -5,6 +5,7 @@ from datetime import timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationFailedError
 from app.db.base import utcnow
 from app.db.models.course import Course, CourseEnrollment
@@ -214,6 +215,31 @@ def start_exam_attempt(
     )
 
 
+def _apply_security_event(
+    db: Session,
+    attempt: ExamAttempt,
+    exam: Exam,
+    *,
+    event_type: str,
+    timestamp: str,
+    duration_ms: int | None = None,
+) -> str | None:
+    """Appends an ExamAuditLog row and updates tab-switch violation flags consistently."""
+    log = ExamAuditLog(
+        attempt_id=attempt.id,
+        event_type=event_type,
+        event_data={"timestamp": str(timestamp), "duration_ms": duration_ms},
+    )
+    db.add(log)
+    if event_type in ("tab_hidden", "fullscreen_exit"):
+        attempt.tab_blur_count += 1
+        if attempt.tab_blur_count >= exam.max_tab_switches:
+            attempt.is_flagged_for_review = True
+            return f"Alert: You have reached {attempt.tab_blur_count}/{exam.max_tab_switches} security violations. Your test has been flagged for institutional review."
+        return f"Warning: Security violation detected ({attempt.tab_blur_count}/{exam.max_tab_switches}). Please stay in full-screen."
+    return None
+
+
 def record_heartbeat(db: Session, student_id: str, payload: ExamHeartbeatRequest) -> ExamHeartbeatResponse:
     attempt = db.get(ExamAttempt, payload.attempt_id)
     if not attempt:
@@ -236,19 +262,14 @@ def record_heartbeat(db: Session, student_id: str, payload: ExamHeartbeatRequest
 
     warning = None
     if payload.event:
-        log = ExamAuditLog(
-            attempt_id=attempt.id,
+        warning = _apply_security_event(
+            db,
+            attempt,
+            exam,
             event_type=payload.event.type,
-            event_data={"timestamp": str(payload.event.timestamp), "duration_ms": payload.event.duration_ms},
+            timestamp=str(payload.event.timestamp),
+            duration_ms=payload.event.duration_ms,
         )
-        db.add(log)
-        if payload.event.type in ("tab_hidden", "fullscreen_exit"):
-            attempt.tab_blur_count += 1
-            if attempt.tab_blur_count >= exam.max_tab_switches:
-                attempt.is_flagged_for_review = True
-                warning = f"Alert: You have reached {attempt.tab_blur_count}/{exam.max_tab_switches} security violations. Your test has been flagged for institutional review."
-            else:
-                warning = f"Warning: Security violation detected ({attempt.tab_blur_count}/{exam.max_tab_switches}). Please stay in full-screen."
 
     db.commit()
 
@@ -266,22 +287,48 @@ def record_heartbeat(db: Session, student_id: str, payload: ExamHeartbeatRequest
     )
 
 
-def submit_exam_attempt(db: Session, student_id: str, payload: ExamSubmitRequest) -> ExamSubmitResponse:
+def submit_exam_attempt(
+    db: Session,
+    student_id: str,
+    payload: ExamSubmitRequest,
+    *,
+    commit: bool = True,
+    as_of=None,
+    offline_events: list[dict] | None = None,
+    enforce_grace: bool = False,
+) -> ExamSubmitResponse:
     attempt = db.get(ExamAttempt, payload.attempt_id)
     if not attempt:
         raise NotFoundError("Exam attempt not found.")
     if attempt.student_id != student_id:
         raise ForbiddenError("Unauthorized attempt access.")
     if attempt.status != AttemptStatus.in_progress:
-        raise ConflictError("Examination attempt is already submitted.")
+        raise ConflictError("Examination attempt is already submitted.", code="EXAM_ALREADY_SUBMITTED")
 
     exam = db.get(Exam, attempt.exam_id)
     now = utcnow()
+    if enforce_grace:
+        grace = timedelta(hours=get_settings().offline_submission_grace_hours)
+        hard_deadline = max(attempt.started_at + timedelta(minutes=exam.duration_minutes), exam.end_window) + grace
+        if now > hard_deadline:
+            raise ConflictError("The offline grace window for submitting this exam has closed.", code="EXAM_EXPIRED")
+
+    submitted_ts = as_of or now
+    for ev in offline_events or []:
+        if isinstance(ev, dict) and ev.get("type"):
+            _apply_security_event(
+                db,
+                attempt,
+                exam,
+                event_type=str(ev["type"])[:50],
+                timestamp=str(ev.get("timestamp") or submitted_ts.isoformat()),
+                duration_ms=ev.get("duration_ms"),
+            )
 
     final_responses = dict(attempt.responses or {})
     final_responses.update(payload.final_answers)
     attempt.responses = final_responses
-    attempt.submitted_at = now
+    attempt.submitted_at = submitted_ts
     attempt.status = AttemptStatus.submitted
 
     # Auto-grading for MCQs and numerical questions
@@ -330,16 +377,19 @@ def submit_exam_attempt(db: Session, student_id: str, payload: ExamSubmitRequest
         attempt.status = AttemptStatus.evaluated
 
     # Generate receipt hash
-    receipt_data = f"{attempt.id}:{student_id}:{now.isoformat()}:{auto_score}"
+    receipt_data = f"{attempt.id}:{student_id}:{submitted_ts.isoformat()}:{auto_score}"
     receipt_hash = hashlib.sha256(receipt_data.encode()).hexdigest()
 
-    db.commit()
-    db.refresh(attempt)
+    if commit:
+        db.commit()
+        db.refresh(attempt)
+    else:
+        db.flush()
 
     return ExamSubmitResponse(
         attempt_id=attempt.id,
         status=attempt.status.value if hasattr(attempt.status, 'value') else str(attempt.status),
-        submitted_at=now,
+        submitted_at=submitted_ts,
         auto_graded_score=round(auto_score, 2),
         pending_manual_evaluation=has_subjective,
         receipt_hash=receipt_hash,

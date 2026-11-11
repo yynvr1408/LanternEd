@@ -58,6 +58,7 @@ export interface LanClassroomSession {
   localIp: string
   port: number
   wsUrl: string
+  httpUrl?: string
   accessCode: string
   isRunning: boolean
   connectedStudents: number
@@ -312,6 +313,35 @@ export const platformAdapter = {
         // fall through
       }
     }
+  },
+
+  /** Sends a peer event over the active Tauri LAN WebSocket broadcast hub. */
+  async broadcastLanMessage(message: string): Promise<number> {
+    if (this.getPlatform() === 'tauri' && (window as any).__TAURI__?.invoke) {
+      try {
+        return await (window as any).__TAURI__.invoke('broadcast_lan_message', { message })
+      } catch {
+        return 0
+      }
+    }
+    return 0
+  },
+
+  /** Registers an offline lesson pack with the Tauri LAN HTTP server for peer Wi-Fi download. */
+  async registerLanPack(packId: string, contentType: string, sha256: string, data: Uint8Array): Promise<string | null> {
+    if (this.getPlatform() === 'tauri' && (window as any).__TAURI__?.invoke) {
+      try {
+        return await (window as any).__TAURI__.invoke('register_lan_pack', {
+          packId,
+          contentType,
+          sha256,
+          bytes: Array.from(data),
+        })
+      } catch {
+        return null
+      }
+    }
+    return null
   },
 
   /** Keep screen active during live class or playback (Wake Lock). */

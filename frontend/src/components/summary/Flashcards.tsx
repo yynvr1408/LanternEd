@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { ChevronLeft, ChevronRight, RotateCw, Shuffle } from 'lucide-react'
-import type { SummaryDefinition } from '../../types'
+import { CheckCircle2, ChevronLeft, ChevronRight, RotateCw, Shuffle, XCircle } from 'lucide-react'
+import type { SummaryDefinition, SummaryQuizQuestion } from '../../types'
 import { Button } from '../ui/Button'
 
 export interface FlashcardsProps {
@@ -68,6 +68,95 @@ export const Flashcards: React.FC<FlashcardsProps> = ({ cards: initialCards }) =
           Shuffle
         </Button>
         <Button variant="primary" size="sm" onClick={() => goTo(index + 1)} icon={<ChevronRight className="w-4 h-4" />}>
+          Next
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export interface OfflineQuizProps {
+  /** Self-check MCQs bundled with the summary; works 100% offline with immediate explanation feedback. */
+  questions: SummaryQuizQuestion[]
+}
+
+export const OfflineQuiz: React.FC<OfflineQuizProps> = ({ questions }) => {
+  const [selectedByIdx, setSelectedByIdx] = useState<Record<number, number>>({})
+  const [index, setIndex] = useState(0)
+
+  const q = questions[index]
+  if (!q) return null
+
+  const picked = selectedByIdx[index]
+  const answered = typeof picked === 'number'
+  const correctCount = questions.reduce(
+    (acc, item, idx) => (selectedByIdx[idx] === item.answer_index ? acc + 1 : acc),
+    0,
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between text-xs text-[#687775]">
+        <span className="font-semibold">
+          Question {index + 1} / {questions.length}
+        </span>
+        <span className="font-semibold text-[#0F5B57]">
+          Score: {correctCount} / {questions.length}
+        </span>
+      </div>
+
+      <p className="text-sm font-semibold text-[#202B2A] leading-relaxed">{q.question}</p>
+
+      <div className="flex flex-col gap-2">
+        {q.options.map((opt, optIdx) => {
+          const isPicked = picked === optIdx
+          const isRight = optIdx === q.answer_index
+          let cls = 'border-[#CBD7D1] bg-[#F8FAF7] text-[#202B2A] hover:border-[#0F5B57]'
+          if (answered) {
+            if (isRight) cls = 'border-[#247A4D] bg-[#E5F5EB] text-[#166534] font-semibold'
+            else if (isPicked) cls = 'border-[#B42318] bg-[#FDE8E7] text-[#911C13]'
+          }
+          return (
+            <button
+              key={optIdx}
+              type="button"
+              onClick={() => setSelectedByIdx((prev) => ({ ...prev, [index]: optIdx }))}
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm flex items-center justify-between gap-2 transition-colors cursor-pointer ${cls}`}
+            >
+              <span>{opt}</span>
+              {answered && isRight && <CheckCircle2 className="w-4 h-4 text-[#247A4D] shrink-0" />}
+              {answered && isPicked && !isRight && <XCircle className="w-4 h-4 text-[#B42318] shrink-0" />}
+            </button>
+          )
+        })}
+      </div>
+
+      {answered && q.explanation && (
+        <div className="p-3 rounded-lg bg-[#F1F5F2] border border-[#CBD7D1] text-xs text-[#202B2A] leading-relaxed">
+          <strong className="text-[#0F5B57]">Explanation:</strong> {q.explanation}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={index === 0}
+          onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          icon={<ChevronLeft className="w-4 h-4" />}
+        >
+          Prev
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setSelectedByIdx({})}>
+          Reset Quiz
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={index >= questions.length - 1}
+          onClick={() => setIndex((i) => Math.min(questions.length - 1, i + 1))}
+          icon={<ChevronRight className="w-4 h-4" />}
+        >
           Next
         </Button>
       </div>

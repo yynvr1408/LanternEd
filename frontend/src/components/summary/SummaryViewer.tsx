@@ -18,10 +18,11 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Card, CardHeader, CardContent } from '../ui/Card'
 import { Dialog } from '../ui/Dialog'
-import { Flashcards } from './Flashcards'
+import { Flashcards, OfflineQuiz } from './Flashcards'
 import { useReadAloud } from '../../hooks/useReadAloud'
 import { exportSummary, buildSummaryBlocks } from '../../utils/summaryExport'
 import { downloadManager } from '../../services/downloadManager'
+import type { SummaryQuizQuestion } from '../../types'
 
 export interface SummaryViewerProps {
   summary: Summary
@@ -43,6 +44,7 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
   const [exporting, setExporting] = React.useState(false)
   const [exportError, setExportError] = React.useState<string | null>(null)
   const [flashcardsOpen, setFlashcardsOpen] = React.useState(false)
+  const [quizOpen, setQuizOpen] = React.useState(false)
   const [isAudioDownloaded, setIsAudioDownloaded] = React.useState(false)
   const [isDownloadingAudio, setIsDownloadingAudio] = React.useState(false)
 
@@ -65,6 +67,32 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
     }
   }
   const hasFlashcards = Boolean(summary.definitions && summary.definitions.length > 0)
+  const quizQuestions: SummaryQuizQuestion[] = React.useMemo(() => {
+    if (summary.quiz_questions && summary.quiz_questions.length > 0) {
+      return summary.quiz_questions
+    }
+    if (!summary.definitions || summary.definitions.length === 0) return []
+    const terms = summary.definitions.map((d) => d.term).filter(Boolean)
+    return summary.definitions
+      .filter((d) => d.term && d.definition)
+      .slice(0, 4)
+      .map((d, idx) => {
+        const distractors = terms.filter((t) => t !== d.term).slice(0, 3)
+        while (distractors.length < 3) {
+          distractors.push(`Concept ${distractors.length + 1}`)
+        }
+        const options = [d.term, ...distractors]
+        const shift = idx % options.length
+        const rotated = [...options.slice(shift), ...options.slice(0, shift)]
+        return {
+          question: `Which key term matches: "${d.definition}"?`,
+          options: rotated,
+          answer_index: rotated.indexOf(d.term),
+          explanation: `${d.term}: ${d.definition}`,
+        }
+      })
+  }, [summary.quiz_questions, summary.definitions])
+  const hasQuiz = quizQuestions.length > 0
   const reader = useReadAloud()
   const handleToggleReadAloud = () => {
     if (reader.isReading) {
@@ -136,6 +164,16 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
               icon={<Layers className="w-3.5 h-3.5" />}
             >
               Study Flashcards
+            </Button>
+          )}
+          {hasQuiz && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setQuizOpen(true)}
+              icon={<HelpCircle className="w-3.5 h-3.5" />}
+            >
+              Practice Quiz
             </Button>
           )}
           <Button
@@ -293,6 +331,11 @@ export const SummaryViewer: React.FC<SummaryViewerProps> = ({
       {hasFlashcards && (
         <Dialog isOpen={flashcardsOpen} onClose={() => setFlashcardsOpen(false)} title="Study Flashcards" maxWidth="md">
           <Flashcards cards={summary.definitions!} />
+        </Dialog>
+      )}
+      {hasQuiz && (
+        <Dialog isOpen={quizOpen} onClose={() => setQuizOpen(false)} title="Offline Practice Quiz" maxWidth="md">
+          <OfflineQuiz questions={quizQuestions} />
         </Dialog>
       )}
     </div>

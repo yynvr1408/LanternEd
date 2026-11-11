@@ -1,6 +1,6 @@
 import { db } from '../db/db'
 import { api } from './apiClient'
-import type { AssignmentDraft, SyncOperation } from '../types'
+import type { AssignmentDraft, ExamDraft, SyncOperation } from '../types'
 import { MAX_NETWORK_RETRIES, classifySyncResult, draftStatusFor } from './syncOutcome'
 
 function generateUUID(): string {
@@ -132,6 +132,135 @@ export const syncManager = {
   },
 
   /**
+   * Persist live exam answers & buffered proctoring telemetry to IndexedDB on every interaction.
+   */
+  async saveExamDraftLocally(params: {
+    examId: string
+    attemptId: string
+    studentId: string
+    answers: Record<string, any>
+    flagged?: Record<string, boolean>
+    offlineEvents?: Array<{ type: string; timestamp: string; duration_ms?: number }>
+    syncStatus?: ExamDraft['syncStatus']
+  }): Promise<ExamDraft> {
+    const existing = await db.examDrafts.get(params.examId)
+    const draft: ExamDraft = {
+      id: params.examId,
+      examId: params.examId,
+      attemptId: params.attemptId,
+      studentId: params.studentId,
+      answers: { ...(existing?.answers ?? {}), ...params.answers },
+      flagged: params.flagged ?? existing?.flagged ?? {},
+      offlineEvents: params.offlineEvents ?? existing?.offlineEvents ?? [],
+      updatedAt: new Date().toISOString(),
+      syncStatus: params.syncStatus ?? existing?.syncStatus ?? 'in_progress',
+      syncMessage: existing?.syncMessage,
+      receiptHash: existing?.receiptHash,
+      autoGradedScore: existing?.autoGradedScore,
+    }
+    await db.examDrafts.put(draft)
+    return draft
+  },
+
+  async getExamDraft(examId: string): Promise<ExamDraft | undefined> {
+    return db.examDrafts.get(examId)
+  },
+
+  /**
+   * Enqueue a completed exam submission when connectivity fails at submit time.
+   */
+  async enqueueExamSubmission(params: {
+    examId: string
+    attemptId: string
+    studentId: string
+    answers: Record<string, any>
+    flagged?: Record<string, boolean>
+    offlineEvents?: Array<{ type: string; timestamp: string; duration_ms?: number }>
+  }): Promise<{ draft: ExamDraft; operation: SyncOperation }> {
+    const draft = await this.saveExamDraftLocally({
+      ...params,
+      syncStatus: 'pending_sync',
+    })
+    const existingOp = await db.syncOperations
+      .filter(
+        (op) =>
+          op.operationType === 'exam_submit' &&
+          op.entityId === params.examId &&
+          (op.status === 'pending' || (op.status === 'failed' && op.outcome === 'network'))
+      )
+      .first()
+
+    const payload = {
+      attempt_id: params.attemptId,
+      final_answers: params.answers,
+      offline_events: params.offlineEvents ?? [],
+    }
+    let operation: SyncOperation
+    if (existingOp) {
+      existingOp.payload = payload
+      existingOp.status = 'pending'
+      existingOp.outcome = undefined
+      existingOp.retryCount = 0
+      await db.syncOperations.put(existingOp)
+      operation = existingOp
+    } else {
+      const id = generateUUID()
+      operation = {
+        id,
+        operationType: 'exam_submit',
+        entityId: params.examId,
+        payload,
+        status: 'pending',
+        idempotencyKey: `exam-${params.examId}-${params.attemptId}-${id}`,
+        createdAt: new Date().toISOString(),
+        retryCount: 0,
+      }
+      await db.syncOperations.put(operation)
+    }
+    return { draft, operation }
+  },
+
+  /**
+   * Coalesces offline video/audio watch progress into the sync queue so progress is never lost.
+   */
+  async enqueueRecordingProgress(recordingId: string, positionSeconds: number, completed: boolean): Promise<SyncOperation> {
+    const existingOp = await db.syncOperations
+      .filter(
+        (op) =>
+          op.operationType === 'recording_progress' &&
+          op.entityId === recordingId &&
+          (op.status === 'pending' || (op.status === 'failed' && op.outcome === 'network'))
+      )
+      .first()
+
+    const payload = { position_seconds: Math.max(0, Math.floor(positionSeconds)), completed }
+    if (existingOp) {
+      existingOp.payload = {
+        position_seconds: Math.max(existingOp.payload?.position_seconds ?? 0, payload.position_seconds),
+        completed: Boolean(existingOp.payload?.completed) || payload.completed,
+      }
+      existingOp.status = 'pending'
+      existingOp.outcome = undefined
+      await db.syncOperations.put(existingOp)
+      return existingOp
+    }
+
+    const id = generateUUID()
+    const operation: SyncOperation = {
+      id,
+      operationType: 'recording_progress',
+      entityId: recordingId,
+      payload,
+      status: 'pending',
+      idempotencyKey: `recprog-${recordingId}-${id}`,
+      createdAt: new Date().toISOString(),
+      retryCount: 0,
+    }
+    await db.syncOperations.put(operation)
+    return operation
+  },
+
+  /**
    * Get count of pending sync operations
    */
   async getPendingCount(): Promise<number> {
@@ -191,6 +320,16 @@ export const syncManager = {
               draft.lastServerSubmissionId = res.server_entity_id
               await db.assignmentDrafts.put(draft)
             }
+          } else if (op.operationType === 'exam_submit') {
+            const examDraft = await db.examDrafts.get(op.entityId)
+            if (examDraft) {
+              examDraft.syncStatus = 'synced'
+              examDraft.syncMessage = undefined
+              examDraft.receiptHash = res.receipt_hash
+              examDraft.autoGradedScore = res.auto_graded_score
+              examDraft.offlineEvents = []
+              await db.examDrafts.put(examDraft)
+            }
           }
           // Remove completed operation from queue
           await db.syncOperations.delete(op.id)
@@ -209,6 +348,13 @@ export const syncManager = {
               draft.syncStatus = draftStatusFor(outcome)
               draft.syncMessage = op.lastError
               await db.assignmentDrafts.put(draft)
+            }
+          } else if (op.operationType === 'exam_submit') {
+            const examDraft = await db.examDrafts.get(op.entityId)
+            if (examDraft) {
+              examDraft.syncStatus = draftStatusFor(outcome)
+              examDraft.syncMessage = op.lastError
+              await db.examDrafts.put(examDraft)
             }
           }
         }

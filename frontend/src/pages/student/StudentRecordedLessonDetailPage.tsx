@@ -33,17 +33,25 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
   const [isDownloaded, setIsDownloaded] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isDownloadingBundle, setIsDownloadingBundle] = useState(false)
+  const [isDownloadingMicro, setIsDownloadingMicro] = useState(false)
   const savings = localAiService.getCumulativeSavings()
 
-  const handleDownloadBundle = async () => {
+  const handleDownloadBundle = async (mode: 'full' | 'micro' = 'full') => {
     if (!recording) return
     try {
-      setIsDownloadingBundle(true)
-      await downloadManager.downloadLessonBundle(recording.id, `${recording.title || 'lesson'}-bundle.zip`)
+      if (mode === 'micro') setIsDownloadingMicro(true)
+      else setIsDownloadingBundle(true)
+      const suffix = mode === 'micro' ? '-micro' : ''
+      await downloadManager.downloadLessonBundle(
+        recording.id,
+        `${recording.title || 'lesson'}${suffix}-bundle.zip`,
+        mode
+      )
     } catch (err: any) {
       alert(err.message || 'Failed to download lesson bundle')
     } finally {
-      setIsDownloadingBundle(false)
+      if (mode === 'micro') setIsDownloadingMicro(false)
+      else setIsDownloadingBundle(false)
     }
   }
 
@@ -109,17 +117,30 @@ export const StudentRecordedLessonDetailPage: React.FC = () => {
 
         <div className="flex items-center space-x-2">
           {recording.status === 'READY' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadBundle}
-              disabled={isDownloadingBundle}
-              className="text-xs h-8"
-              title="Download single compressed ZIP archive with video, AI summary, and transcript"
-            >
-              <Package className="w-3.5 h-3.5 mr-1 text-[#0F5B57]" />
-              {isDownloadingBundle ? 'Bundling...' : 'Download Bundle (.zip)'}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadBundle('micro')}
+                disabled={isDownloadingMicro}
+                className="text-xs h-8"
+                title="Download ultra-lightweight (~10x smaller) bundle with voice audio, synced vector whiteboard, summary & quiz"
+              >
+                <Package className="w-3.5 h-3.5 mr-1 text-[#2DBE8B]" />
+                {isDownloadingMicro ? 'Packing...' : 'Micro-Pack (Audio + Board)'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadBundle('full')}
+                disabled={isDownloadingBundle}
+                className="text-xs h-8"
+                title="Download single compressed ZIP archive with video, AI summary, and transcript"
+              >
+                <Package className="w-3.5 h-3.5 mr-1 text-[#0F5B57]" />
+                {isDownloadingBundle ? 'Bundling...' : 'Download Bundle (.zip)'}
+              </Button>
+            </>
           )}
           {isDownloaded ? (
             <Badge variant="success" className="text-xs">

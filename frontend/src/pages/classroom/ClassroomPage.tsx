@@ -433,8 +433,62 @@ const ClassroomStage: React.FC<{
     isTeacher ? t.participant.isLocal : !t.participant.isLocal && t.participant.permissions?.canPublish
   )
 
+  // Record teacher whiteboard events for Micro-Bundle replay & HTTPS fallback feed, plus live caption input
+  const classStartedAtRef = useRef<number>(Date.now())
+  const wbTimelineQueueRef = useRef<Array<{ t_ms: number; msg: Record<string, any> }>>([])
+  const [liveCaptionDraft, setLiveCaptionDraft] = useState('')
+  const [captionSentNotice, setCaptionSentNotice] = useState<string | null>(null)
+
+  const recordWhiteboardAction = useCallback((message: any) => {
+    wbTimelineQueueRef.current.push({
+      t_ms: Math.max(0, Date.now() - classStartedAtRef.current),
+      msg: message,
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!isTeacher) return
+    const timer = setInterval(() => {
+      if (wbTimelineQueueRef.current.length === 0) return
+      const batch = wbTimelineQueueRef.current.splice(0, 100)
+      api.pushWhiteboardEvents(classroom.id, batch).catch(() => {
+        // Requeue bounded prefix on transient network hiccup so timeline stays smooth
+        if (wbTimelineQueueRef.current.length < 300) {
+          wbTimelineQueueRef.current.unshift(...batch)
+        }
+      })
+    }, 2500)
+    return () => clearInterval(timer)
+  }, [classroom.id, isTeacher])
+
+  const handleSendLiveCaption = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = liveCaptionDraft.trim()
+    if (!trimmed) return
+    setLiveCaptionDraft('')
+    try {
+      await api.pushLiveCaption(classroom.id, trimmed, classroom.teacher_name || 'Teacher')
+      if (lanClassroomService.isLanModeActive()) {
+        lanClassroomService.broadcast({
+          type: 'caption-chunk',
+          senderId: 'teacher',
+          senderName: classroom.teacher_name || 'Teacher',
+          payload: { text: trimmed },
+        })
+      }
+      setCaptionSentNotice('Sent to low-bandwidth students')
+      setTimeout(() => setCaptionSentNotice(null), 2000)
+    } catch {
+      setCaptionSentNotice('Failed to send note')
+    }
+  }
+
   // Whiteboard (shared over the data channel) and screen sharing (one or several screens)
-  const { board, dispatch, applyLocal, send, setOpen } = useWhiteboard(room, isTeacher)
+  const { board, dispatch, applyLocal, send, setOpen } = useWhiteboard(
+    room,
+    isTeacher,
+    isTeacher ? recordWhiteboardAction : undefined,
+  )
   const { shares, hiddenCount, addScreen, stopShare, supported: canShareScreen, error: shareError } = useScreenShares(room)
   const blur = useBackgroundBlur(isTeacher ? room : undefined, Boolean(isCameraEnabled), wantBlur)
 
@@ -566,6 +620,29 @@ const ClassroomStage: React.FC<{
           </Badge>
         </div>
       </div>
+
+      {/* Teacher quick HTTPS live note bar (feeds TextFallbackPanel students on 2G/UDP-blocked links) */}
+      {isTeacher && (
+        <form
+          onSubmit={handleSendLiveCaption}
+          className="bg-[#182321] border-b border-[#202B2A] px-4 py-1.5 flex items-center gap-2 text-xs shrink-0"
+        >
+          <input
+            type="text"
+            value={liveCaptionDraft}
+            onChange={(e) => setLiveCaptionDraft(e.target.value)}
+            placeholder="Broadcast a quick live note / formula to low-bandwidth Text Fallback students..."
+            className="flex-1 min-w-0 bg-[#121A19] text-[#FFFFFF] placeholder-[#84908D] border border-[#374947] rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#2DBE8B]"
+          />
+          <button
+            type="submit"
+            className="px-3 py-1 rounded-lg bg-[#0F5B57] hover:bg-[#123B39] text-white font-semibold cursor-pointer shrink-0"
+          >
+            Send Note
+          </button>
+          {captionSentNotice && <span className="text-[#7EE2B8] shrink-0">{captionSentNotice}</span>}
+        </form>
+      )}
 
       {/* Campus LAN Mode Active Banner */}
       {lanSession?.isRunning && (

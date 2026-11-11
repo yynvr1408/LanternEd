@@ -342,9 +342,128 @@ async def set_mic_permission(db: Session, teacher: User, cls: Class, student_id:
     )
 
 
-def build_class_bundle(db: Session, user: User, cls: Class) -> Path:
+def _read_storage_json(storage_key: str, default):
+    import json
+    import tempfile
+    from app.integrations.object_storage import get_storage
+
+    storage = get_storage()
+    if storage.verify_uploaded(storage_key) is None:
+        return default
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+    tmp_path = Path(tmp.name)
+    tmp.close()
+    try:
+        actual = Path(storage.fetch_to_path(storage_key, tmp_path))
+        return json.loads(actual.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 - treat unreadable JSON blob safely as default
+        return default
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def _write_storage_json(storage_key: str, payload) -> None:
+    import json
+    import tempfile
+    from app.integrations.object_storage import get_storage
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w", encoding="utf-8")
+    tmp_path = Path(tmp.name)
+    try:
+        json.dump(payload, tmp, separators=(",", ":"))
+        tmp.close()
+        get_storage().upload_file(tmp_path, storage_key, content_type="application/json")
+    finally:
+        if not tmp.closed:
+            tmp.close()
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+MAX_WHITEBOARD_TIMELINE_EVENTS = 2000
+MAX_LIVE_FEED_EVENTS = 200
+
+
+def get_whiteboard_timeline(class_id: str) -> list[dict]:
+    data = _read_storage_json(f"classes/{class_id}/whiteboard_timeline.json", [])
+    return data if isinstance(data, list) else []
+
+
+def append_whiteboard_events(db: Session, teacher: User, cls: Class, events: list[dict]) -> int:
+    """Stores timestamped vector whiteboard events + mirrors them into the HTTPS fallback feed."""
+    assert_teaches_class(db, teacher, cls)
+    if not events:
+        return len(get_whiteboard_timeline(cls.id))
+
+    timeline = get_whiteboard_timeline(cls.id)
+    for ev in events:
+        if not isinstance(ev, dict) or not isinstance(ev.get("msg"), dict):
+            continue
+        timeline.append({"t_ms": max(0, int(ev.get("t_ms", 0))), "msg": ev["msg"]})
+    if len(timeline) > MAX_WHITEBOARD_TIMELINE_EVENTS:
+        timeline = timeline[-MAX_WHITEBOARD_TIMELINE_EVENTS:]
+    _write_storage_json(f"classes/{cls.id}/whiteboard_timeline.json", timeline)
+
+    feed = _read_storage_json(f"classes/{cls.id}/live_feed.json", [])
+    if not isinstance(feed, list):
+        feed = []
+    next_seq = (feed[-1]["seq"] + 1) if feed else 1
+    for ev in events:
+        if isinstance(ev, dict) and isinstance(ev.get("msg"), dict):
+            feed.append({"seq": next_seq, "kind": "whiteboard", "t_ms": max(0, int(ev.get("t_ms", 0))), "msg": ev["msg"], "at": utcnow().isoformat()})
+            next_seq += 1
+    if len(feed) > MAX_LIVE_FEED_EVENTS:
+        feed = feed[-MAX_LIVE_FEED_EVENTS:]
+    _write_storage_json(f"classes/{cls.id}/live_feed.json", feed)
+    return len(timeline)
+
+
+def append_live_caption(db: Session, teacher: User, cls: Class, text: str, author: str | None = None) -> dict:
+    """Publishes a lightweight HTTPS live-caption / key-note entry for severe-degradation students."""
+    assert_teaches_class(db, teacher, cls)
+    cleaned = text.strip()
+    if not cleaned:
+        raise ValidationFailedError("Caption text cannot be empty.")
+    feed = _read_storage_json(f"classes/{cls.id}/live_feed.json", [])
+    if not isinstance(feed, list):
+        feed = []
+    next_seq = (feed[-1]["seq"] + 1) if feed else 1
+    entry = {
+        "seq": next_seq,
+        "kind": "caption",
+        "text": cleaned[:500],
+        "author": author or teacher.full_name,
+        "at": utcnow().isoformat(),
+    }
+    feed.append(entry)
+    if len(feed) > MAX_LIVE_FEED_EVENTS:
+        feed = feed[-MAX_LIVE_FEED_EVENTS:]
+    _write_storage_json(f"classes/{cls.id}/live_feed.json", feed)
+    return entry
+
+
+def get_fallback_feed(db: Session, user: User, cls: Class, *, since_seq: int = 0) -> dict:
+    """Returns incremental HTTPS text captions and vector whiteboard frames when WebRTC fails."""
+    if user.role == UserRole.teacher:
+        assert_teaches_class(db, user, cls)
+    else:
+        assert_enrolled_in_class(db, user, cls)
+    feed = _read_storage_json(f"classes/{cls.id}/live_feed.json", [])
+    if not isinstance(feed, list):
+        feed = []
+    events = [ev for ev in feed if isinstance(ev, dict) and int(ev.get("seq", 0)) > since_seq]
+    latest_seq = int(feed[-1].get("seq", since_seq)) if feed else since_seq
+    return {
+        "class_id": cls.id,
+        "latest_seq": latest_seq,
+        "events": events,
+    }
+
+
+def build_class_bundle(db: Session, user: User, cls: Class, *, mode: str = "full") -> Path:
     """Creates a single-stream offline bundle for a class containing its summary,
-    available recordings, and metadata."""
+    available recordings, whiteboard timeline, and metadata."""
     assert_can_view_class(db, user, cls)
     from app.services import recording_service
     recordings = recording_service.list_recordings_for_class(db, cls)
@@ -353,7 +472,7 @@ def build_class_bundle(db: Session, user: User, cls: Class) -> Path:
         None,
     )
     if available_rec:
-        return recording_service.build_recording_bundle(db, user, available_rec)
+        return recording_service.build_recording_bundle(db, user, available_rec, mode=mode)
 
     import json
     import tempfile
@@ -368,6 +487,7 @@ def build_class_bundle(db: Session, user: User, cls: Class) -> Path:
     ).scalars().first()
     if summary and user.role != UserRole.teacher and summary.status != SummaryStatus.completed:
         summary = None
+    timeline = get_whiteboard_timeline(cls.id)
 
     tmp_zip = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
     tmp_path = Path(tmp_zip.name)
@@ -380,10 +500,14 @@ def build_class_bundle(db: Session, user: User, cls: Class) -> Path:
                 "class_title": cls.title,
                 "course_id": course.id,
                 "course_title": course.title,
+                "bundle_mode": mode,
+                "whiteboard_events": len(timeline),
                 "scheduled_start": cls.scheduled_start.isoformat() if cls.scheduled_start else None,
                 "scheduled_end": cls.scheduled_end.isoformat() if cls.scheduled_end else None,
             }
             zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+            if timeline:
+                zf.writestr("whiteboard_timeline.json", json.dumps(timeline))
 
             if summary and summary.content_json:
                 zf.writestr("summary.json", json.dumps(summary.content_json, indent=2))

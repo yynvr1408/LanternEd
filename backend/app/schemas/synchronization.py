@@ -22,6 +22,8 @@ class SyncOperationResult(BaseModel):
     server_entity_id: str | None = None
     server_version: int | None = None
     server_updated_at: UtcDatetime | None = None
+    receipt_hash: str | None = None
+    auto_graded_score: float | None = None
     error_code: str | None = None
     message: str | None = None
 

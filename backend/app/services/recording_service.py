@@ -334,6 +334,7 @@ def describe(db: Session, user: User, recording: ClassRecording, *, with_transcr
     }
     if with_transcript:
         out["transcript"] = transcript.content if transcript else None
+        out["whiteboard_timeline"] = classroom_service.get_whiteboard_timeline(recording.class_id)
     return out
 
 
@@ -474,7 +475,15 @@ def delete_recording(db: Session, teacher: User, recording: ClassRecording) -> C
     return recording
 
 
-def update_progress(db: Session, user: User, recording: ClassRecording, *, position_seconds: int, completed: bool) -> RecordingProgress:
+def update_progress(
+    db: Session,
+    user: User,
+    recording: ClassRecording,
+    *,
+    position_seconds: int,
+    completed: bool,
+    commit: bool = True,
+) -> RecordingProgress:
     assert_can_access(db, user, recording)
     progress = db.execute(
         select(RecordingProgress).where(RecordingProgress.recording_id == recording.id, RecordingProgress.user_id == user.id)
@@ -484,14 +493,20 @@ def update_progress(db: Session, user: User, recording: ClassRecording, *, posit
         db.add(progress)
     progress.position_seconds = position_seconds
     progress.completed = progress.completed or completed
-    db.commit()
-    db.refresh(progress)
+    if commit:
+        db.commit()
+        db.refresh(progress)
+    else:
+        db.flush()
     return progress
 
 
-def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -> Path:
-    """Packages a lecture's recording, summary, transcript, and metadata into a single
-    compressed .zip bundle for offline download and local playback."""
+def build_recording_bundle(db: Session, user: User, recording: ClassRecording, *, mode: str = "full") -> Path:
+    """Packages a lecture's recording, summary, transcript, whiteboard timeline, and metadata into a .zip bundle.
+
+    mode='full' embeds full media; mode='micro' produces an ultra-low-bandwidth pack (~10 MB/hr):
+    speech-compressed audio + vector whiteboard replay + structured notes + flashcards/quizzes.
+    """
     assert_can_access(db, user, recording)
     if recording.status == RecordingStatus.failed:
         raise ConflictError("This recording failed and cannot be bundled.", code="RECORDING_FAILED")
@@ -504,6 +519,7 @@ def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -
     import tempfile
     import zipfile
     from pathlib import Path
+    from app.services import media_processing
 
     cls = _class_of(db, recording)
     course = course_service.get_course_or_404(db, cls.course_id)
@@ -512,6 +528,7 @@ def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -
     if summary is not None and not is_teacher and summary.status != SummaryStatus.completed:
         summary = None
     transcript = _transcript_for(db, recording) if (is_teacher or summary is not None) else None
+    timeline = classroom_service.get_whiteboard_timeline(cls.id)
 
     tmp_zip = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
     tmp_path = Path(tmp_zip.name)
@@ -525,13 +542,17 @@ def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -
                 "class_title": cls.title,
                 "course_id": course.id,
                 "course_title": course.title,
-                "audio_only": recording.audio_only,
+                "bundle_mode": mode,
+                "audio_only": recording.audio_only or mode == "micro",
+                "whiteboard_events": len(timeline),
                 "duration_seconds": recording.duration_seconds,
                 "size_bytes": recording.size_bytes,
                 "started_at": recording.started_at.isoformat() if recording.started_at else None,
                 "completed_at": recording.completed_at.isoformat() if recording.completed_at else None,
             }
             zf.writestr("metadata.json", json.dumps(metadata, indent=2))
+            if timeline:
+                zf.writestr("whiteboard_timeline.json", json.dumps(timeline))
 
             if summary and summary.content_json:
                 zf.writestr("summary.json", json.dumps(summary.content_json, indent=2))
@@ -571,12 +592,22 @@ def build_recording_bundle(db: Session, user: User, recording: ClassRecording) -
                     media_temp = tempfile.NamedTemporaryFile(suffix=f".{media_ext}", delete=False)
                     media_path = Path(media_temp.name)
                     media_temp.close()
+                    micro_audio_path = media_path.with_name(f"{media_path.stem}_micro.mp3")
                     try:
-                        storage.fetch_to_path(recording.storage_key, media_path)
-                        zf.write(media_path, arcname=f"media.{media_ext}", compress_type=zipfile.ZIP_STORED)
+                        fetched = Path(storage.fetch_to_path(recording.storage_key, media_path))
+                        if mode == "micro" and not recording.audio_only:
+                            try:
+                                media_processing.extract_speech_audio(fetched, micro_audio_path)
+                                zf.write(micro_audio_path, arcname="audio_micro.mp3", compress_type=zipfile.ZIP_STORED)
+                            except media_processing.MediaError:
+                                logger.info("Skipping video-to-micro-audio extraction for recording %s (ffmpeg unavailable)", recording.id)
+                        else:
+                            zf.write(fetched, arcname=f"media.{media_ext}", compress_type=zipfile.ZIP_STORED)
                     finally:
                         if media_path.exists():
                             media_path.unlink()
+                        if micro_audio_path.exists():
+                            micro_audio_path.unlink()
         return tmp_path
     except Exception:
         if tmp_path.exists():

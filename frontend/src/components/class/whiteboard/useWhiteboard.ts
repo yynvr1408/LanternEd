@@ -1,29 +1,45 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RoomEvent, type Room, type RemoteParticipant } from 'livekit-client'
 import { TOPIC, apply, decode, emptyBoard, encode, snapshot, type BoardState, type Message } from './protocol'
+import { lanClassroomService } from '../../../services/lanClassroomService'
 
 /**
- * Shared whiteboard state over the LiveKit data channel.
+ * Shared whiteboard state over the LiveKit data channel (plus optional LAN WebSocket & HTTPS recorder hook).
  *
  * Teacher: every local action is applied and broadcast. When someone joins, the teacher re-sends the whole board to
  * that person only. Students never send anything and only accept messages from participants who are allowed to
  * publish (a student cannot forge the teacher's board).
  */
-export function useWhiteboard(room: Room | undefined, isTeacher: boolean) {
+export function useWhiteboard(
+  room: Room | undefined,
+  isTeacher: boolean,
+  onTeacherMessage?: (message: Message) => void,
+) {
   const [board, setBoard] = useState<BoardState>(emptyBoard)
   const boardRef = useRef(board)
   boardRef.current = board
+  const onTeacherMessageRef = useRef(onTeacherMessage)
+  onTeacherMessageRef.current = onTeacherMessage
 
   const publish = useCallback(
     (messages: Message[], to?: string[]) => {
-      if (!room) return
       for (const m of messages) {
-        room.localParticipant
-          .publishData(encode(m), { reliable: true, topic: TOPIC, ...(to ? { destinationIdentities: to } : {}) })
-          .catch(() => undefined) // a dropped packet must never break the lesson; the next snapshot repairs it
+        if (room) {
+          room.localParticipant
+            .publishData(encode(m), { reliable: true, topic: TOPIC, ...(to ? { destinationIdentities: to } : {}) })
+            .catch(() => undefined) // a dropped packet must never break the lesson; the next snapshot repairs it
+        }
+        if (isTeacher && !to && lanClassroomService.isLanModeActive()) {
+          lanClassroomService.broadcast({
+            type: 'whiteboard-sync',
+            senderId: 'teacher',
+            senderName: 'Teacher',
+            payload: m,
+          })
+        }
       }
     },
-    [room],
+    [room, isTeacher],
   )
 
   /** Teacher: apply locally and send to everyone. */
@@ -31,8 +47,9 @@ export function useWhiteboard(room: Room | undefined, isTeacher: boolean) {
     (message: Message) => {
       setBoard((b) => apply(b, message))
       publish([message])
+      if (isTeacher) onTeacherMessageRef.current?.(message)
     },
-    [publish],
+    [publish, isTeacher],
   )
 
   useEffect(() => {
@@ -71,13 +88,21 @@ export function useWhiteboard(room: Room | undefined, isTeacher: boolean) {
     (open: boolean) => {
       if (!isTeacher) return
       setBoard((b) => ({ ...b, open }))
-      publish(open ? snapshot({ ...boardRef.current, open }) : [{ t: 'open', open: false }])
+      const msgs: Message[] = open ? snapshot({ ...boardRef.current, open }) : [{ t: 'open', open: false }]
+      publish(msgs)
+      onTeacherMessageRef.current?.({ t: 'open', open })
     },
     [isTeacher, publish],
   )
 
   const applyLocal = useCallback((message: Message) => setBoard((b) => apply(b, message)), [])
-  const send = useCallback((message: Message) => publish([message]), [publish])
+  const send = useCallback(
+    (message: Message) => {
+      publish([message])
+      if (isTeacher) onTeacherMessageRef.current?.(message)
+    },
+    [publish, isTeacher],
+  )
 
   return { board, dispatch, applyLocal, send, setOpen }
 }

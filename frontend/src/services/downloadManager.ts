@@ -396,18 +396,20 @@ export const downloadManager = {
    * full lecture transcript, and media asset without needing multiple round-trips.
    * Saves the `.zip` archive directly to the student's device.
    */
-  async downloadLessonBundle(recordingId: string, filename?: string): Promise<void> {
-    const blob = await api.downloadRecordingBundle(recordingId)
-    const name = filename || `lesson-${recordingId}-bundle.zip`
+  async downloadLessonBundle(recordingId: string, filename?: string, mode: 'full' | 'micro' = 'full'): Promise<void> {
+    const blob = await api.downloadRecordingBundle(recordingId, mode)
+    const suffix = mode === 'micro' ? '-micro' : ''
+    const name = filename || `lesson-${recordingId}${suffix}-bundle.zip`
     saveBlobToDevice(blob, name.endsWith('.zip') ? name : `${name}.zip`)
   },
 
   /**
    * Downloads a `.zip` bundle of all artifacts for a class session.
    */
-  async downloadClassBundle(classId: string, filename?: string): Promise<void> {
-    const blob = await api.downloadClassBundle(classId)
-    const name = filename || `class-${classId}-bundle.zip`
+  async downloadClassBundle(classId: string, filename?: string, mode: 'full' | 'micro' = 'full'): Promise<void> {
+    const blob = await api.downloadClassBundle(classId, mode)
+    const suffix = mode === 'micro' ? '-micro' : ''
+    const name = filename || `class-${classId}${suffix}-bundle.zip`
     saveBlobToDevice(blob, name.endsWith('.zip') ? name : `${name}.zip`)
   },
 }

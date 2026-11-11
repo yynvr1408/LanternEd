@@ -24,8 +24,9 @@ from app.db.base import utcnow
 from app.db.models.enums import SyncOperationStatus, SyncOperationType
 from app.db.models.sync_operation import SyncOperation
 from app.db.models.user import User
+from app.schemas.exam import ExamSubmitRequest
 from app.schemas.synchronization import SyncOperationIn, SyncOperationResult
-from app.services import assignment_service
+from app.services import assignment_service, exam_service, recording_service
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +80,66 @@ def _within_grace(due_at, now) -> bool:
     return now <= due_at + timedelta(hours=get_settings().offline_submission_grace_hours)
 
 
+def _apply_exam_submit(db: Session, user: User, op: SyncOperationIn) -> dict:
+    attempt_id = op.payload.get("attempt_id")
+    final_answers = op.payload.get("final_answers")
+    if not isinstance(attempt_id, str) or not attempt_id.strip():
+        raise AppError("payload.attempt_id is required for exam_submit.", code="INVALID_PAYLOAD", status_code=422)
+    if not isinstance(final_answers, dict):
+        raise AppError("payload.final_answers must be an object for exam_submit.", code="INVALID_PAYLOAD", status_code=422)
+
+    exam = exam_service.get_exam_or_404(db, op.entity_id)
+    attempt = db.get(exam_service.ExamAttempt, attempt_id)
+    if not attempt or attempt.exam_id != exam.id:
+        raise AppError("Exam attempt does not match target exam.", code="ATTEMPT_MISMATCH", status_code=404)
+
+    offline_events = op.payload.get("offline_events")
+    if offline_events is not None and not isinstance(offline_events, list):
+        offline_events = []
+
+    res = exam_service.submit_exam_attempt(
+        db,
+        user.id,
+        ExamSubmitRequest(attempt_id=attempt_id, final_answers=final_answers),
+        commit=False,
+        as_of=_effective_submission_time(op),
+        offline_events=offline_events,
+        enforce_grace=True,
+    )
+    return {
+        "server_entity_id": res.attempt_id,
+        "server_updated_at": res.submitted_at,
+        "receipt_hash": res.receipt_hash,
+        "auto_graded_score": res.auto_graded_score,
+    }
+
+
+def _apply_recording_progress(db: Session, user: User, op: SyncOperationIn) -> dict:
+    recording = recording_service.get_recording_or_404(db, op.entity_id)
+    raw_pos = op.payload.get("position_seconds", 0)
+    try:
+        position_seconds = max(0, int(raw_pos))
+    except (TypeError, ValueError) as exc:
+        raise AppError("payload.position_seconds must be a non-negative integer.", code="INVALID_PAYLOAD", status_code=422) from exc
+    completed = bool(op.payload.get("completed", False))
+    progress = recording_service.update_progress(
+        db,
+        user,
+        recording,
+        position_seconds=position_seconds,
+        completed=completed,
+        commit=False,
+    )
+    return {
+        "server_entity_id": progress.id,
+        "server_updated_at": progress.updated_at,
+    }
+
+
 _HANDLERS = {
     SyncOperationType.assignment_submission.value: _apply_assignment_submission,
+    SyncOperationType.exam_submit.value: _apply_exam_submit,
+    SyncOperationType.recording_progress.value: _apply_recording_progress,
 }
 
 

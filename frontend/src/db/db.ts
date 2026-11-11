@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { DownloadedResource, AssignmentDraft, SyncOperation, Summary, Lesson } from '../types'
+import type { DownloadedResource, AssignmentDraft, ExamDraft, SyncOperation, Summary, Lesson } from '../types'
 import type { DownloadJob, DownloadPart } from '../services/downloadEngine'
 
 const DATA_OWNER_KEY = 'lanterned_data_owner'
@@ -67,6 +67,7 @@ class LanternEDDatabase extends Dexie {
   cachedLessonMetadata!: EntityTable<CachedLesson, 'id'>
   cachedSummaries!: EntityTable<CachedSummary, 'classId'>
   assignmentDrafts!: EntityTable<AssignmentDraft, 'id'>
+  examDrafts!: EntityTable<ExamDraft, 'id'>
   syncOperations!: EntityTable<SyncOperation, 'id'>
 
   constructor() {
@@ -117,6 +118,21 @@ class LanternEDDatabase extends Dexie {
       assignmentDrafts: 'id, assignmentId, studentId, courseId, syncStatus, savedAt',
       syncOperations: 'id, operationType, entityId, status, idempotencyKey, createdAt',
     })
+
+    // Schema version 5: resilient offline exam drafts + proctoring telemetry buffering
+    this.version(5).stores({
+      downloadedResources: 'id, resourceId, courseId, lessonId, fileType, downloadedAt',
+      downloadedRecordings: 'id, recordingId, courseId, title, downloadedAt',
+      downloadedSummaries: 'id, classId, courseId, downloadedAt',
+      downloadJobs: 'id, status, updatedAt',
+      downloadParts: '[jobId+index], jobId',
+      playbackPositions: 'id, updatedAt',
+      cachedLessonMetadata: 'id, courseId, title, updatedAt',
+      cachedSummaries: 'classId, courseId, status, reviewStatus, updatedAt',
+      assignmentDrafts: 'id, assignmentId, studentId, courseId, syncStatus, savedAt',
+      examDrafts: 'id, examId, attemptId, syncStatus, updatedAt',
+      syncOperations: 'id, operationType, entityId, status, idempotencyKey, createdAt',
+    })
   }
 
   /**
@@ -146,8 +162,9 @@ class LanternEDDatabase extends Dexie {
    * Clear user-private data upon logout to protect privacy on shared rural devices
    */
   async clearPrivateUserData(options: { includeDownloads?: boolean } = {}): Promise<void> {
-    await this.transaction('rw', [this.assignmentDrafts, this.syncOperations], async () => {
+    await this.transaction('rw', [this.assignmentDrafts, this.examDrafts, this.syncOperations], async () => {
       await this.assignmentDrafts.clear()
+      await this.examDrafts.clear()
       await this.syncOperations.clear()
     })
     if (options.includeDownloads) {

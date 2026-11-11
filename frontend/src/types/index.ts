@@ -87,6 +87,11 @@ export interface Section {
 
 export type RecordingStatus = 'PROCESSING' | 'READY' | 'FAILED' | 'ARCHIVED'
 
+export interface WhiteboardTimelineEvent {
+  t_ms: number
+  msg: Record<string, any>
+}
+
 export interface Recording {
   id: string
   course_id: string
@@ -111,6 +116,7 @@ export interface Recording {
   user_progress_seconds?: number
   user_completed?: boolean
   transcript?: string
+  whiteboard_timeline?: WhiteboardTimelineEvent[]
   summary?: Summary
   /** Present only for teachers when the server reports a recording failure. */
   error_message?: string
@@ -204,6 +210,13 @@ export interface SummaryDefinition {
   definition: string
 }
 
+export interface SummaryQuizQuestion {
+  question: string
+  options: string[]
+  answer_index: number
+  explanation?: string
+}
+
 export interface Summary {
   id: string
   class_id: string
@@ -215,6 +228,8 @@ export interface Summary {
   definitions?: SummaryDefinition[]
   examples?: string[]
   revision_questions?: string[]
+  quiz_questions?: SummaryQuizQuestion[]
+  target_language?: string
   teacher_notes?: string
   /** 'llm' for a real model, 'stub' for the labeled no-provider fallback. */
   generator?: string
@@ -225,9 +240,24 @@ export interface Summary {
   created_at: string
 }
 
-export type SyncOperationType = 'submit_assignment' | 'save_draft'
+export type SyncOperationType = 'submit_assignment' | 'save_draft' | 'exam_submit' | 'recording_progress'
 export type SyncStatus = 'pending' | 'syncing' | 'failed' | 'completed'
 export type SyncOutcomeKind = 'expired' | 'closed' | 'conflict' | 'rejected' | 'network'
+
+export interface ExamDraft {
+  id: string // examId
+  examId: string
+  attemptId: string
+  studentId: string
+  answers: Record<string, any>
+  flagged: Record<string, boolean>
+  offlineEvents: Array<{ type: string; timestamp: string; duration_ms?: number }>
+  updatedAt: string
+  syncStatus: 'in_progress' | 'pending_sync' | 'synced' | 'expired' | 'conflict' | 'rejected' | 'sync_failed'
+  syncMessage?: string
+  receiptHash?: string
+  autoGradedScore?: number
+}
 
 export interface SyncOperation {
   id: string

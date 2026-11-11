@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -10,10 +10,13 @@ from app.schemas.classroom import (
     ClassCreate,
     ClassOut,
     ClassUpdate,
+    FallbackFeedOut,
     JoinTokenResponse,
+    LiveCaptionIn,
     ParticipantOut,
     RecordingOut,
     StartRecordingRequest,
+    WhiteboardEventBatchRequest,
 )
 from datetime import timedelta
 
@@ -175,17 +178,57 @@ def download_recording(recording_id: str, user: User = Depends(get_current_user)
     return RedirectResponse(url=info["url"])
 
 
+@router.post("/{class_id}/whiteboard-events")
+def push_whiteboard_events(
+    class_id: str,
+    payload: WhiteboardEventBatchRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Records teacher whiteboard strokes for offline replay & HTTPS fallback streaming."""
+    cls = classroom_service.get_class_or_404(db, class_id)
+    count = classroom_service.append_whiteboard_events(db, user, cls, [ev.model_dump() for ev in payload.events])
+    return {"class_id": class_id, "recorded_events": count}
+
+
+@router.post("/{class_id}/live-captions")
+def push_live_caption(
+    class_id: str,
+    payload: LiveCaptionIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Publishes a lightweight HTTPS live text caption/note when WebRTC degrades."""
+    cls = classroom_service.get_class_or_404(db, class_id)
+    entry = classroom_service.append_live_caption(db, user, cls, payload.text, author=payload.author)
+    return entry
+
+
+@router.get("/{class_id}/fallback-feed", response_model=FallbackFeedOut)
+def get_fallback_feed(
+    class_id: str,
+    since_seq: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Polled over HTTPS (<2 KB/s) during severe WebRTC degradation or firewall UDP blocks."""
+    cls = classroom_service.get_class_or_404(db, class_id)
+    return classroom_service.get_fallback_feed(db, user, cls, since_seq=since_seq)
+
+
 @router.get("/{class_id}/bundle")
 def download_class_bundle(
     class_id: str,
     background_tasks: BackgroundTasks,
+    mode: str = Query(default="full", pattern="^(full|micro)$"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Download a self-contained offline lesson bundle (.zip) for a class containing its summary,
-    available recordings, and metadata."""
+    available recordings, whiteboard timeline, and metadata."""
     cls = classroom_service.get_class_or_404(db, class_id)
-    bundle_path = classroom_service.build_class_bundle(db, user, cls)
+    bundle_path = classroom_service.build_class_bundle(db, user, cls, mode=mode)
     background_tasks.add_task(bundle_path.unlink, missing_ok=True)
-    filename = f"class-{cls.id}-bundle.zip"
+    suffix = "-micro" if mode == "micro" else ""
+    filename = f"class-{cls.id}{suffix}-bundle.zip"
     return FileResponse(bundle_path, media_type="application/zip", filename=filename)

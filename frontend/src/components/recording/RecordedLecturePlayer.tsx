@@ -15,11 +15,15 @@ import {
   Clock,
   HardDrive,
   RefreshCw,
+  PencilLine,
 } from 'lucide-react'
 import type { Recording } from '../../types'
 import { api } from '../../services/apiClient'
 import { downloadManager } from '../../services/downloadManager'
 import { playbackStore } from '../../services/playbackStore'
+import { syncManager } from '../../services/syncManager'
+import { Whiteboard } from '../class/whiteboard/Whiteboard'
+import { apply, emptyBoard, type Message as WhiteboardMessage } from '../class/whiteboard/protocol'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 
@@ -55,6 +59,7 @@ export const RecordedLecturePlayer: React.FC<RecordedLecturePlayerProps> = ({
   const [isDownloading, setIsDownloading] = useState(false)
   const [isDownloaded, setIsDownloaded] = useState(false)
   const [downloadSuccessMessage, setDownloadSuccessMessage] = useState<string | null>(null)
+  const [showBoardReplay, setShowBoardReplay] = useState(true)
   const lastSavedPositionRef = useRef<number>(initialPositionSeconds)
   // Where to resume: the later of the server's saved position and the one kept on this device
   // (which also covers time watched while offline).
@@ -135,7 +140,8 @@ export const RecordedLecturePlayer: React.FC<RecordedLecturePlayerProps> = ({
         await api.saveRecordingProgress(recording.id, Math.round(pos), completed)
         if (onProgressSaved) onProgressSaved(Math.round(pos))
       } catch {
-        // Offline or transient failure: do not interrupt playback
+        // Offline or transient failure: queue idempotently instead of losing watch progress
+        void syncManager.enqueueRecordingProgress(recording.id, Math.round(pos), completed)
       }
     },
     [recording.id, onProgressSaved]
@@ -517,6 +523,41 @@ export const RecordedLecturePlayer: React.FC<RecordedLecturePlayerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Synced Vector Whiteboard Replay (works with audio-only or micro bundles) */}
+      {recording.whiteboard_timeline && recording.whiteboard_timeline.length > 0 && (
+        <div className="bg-[#121A19] border border-[#202B2A] rounded-2xl p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs text-[#CBD7D1]">
+            <span className="flex items-center gap-1.5 font-semibold text-white">
+              <PencilLine className="w-3.5 h-3.5 text-[#2DBE8B]" />
+              Synced Lecture Whiteboard Replay
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowBoardReplay((v) => !v)}
+              className="text-xs text-[#2DBE8B] hover:underline cursor-pointer"
+            >
+              {showBoardReplay ? 'Hide Board' : 'Show Board'}
+            </button>
+          </div>
+          {showBoardReplay && (
+            <div className="h-64 w-full">
+              <Whiteboard
+                board={(() => {
+                  const cutoffMs = Math.floor(currentTime * 1000)
+                  let st = emptyBoard()
+                  for (const ev of recording.whiteboard_timeline || []) {
+                    if (ev.t_ms <= cutoffMs && ev.msg) {
+                      st = apply(st, ev.msg as WhiteboardMessage)
+                    }
+                  }
+                  return st
+                })()}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

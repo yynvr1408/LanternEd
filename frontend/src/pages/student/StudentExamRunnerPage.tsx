@@ -13,11 +13,17 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { examService, type ExamStartResponse, type QuestionItemStudentView } from '../../services/examService'
+import { ApiError } from '../../services/apiClient'
+import { syncManager } from '../../services/syncManager'
+import { useAuth } from '../../context/AuthContext'
+import { useSync } from '../../context/SyncContext'
 import { Badge, Button, Dialog, LoadingState } from '../../components/ui'
 
 export const StudentExamRunnerPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { syncNow, refreshQueue } = useSync()
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,13 +39,17 @@ export const StudentExamRunnerPage: React.FC = () => {
   const [isAutoSaving, setIsAutoSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string>('Just now')
 
-  // Submission Modal
+  // Submission Modal & Offline Resilience
   const [isSubmitOpen, setIsSubmitOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submittedReceipt, setSubmittedReceipt] = useState<any | null>(null)
+  const [queuedOfflineNotice, setQueuedOfflineNotice] = useState<string | null>(null)
 
   const answersRef = useRef(answers)
   answersRef.current = answers
+  const flaggedRef = useRef(flagged)
+  flaggedRef.current = flagged
+  const offlineEventsRef = useRef<Array<{ type: string; timestamp: string; duration_ms?: number }>>([])
 
   // Initialize Exam
   useEffect(() => {
@@ -47,13 +57,23 @@ export const StudentExamRunnerPage: React.FC = () => {
     let mounted = true
     setIsLoading(true)
 
-    examService
-      .startExam(examId)
-      .then((data) => {
+    Promise.all([examService.startExam(examId), syncManager.getExamDraft(examId).catch(() => undefined)])
+      .then(([data, localDraft]) => {
         if (!mounted) return
         setExamData(data)
         setSecondsRemaining(data.duration_seconds)
-        setAnswers(data.existing_responses || {})
+        const restored =
+          localDraft && localDraft.attemptId === data.attempt_id
+            ? { ...(data.existing_responses || {}), ...localDraft.answers }
+            : data.existing_responses || {}
+        setAnswers(restored)
+        if (localDraft && localDraft.attemptId === data.attempt_id) {
+          setFlagged(localDraft.flagged || {})
+          offlineEventsRef.current = localDraft.offlineEvents || []
+          if (localDraft.syncStatus === 'pending_sync') {
+            setQueuedOfflineNotice('Your completed exam is saved offline and waiting for connectivity to sync.')
+          }
+        }
         setIsLoading(false)
 
         // Request Fullscreen if enforced
@@ -125,6 +145,18 @@ export const StudentExamRunnerPage: React.FC = () => {
   const saveProgress = async () => {
     if (!examId || !examData) return
     setIsAutoSaving(true)
+    if (user?.id) {
+      await syncManager
+        .saveExamDraftLocally({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user.id,
+          answers: answersRef.current,
+          flagged: flaggedRef.current,
+          offlineEvents: offlineEventsRef.current,
+        })
+        .catch(() => {})
+    }
     try {
       const res = await examService.sendHeartbeat(examId, {
         attempt_id: examData.attempt_id,
@@ -133,7 +165,7 @@ export const StudentExamRunnerPage: React.FC = () => {
       setLastSavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
       if (res.warning) setSecurityWarning(res.warning)
     } catch {
-      // offline silent queue
+      setLastSavedAt('Saved on device (offline)')
     } finally {
       setIsAutoSaving(false)
     }
@@ -141,11 +173,12 @@ export const StudentExamRunnerPage: React.FC = () => {
 
   const logSecurityEvent = async (type: string) => {
     if (!examId || !examData) return
+    const eventEntry = { type, timestamp: new Date().toISOString() }
     try {
       const res = await examService.sendHeartbeat(examId, {
         attempt_id: examData.attempt_id,
         answers: answersRef.current,
-        event: { type, timestamp: new Date().toISOString() },
+        event: eventEntry,
       })
       setTabBlurCount(res.tab_blur_count)
       if (res.warning) {
@@ -154,22 +187,53 @@ export const StudentExamRunnerPage: React.FC = () => {
         setSecurityWarning(`Security Notice: Tab navigation was logged. Fullscreen compliance is monitored.`)
       }
     } catch {
+      offlineEventsRef.current = [...offlineEventsRef.current, eventEntry]
+      if (user?.id) {
+        void syncManager.saveExamDraftLocally({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user.id,
+          answers: answersRef.current,
+          flagged: flaggedRef.current,
+          offlineEvents: offlineEventsRef.current,
+        })
+      }
       setTabBlurCount((prev) => prev + 1)
     }
   }
 
   const handleSelectOption = (questionId: string, optionId: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: optionId,
-    }))
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: optionId }
+      if (examId && examData && user?.id) {
+        void syncManager.saveExamDraftLocally({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user.id,
+          answers: next,
+          flagged: flaggedRef.current,
+          offlineEvents: offlineEventsRef.current,
+        })
+      }
+      return next
+    })
   }
 
   const toggleFlag = (questionId: string) => {
-    setFlagged((prev) => ({
-      ...prev,
-      [questionId]: !prev[questionId],
-    }))
+    setFlagged((prev) => {
+      const next = { ...prev, [questionId]: !prev[questionId] }
+      if (examId && examData && user?.id) {
+        void syncManager.saveExamDraftLocally({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user.id,
+          answers: answersRef.current,
+          flagged: next,
+          offlineEvents: offlineEventsRef.current,
+        })
+      }
+      return next
+    })
   }
 
   const handleForceSubmit = () => {
@@ -184,13 +248,42 @@ export const StudentExamRunnerPage: React.FC = () => {
         attempt_id: examData.attempt_id,
         final_answers: answersRef.current,
       })
+      if (user?.id) {
+        await syncManager
+          .saveExamDraftLocally({
+            examId,
+            attemptId: examData.attempt_id,
+            studentId: user.id,
+            answers: answersRef.current,
+            flagged: flaggedRef.current,
+            offlineEvents: [],
+            syncStatus: 'synced',
+          })
+          .catch(() => {})
+      }
+      setQueuedOfflineNotice(null)
       setSubmittedReceipt(res)
       setIsSubmitOpen(false)
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {})
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to submit examination.')
+      const isOffline = (err instanceof ApiError && err.isNetworkError) || (typeof navigator !== 'undefined' && !navigator.onLine)
+      if (isOffline) {
+        await syncManager.enqueueExamSubmission({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user?.id || 'student',
+          answers: answersRef.current,
+          flagged: flaggedRef.current,
+          offlineEvents: offlineEventsRef.current,
+        })
+        await refreshQueue()
+        setIsSubmitOpen(false)
+        setQueuedOfflineNotice('Network unavailable: your final answers and proctoring receipt are saved on this device and queued for automatic submission when signal returns.')
+      } else {
+        setError(err.message || 'Failed to submit examination.')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -212,6 +305,48 @@ export const StudentExamRunnerPage: React.FC = () => {
           <h2 className="text-lg font-bold text-[#202B2A]">Examination Access Blocked</h2>
           <p className="text-xs text-[#687775]">{error || 'Unable to start examination attempt.'}</p>
           <Button onClick={() => navigate('/student/courses')}>Return to Courses</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Offline queued submission screen (when cellular drops at submit time)
+  if (queuedOfflineNotice && !submittedReceipt) {
+    return (
+      <div className="min-h-screen bg-[#F5F8F7] flex items-center justify-center p-4">
+        <div className="max-w-lg w-full p-8 bg-white border border-[#CBD7D1] rounded-2xl shadow-sm text-center space-y-5">
+          <div className="w-16 h-16 rounded-full bg-[#FFF0CB] text-[#8A5700] flex items-center justify-center mx-auto">
+            <Save className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-[#202B2A]">Saved Offline — Queued for Sync</h2>
+            <p className="text-xs text-[#687775]">{queuedOfflineNotice}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              className="flex-1"
+              variant="primary"
+              onClick={async () => {
+                await syncNow()
+                const refreshed = examId ? await syncManager.getExamDraft(examId) : undefined
+                if (refreshed?.syncStatus === 'synced') {
+                  setSubmittedReceipt({
+                    status: 'evaluated',
+                    submitted_at: refreshed.updatedAt,
+                    auto_graded_score: refreshed.autoGradedScore ?? 0,
+                    pending_manual_evaluation: false,
+                    receipt_hash: refreshed.receiptHash || 'synced',
+                  })
+                  setQueuedOfflineNotice(null)
+                }
+              }}
+            >
+              Sync Submission Now
+            </Button>
+            <Button className="flex-1" variant="outline" onClick={() => navigate('/student/courses')}>
+              Return to Courses
+            </Button>
+          </div>
         </div>
       </div>
     )

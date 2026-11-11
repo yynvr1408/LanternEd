@@ -93,6 +93,27 @@ class RecordingLibraryItem(RecordingOut):
 
 class RecordingDetail(RecordingLibraryItem):
     transcript: str | None = None
+    whiteboard_timeline: list[dict] = []
+
+
+class WhiteboardEventIn(BaseModel):
+    t_ms: int = Field(ge=0)
+    msg: dict
+
+
+class WhiteboardEventBatchRequest(BaseModel):
+    events: list[WhiteboardEventIn] = Field(min_length=1, max_length=250)
+
+
+class LiveCaptionIn(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+    author: str | None = Field(default=None, max_length=120)
+
+
+class FallbackFeedOut(BaseModel):
+    class_id: str
+    latest_seq: int
+    events: list[dict] = []
 
 
 class PlaybackOut(BaseModel):
