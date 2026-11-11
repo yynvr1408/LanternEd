@@ -1,45 +1,45 @@
 {
-  "version": "0.1.6",
-  "releaseDate": "2026-11-10T13:47:29.929858+00:00",
-  "releaseNotes": "LanternED v0.1.1: Institutional onboarding hierarchy, searchable campus selection, streamlined bandwidth simulation, and cross-platform native release distribution.",
+  "version": "0.1.7",
+  "releaseDate": "2026-11-11T07:21:56.853222+00:00",
+  "releaseNotes": "LanternED v0.1.7: **native,ui,ci:** bring LAN hub, NSD/Bonjour, wake lock, Share Sheet, safe areas, and CI/CD release parity to Windows, macOS, Android, and iOS (`a84937d`); **offline,classroom:** implement offline exam sync, micro-bundles, real Tauri LAN server, HTTPS fallback feed, and offline quizzes (`5665a3d`); **release:** keep latest 2 versions per app and build local 4-app releases (`5c81def`); **android:** make ServerSocket effectively final for lambda capture in LanternNativePlugin (`745ceae`)",
   "platforms": {
     "windows": {
-      "version": "0.1.6",
-      "fileName": "LanternEd-Setup-0.1.6.exe",
+      "version": "0.1.7",
+      "fileName": "LanternEd-Setup-0.1.7.exe",
       "installerType": "exe",
       "downloadUrl": "/api/v1/releases/download/windows",
-      "fileSizeMb": 2.5,
-      "sha256": "2378ccd2a1302f4148972d4f9b5607efeaa9bda6d7904a1b4cf7093322aa8a25",
+      "fileSizeMb": 2.6,
+      "sha256": "be64028b49cd9df555d440f60086c9a5e69242e4560960acf0fd723434de8983",
       "minOsVersion": "Windows 10 / 11 (64-bit)",
       "arch": "x64"
     },
     "macos": {
-      "version": "0.1.6",
-      "fileName": "LanternEd-0.1.6-universal.dmg",
+      "version": "0.1.7",
+      "fileName": "LanternEd-0.1.7-universal.dmg",
       "installerType": "dmg",
       "downloadUrl": "/api/v1/releases/download/macos",
-      "fileSizeMb": 6.8,
-      "sha256": "e3f3127e7fd61386d36aef8e84b4ab8b73f3bd2d02caaa1a429d9e2b3dc4fd53",
+      "fileSizeMb": 7.0,
+      "sha256": "2111dcccb473aa11b642234c42842b89b84123f9d0ebcf3a63c49454dd63dd32",
       "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
       "arch": "Universal (Apple Silicon & Intel)"
     },
     "android": {
-      "version": "0.1.6",
-      "fileName": "LanternEd-v0.1.6.apk",
+      "version": "0.1.7",
+      "fileName": "LanternEd-v0.1.7.apk",
       "installerType": "apk",
       "downloadUrl": "/api/v1/releases/download/android",
       "fileSizeMb": 3.7,
-      "sha256": "14bb5d705c6a363bce457661dade0815ce197e7cdc47dbc45fd61f97487be9a7",
+      "sha256": "1bab32646519a34af85ce12323cba5fe3a1051282d3e3b86eaa4eef65579b224",
       "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
       "arch": "arm64-v8a, armeabi-v7a"
     },
     "ios": {
-      "version": "0.1.6",
-      "fileName": "LanternEd-v0.1.6.ipa",
+      "version": "0.1.7",
+      "fileName": "LanternEd-v0.1.7.ipa",
       "installerType": "ipa",
       "downloadUrl": "/api/v1/releases/download/ios",
-      "fileSizeMb": 1.3,
-      "sha256": "dfc9a808b3f4e5d0e8f0598e1692bf4911013351c9f943b3e63f7705144c3acc",
+      "fileSizeMb": 1.4,
+      "sha256": "e109d687b3b615e9f9e150cf44a6f6bcfada9359ba22386b61aa54343893f6d5",
       "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
       "arch": "arm64"
     }

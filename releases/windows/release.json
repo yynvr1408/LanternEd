@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "fileName": "LanternEd-Setup-0.1.6.exe",
+  "version": "0.1.7",
+  "fileName": "LanternEd-Setup-0.1.7.exe",
   "installerType": "exe",
   "downloadUrl": "/api/v1/releases/download/windows",
-  "fileSizeMb": 2.5,
-  "sha256": "2378ccd2a1302f4148972d4f9b5607efeaa9bda6d7904a1b4cf7093322aa8a25",
+  "fileSizeMb": 2.6,
+  "sha256": "be64028b49cd9df555d440f60086c9a5e69242e4560960acf0fd723434de8983",
   "minOsVersion": "Windows 10 / 11 (64-bit)",
   "arch": "x64"
 }

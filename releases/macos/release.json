@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "fileName": "LanternEd-0.1.6-universal.dmg",
+  "version": "0.1.7",
+  "fileName": "LanternEd-0.1.7-universal.dmg",
   "installerType": "dmg",
   "downloadUrl": "/api/v1/releases/download/macos",
-  "fileSizeMb": 6.8,
-  "sha256": "e3f3127e7fd61386d36aef8e84b4ab8b73f3bd2d02caaa1a429d9e2b3dc4fd53",
+  "fileSizeMb": 7.0,
+  "sha256": "2111dcccb473aa11b642234c42842b89b84123f9d0ebcf3a63c49454dd63dd32",
   "minOsVersion": "macOS 10.15+ (Catalina through Sequoia)",
   "arch": "Universal (Apple Silicon & Intel)"
 }

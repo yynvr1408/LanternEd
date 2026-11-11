@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [v0.1.7] — 2026-11-11
+
+### Added
+
+- **native,ui,ci:** bring LAN hub, NSD/Bonjour, wake lock, Share Sheet, safe areas, and CI/CD release parity to Windows, macOS, Android, and iOS (`a84937d`)
+- **offline,classroom:** implement offline exam sync, micro-bundles, real Tauri LAN server, HTTPS fallback feed, and offline quizzes (`5665a3d`)
+- **release:** keep latest 2 versions per app and build local 4-app releases (`5c81def`)
+
+### Fixed
+
+- **android:** make ServerSocket effectively final for lambda capture in LanternNativePlugin (`745ceae`)
+
+---
+
 ## [v0.1.6] — 2026-11-10
 
 ### Added

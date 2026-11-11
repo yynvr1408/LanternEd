@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "fileName": "LanternEd-v0.1.6.apk",
+  "version": "0.1.7",
+  "fileName": "LanternEd-v0.1.7.apk",
   "installerType": "apk",
   "downloadUrl": "/api/v1/releases/download/android",
   "fileSizeMb": 3.7,
-  "sha256": "14bb5d705c6a363bce457661dade0815ce197e7cdc47dbc45fd61f97487be9a7",
+  "sha256": "1bab32646519a34af85ce12323cba5fe3a1051282d3e3b86eaa4eef65579b224",
   "minOsVersion": "Android 8.0+ (Oreo, Pie, 10, 11, 12, 13, 14, 15)",
   "arch": "arm64-v8a, armeabi-v7a"
 }

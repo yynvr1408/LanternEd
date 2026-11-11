@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "fileName": "LanternEd-v0.1.6.ipa",
+  "version": "0.1.7",
+  "fileName": "LanternEd-v0.1.7.ipa",
   "installerType": "ipa",
   "downloadUrl": "/api/v1/releases/download/ios",
-  "fileSizeMb": 1.3,
-  "sha256": "dfc9a808b3f4e5d0e8f0598e1692bf4911013351c9f943b3e63f7705144c3acc",
+  "fileSizeMb": 1.4,
+  "sha256": "e109d687b3b615e9f9e150cf44a6f6bcfada9359ba22386b61aa54343893f6d5",
   "minOsVersion": "iOS 14.0+ (iPhone & iPad)",
   "arch": "arm64"
 }

@@ -1,6 +1,6 @@
 [package]
 name = "lanterned-desktop"
-version = "0.1.6"
+version = "0.1.7"
 description = "LanternEd Native Rural Education Application"
 edition = "2021"
 

@@ -47,7 +47,7 @@ export interface UpdateCheckResult {
   is_critical?: boolean
 }
 
-export const APP_CURRENT_VERSION = '0.1.6'
+export const APP_CURRENT_VERSION = '0.1.7'
 
 export function parseSemverTuple(raw: string): [number, number, number] {
   const cleaned = String(raw || '').replace(/^v/i, '').split('-')[0].trim()
