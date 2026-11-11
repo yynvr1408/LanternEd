@@ -31,6 +31,11 @@ on:
         required: true
         default: false
         type: boolean
+      keep_releases:
+        description: "Retain only the latest N versions per app (local releases/ + App-Releases)"
+        required: true
+        default: "2"
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
@@ -48,4 +53,5 @@ jobs:
       tag: ${{ github.event_name == 'push' && github.ref_name || '' }}
       draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
       prerelease: ${{ (github.event_name == 'workflow_dispatch' && inputs.prerelease) || (github.event_name == 'push' && contains(github.ref_name, '-')) }}
+      keep_releases: ${{ github.event_name == 'workflow_dispatch' && inputs.keep_releases || '2' }}
     secrets: inherit

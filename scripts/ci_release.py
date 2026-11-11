@@ -559,6 +559,529 @@ PRIMARY_EXTS = {
     "ios": ".ipa",
 }
 
+DEFAULT_KEEP_VERSIONS = 2
+
+ARTIFACT_SUFFIXES = (
+    "-macos-universal.app.zip",
+    "-ios.xcarchive.zip",
+    "-universal.dmg",
+    "-x64.msi",
+    ".xcarchive.zip",
+    ".app.zip",
+    ".tar.gz",
+    ".exe",
+    ".msi",
+    ".dmg",
+    ".apk",
+    ".aab",
+    ".ipa",
+)
+
+
+def extract_version_from_artifact_name(filename: str) -> str | None:
+    """Extracts canonical SemVer from a platform installer filename, ignoring non-binary metadata."""
+    lower = filename.lower()
+    matched_suffix = next((s for s in ARTIFACT_SUFFIXES if lower.endswith(s)), None)
+    if not matched_suffix:
+        return None
+
+    stem = filename[: len(filename) - len(matched_suffix)]
+    m = re.search(
+        r"(?:^|[-_])v?(?P<ver>(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?)$",
+        stem,
+    )
+    if not m:
+        return None
+    ver = m.group("ver")
+    try:
+        parse_semver(ver)
+    except ValueError:
+        return None
+    return ver
+
+
+def prune_platform_dir(
+    plat_dir: Path,
+    *,
+    keep: int = DEFAULT_KEEP_VERSIONS,
+    preserve_version: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Retains only the newest ``keep`` SemVer versions of installers inside a platform directory."""
+    if keep < 1:
+        raise ValueError(f"keep must be >= 1, got {keep}")
+    if not plat_dir.exists():
+        return {"kept_versions": [], "removed_files": []}
+
+    grouped: dict[str, list[Path]] = {}
+    for entry in sorted(plat_dir.iterdir()):
+        if not entry.is_file():
+            continue
+        ver = extract_version_from_artifact_name(entry.name)
+        if not ver:
+            continue
+        grouped.setdefault(ver, []).append(entry)
+
+    ordered_versions = sorted(grouped.keys(), key=semver_sort_key, reverse=True)
+    kept_versions: list[str] = []
+
+    clean_preserve = preserve_version.lstrip("v") if preserve_version else None
+    if clean_preserve and clean_preserve in grouped:
+        kept_versions.append(clean_preserve)
+
+    for ver in ordered_versions:
+        if ver in kept_versions:
+            continue
+        if len(kept_versions) >= keep:
+            break
+        kept_versions.append(ver)
+
+    kept_versions.sort(key=semver_sort_key, reverse=True)
+    kept_set = set(kept_versions)
+
+    removed_files: list[str] = []
+    for ver in ordered_versions:
+        if ver in kept_set:
+            continue
+        for file_path in grouped[ver]:
+            if not dry_run:
+                file_path.unlink()
+            removed_files.append(file_path.name)
+
+    return {"kept_versions": kept_versions, "removed_files": removed_files}
+
+
+def prune_local_releases(
+    releases_root: Path,
+    *,
+    keep: int = DEFAULT_KEEP_VERSIONS,
+    preserve_version: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, dict[str, Any]]:
+    """Enforces the latest-N-versions retention policy uniformly across all 4 app directories."""
+    summary: dict[str, dict[str, Any]] = {}
+    for plat in VALID_PLATFORMS:
+        summary[plat] = prune_platform_dir(
+            releases_root / plat,
+            keep=keep,
+            preserve_version=preserve_version,
+            dry_run=dry_run,
+        )
+    return summary
+
+
+def select_releases_to_prune(
+    releases: list[dict[str, Any]],
+    *,
+    keep: int = DEFAULT_KEEP_VERSIONS,
+    preserve_tag: str = "",
+    include_drafts: bool = False,
+) -> tuple[list[str], list[str]]:
+    """Returns (kept_tags, delete_tags) keeping at most ``keep`` newest SemVer releases."""
+    if keep < 1:
+        raise ValueError(f"keep must be >= 1, got {keep}")
+
+    clean_preserve = preserve_tag.strip()
+    candidates: list[str] = []
+    for rel in releases:
+        tag = str(rel.get("tagName") or rel.get("tag_name") or "").strip()
+        is_draft = bool(rel.get("isDraft") if "isDraft" in rel else rel.get("draft", False))
+        if not tag or not SEMVER_RE.match(tag):
+            continue
+        if is_draft and not include_drafts and tag != clean_preserve:
+            continue
+        candidates.append(tag)
+
+    unique_sorted = sorted(dict.fromkeys(candidates), key=semver_sort_key, reverse=True)
+    kept: list[str] = []
+    if clean_preserve and clean_preserve in unique_sorted:
+        kept.append(clean_preserve)
+
+    for tag in unique_sorted:
+        if tag in kept:
+            continue
+        if len(kept) >= keep:
+            break
+        kept.append(tag)
+
+    kept.sort(key=semver_sort_key, reverse=True)
+    kept_set = set(kept)
+    to_delete = [tag for tag in unique_sorted if tag not in kept_set]
+    return kept, to_delete
+
+
+def _collect_staged_platform_files(
+    input_dir: Path,
+    clean_ver: str,
+    *,
+    include_secondary: bool = False,
+) -> dict[str, list[tuple[Path, str, bool]]]:
+    """Collects (source_path, canonical_filename, is_primary) items grouped by platform."""
+    collected: dict[str, list[tuple[Path, str, bool]]] = {}
+    for plat in VALID_PLATFORMS:
+        candidates = [input_dir / f"platform-{plat}", input_dir / plat]
+        plat_dir = next((c for c in candidates if c.exists()), None)
+        if not plat_dir:
+            continue
+        files = sorted([p for p in plat_dir.rglob("*") if p.is_file()])
+        if not files:
+            continue
+
+        mapped = [(src, _canonical_artifact_name(plat, src, clean_ver)) for src in files]
+        primary_ext = PRIMARY_EXTS[plat]
+        primary_names = {dest for _, dest in mapped if dest.lower().endswith(primary_ext)}
+        if not primary_names and mapped:
+            primary_names = {mapped[0][1]}
+
+        selected: list[tuple[Path, str, bool]] = []
+        for src, dest in mapped:
+            is_primary = dest in primary_names
+            if include_secondary or is_primary:
+                selected.append((src, dest, is_primary))
+        if selected:
+            collected[plat] = selected
+    return collected
+
+
+def install_local_releases(
+    input_dir: Path,
+    version: str,
+    *,
+    releases_dir: Path | None = None,
+    keep: int = DEFAULT_KEEP_VERSIONS,
+    include_secondary: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Installs built platform installers into releases/<plat>/, updates manifest checksums, and prunes to keep N."""
+    clean_ver = version.lstrip("v")
+    parse_semver(clean_ver)
+    target_releases = (releases_dir or RELEASES_DIR).resolve()
+    target_releases.mkdir(parents=True, exist_ok=True)
+    manifest_file = target_releases / "manifest.json"
+    manifest_data = (
+        json.loads(manifest_file.read_text(encoding="utf-8"))
+        if manifest_file.exists()
+        else {"version": clean_ver, "releaseDate": "", "releaseNotes": "", "platforms": {}}
+    )
+
+    collected = _collect_staged_platform_files(input_dir.resolve(), clean_ver, include_secondary=include_secondary)
+    installed: dict[str, list[str]] = {}
+    for plat, items in collected.items():
+        plat_dir = target_releases / plat
+        if not dry_run:
+            plat_dir.mkdir(parents=True, exist_ok=True)
+        installed[plat] = []
+        primary_stats: tuple[str, int, str] | None = None
+
+        for src, dest_name, is_primary in items:
+            dest_path = plat_dir / dest_name
+            if not dry_run:
+                shutil.copy2(src, dest_path)
+            sha = _sha256_file(src if dry_run else dest_path)
+            size_bytes = (src if dry_run else dest_path).stat().st_size
+            installed[plat].append(dest_name)
+            if is_primary or primary_stats is None:
+                primary_stats = (dest_name, size_bytes, sha)
+
+        if primary_stats:
+            fname, size_bytes, sha = primary_stats
+            cfg = manifest_data.setdefault("platforms", {}).setdefault(plat, {})
+            cfg["version"] = clean_ver
+            cfg["fileName"] = fname
+            cfg["fileSizeMb"] = round(size_bytes / (1024 * 1024), 1)
+            cfg["sha256"] = sha
+            if not dry_run:
+                (plat_dir / "release.json").write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+
+    manifest_data["version"] = clean_ver
+    manifest_data["releaseDate"] = datetime.now(timezone.utc).isoformat()
+    if not dry_run:
+        manifest_file.write_text(json.dumps(manifest_data, indent=2) + "\n", encoding="utf-8")
+        if CHANGELOG_PATH.exists():
+            shutil.copy2(CHANGELOG_PATH, target_releases / "CHANGELOG.md")
+
+    prune_summary = prune_local_releases(
+        target_releases,
+        keep=keep,
+        preserve_version=clean_ver,
+        dry_run=dry_run,
+    )
+    return {"version": clean_ver, "installed": installed, "pruned": prune_summary}
+
+
+def mirror_releases_tree(
+    source_releases: Path,
+    mirror_dir: Path,
+    *,
+    keep: int = DEFAULT_KEEP_VERSIONS,
+    preserve_version: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, dict[str, Any]]:
+    """Synchronizes local releases/ content into a mirror repo directory while preserving repo files & keep-N rule."""
+    src_root = source_releases.resolve()
+    dst_root = mirror_dir.resolve()
+    if not dry_run:
+        dst_root.mkdir(parents=True, exist_ok=True)
+        for plat in VALID_PLATFORMS:
+            src_plat = src_root / plat
+            dst_plat = dst_root / plat
+            if src_plat.exists():
+                if dst_plat.exists():
+                    shutil.rmtree(dst_plat)
+                shutil.copytree(src_plat, dst_plat)
+        for fname in ("manifest.json", "CHANGELOG.md"):
+            src_file = src_root / fname
+            if src_file.exists():
+                shutil.copy2(src_file, dst_root / fname)
+        for optional_name in ("LICENSE",):
+            src_opt = src_root / optional_name
+            dst_opt = dst_root / optional_name
+            if src_opt.exists() and not dst_opt.exists():
+                shutil.copy2(src_opt, dst_opt)
+
+    return prune_local_releases(
+        dst_root,
+        keep=keep,
+        preserve_version=preserve_version,
+        dry_run=dry_run,
+    )
+
+
+def _run_step(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
+    print(f"$ ({cwd}) {' '.join(cmd)}")
+    return subprocess.run(cmd, cwd=str(cwd), env=env, text=True, check=check)
+
+
+def _host_native_platforms() -> list[str]:
+    if sys.platform.startswith("win"):
+        return ["windows", "android"]
+    if sys.platform == "darwin":
+        return ["macos", "ios", "android"]
+    return ["android"]
+
+
+def _npm_exe() -> str:
+    return "npm.cmd" if sys.platform.startswith("win") else "npm"
+
+
+def _npx_exe() -> str:
+    return "npx.cmd" if sys.platform.startswith("win") else "npx"
+
+
+def _fetch_missing_from_release(
+    target_dir: Path,
+    platforms: list[str],
+    release_ref: str,
+    version: str,
+    repo: str = "yynvr1408/LanternEd-App-Releases",
+) -> list[str]:
+    """Downloads missing cross-OS platform installers from a GitHub Release into target_dir/platform-<plat>/."""
+    import urllib.error
+    import urllib.request
+
+    name_templates = {
+        "windows": f"LanternEd-Setup-{version}.exe",
+        "macos": f"LanternEd-{version}-universal.dmg",
+        "android": f"LanternEd-v{version}.apk",
+        "ios": f"LanternEd-v{version}.ipa",
+    }
+    base_url = (
+        f"https://github.com/{repo}/releases/latest/download"
+        if release_ref == "latest"
+        else f"https://github.com/{repo}/releases/download/{release_ref}"
+    )
+    fetched: list[str] = []
+    for plat in platforms:
+        fname = name_templates[plat]
+        url = f"{base_url}/{fname}"
+        dest_dir = target_dir / f"platform-{plat}"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / fname
+        try:
+            print(f"[fetch] Downloading {plat}: {url}")
+            urllib.request.urlretrieve(url, dest_file)
+            fetched.append(plat)
+        except urllib.error.URLError as exc:
+            print(f"[warn] Could not fetch {plat} from {url}: {exc}")
+    return fetched
+
+
+def cmd_install_local_releases(args: argparse.Namespace) -> None:
+    res = install_local_releases(
+        Path(args.input_dir),
+        args.version,
+        releases_dir=Path(args.releases_dir) if args.releases_dir else RELEASES_DIR,
+        keep=args.keep,
+        include_secondary=args.include_secondary,
+        dry_run=args.dry_run,
+    )
+    print(json.dumps(res, indent=2))
+
+
+def cmd_prune_releases(args: argparse.Namespace) -> None:
+    releases_root = Path(args.releases_dir).resolve()
+    summary = prune_local_releases(
+        releases_root,
+        keep=args.keep,
+        preserve_version=args.preserve_version or None,
+        dry_run=args.dry_run,
+    )
+    payload: dict[str, Any] = {"local": summary}
+    if args.mirror_dir:
+        payload["mirror"] = mirror_releases_tree(
+            releases_root,
+            Path(args.mirror_dir),
+            keep=args.keep,
+            preserve_version=args.preserve_version or None,
+            dry_run=args.dry_run,
+        )
+    print(json.dumps(payload, indent=2))
+
+
+def cmd_prune_github_releases(args: argparse.Namespace) -> None:
+    res = subprocess.run(
+        ["gh", "release", "list", "--repo", args.repo, "--limit", "100", "--json", "tagName,isDraft,isPrerelease,createdAt"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    releases = json.loads(res.stdout or "[]")
+    kept, to_delete = select_releases_to_prune(
+        releases,
+        keep=args.keep,
+        preserve_tag=args.preserve_tag,
+        include_drafts=args.include_drafts,
+    )
+    for tag in to_delete:
+        if args.dry_run:
+            print(f"[DRY RUN] Would delete GitHub release {tag} from {args.repo} (cleanup_tag={args.cleanup_tag})")
+        else:
+            cmd = ["gh", "release", "delete", tag, "--repo", args.repo, "--yes"]
+            if args.cleanup_tag:
+                cmd.append("--cleanup-tag")
+            subprocess.run(cmd, check=True)
+    print(json.dumps({"repo": args.repo, "kept": kept, "deleted": to_delete, "dry_run": args.dry_run}, indent=2))
+
+
+def cmd_local_build(args: argparse.Namespace) -> None:
+    """Builds web dist + local host-supported app packages into releases/<plat>/ while keeping latest N versions."""
+    if args.version:
+        clean_ver = args.version.lstrip("v")
+        parse_semver(clean_ver)
+    elif args.bump != "none":
+        baseline = current_baseline_version()
+        maj, min_, pat, _ = parse_semver(baseline)
+        if args.bump == "major":
+            clean_ver = f"{maj + 1}.0.0"
+        elif args.bump == "minor":
+            clean_ver = f"{maj}.{min_ + 1}.0"
+        else:
+            clean_ver = f"{maj}.{min_}.{pat + 1}"
+    else:
+        clean_ver = json.loads(MANIFEST_PATH.read_text(encoding="utf-8")).get("version") or current_baseline_version()
+
+    version_code = compute_version_code(clean_ver)
+    native_supported = _host_native_platforms()
+    raw_targets = (args.targets or "auto").strip().lower()
+    if raw_targets == "auto":
+        selected_targets = list(native_supported)
+    else:
+        selected_targets = parse_targets(raw_targets)
+
+    print(f"[local-build] Target version: v{clean_ver} (code {version_code}); host native targets={native_supported}; requested={selected_targets}")
+    if args.dry_run:
+        summary = prune_local_releases(RELEASES_DIR, keep=args.keep, preserve_version=clean_ver, dry_run=True)
+        print(json.dumps({"version": clean_ver, "targets": selected_targets, "prune_preview": summary}, indent=2))
+        return
+
+    sync_all_versions(clean_ver, version_code)
+    npm = _npm_exe()
+    npx = _npx_exe()
+
+    if not (FRONTEND_DIR / "node_modules").exists():
+        _run_step([npm, "ci"], cwd=FRONTEND_DIR)
+    if not args.skip_tests:
+        _run_step([npx, "oxlint"], cwd=FRONTEND_DIR)
+        _run_step([npx, "tsc", "-b"], cwd=FRONTEND_DIR)
+        _run_step([npx, "vitest", "run"], cwd=FRONTEND_DIR)
+    if not args.skip_web_build:
+        _run_step([npx, "vite", "build"], cwd=FRONTEND_DIR)
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="lanterned-local-") as tmp:
+        stage_in = Path(tmp)
+        unbuildable: list[str] = []
+
+        for plat in selected_targets:
+            if plat not in native_supported:
+                unbuildable.append(plat)
+                print(f"[skip] Platform '{plat}' cannot compile natively on this host ({sys.platform}).")
+                continue
+
+            pdir = stage_in / f"platform-{plat}"
+            pdir.mkdir(parents=True, exist_ok=True)
+            ci_cfg = str(FRONTEND_DIR / "src-tauri" / "tauri.ci.conf.json")
+
+            if plat == "windows":
+                _run_step([npx, "tauri", "build", "--ci", "--config", ci_cfg, "--target", "x86_64-pc-windows-msvc", "--bundles", "nsis", "--no-sign"], cwd=FRONTEND_DIR)
+                nsis_dir = FRONTEND_DIR / "src-tauri" / "target" / "x86_64-pc-windows-msvc" / "release" / "bundle" / "nsis"
+                for exe in sorted(nsis_dir.glob("*.exe")):
+                    shutil.copy2(exe, pdir / exe.name)
+            elif plat == "macos":
+                _run_step([npx, "tauri", "build", "--ci", "--config", ci_cfg, "--target", "universal-apple-darwin", "--bundles", "dmg", "--no-sign"], cwd=FRONTEND_DIR)
+                dmg_dir = FRONTEND_DIR / "src-tauri" / "target" / "universal-apple-darwin" / "release" / "bundle" / "dmg"
+                for dmg in sorted(dmg_dir.glob("*.dmg")):
+                    shutil.copy2(dmg, pdir / dmg.name)
+            elif plat == "android":
+                _run_step([npx, "cap", "sync", "android"], cwd=FRONTEND_DIR)
+                android_dir = FRONTEND_DIR / "android"
+                gradlew = str(android_dir / ("gradlew.bat" if sys.platform.startswith("win") else "gradlew"))
+                _run_step([gradlew, "assembleRelease"], cwd=android_dir)
+                apk_root = android_dir / "app" / "build" / "outputs" / "apk"
+                apks = sorted(apk_root.rglob("*.apk"))
+                if apks:
+                    shutil.copy2(apks[0], pdir / apks[0].name)
+            elif plat == "ios":
+                _run_step([npx, "cap", "sync", "ios"], cwd=FRONTEND_DIR)
+                ios_dir = FRONTEND_DIR / "ios" / "App"
+                proj_flag = ["-workspace", "App.xcworkspace"] if (ios_dir / "App.xcworkspace").exists() else ["-project", "App.xcodeproj"]
+                _run_step(
+                    [
+                        "xcodebuild",
+                        *proj_flag,
+                        "-scheme",
+                        "App",
+                        "-configuration",
+                        "Release",
+                        "-destination",
+                        "generic/platform=iOS",
+                        "CODE_SIGNING_ALLOWED=NO",
+                        "CODE_SIGNING_REQUIRED=NO",
+                        f"SYMROOT={ios_dir / 'build'}",
+                        "clean",
+                        "build",
+                    ],
+                    cwd=ios_dir,
+                )
+                payload_dir = ios_dir / "build" / "Release-iphoneos" / "Payload"
+                payload_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(ios_dir / "build" / "Release-iphoneos" / "App.app", payload_dir / "App.app", dirs_exist_ok=True)
+                shutil.make_archive(str(pdir / f"LanternEd-v{clean_ver}"), "zip", root_dir=str(ios_dir / "build" / "Release-iphoneos"), base_dir="Payload")
+                (pdir / f"LanternEd-v{clean_ver}.zip").rename(pdir / f"LanternEd-v{clean_ver}.ipa")
+
+        if unbuildable and args.fetch_missing_from_release:
+            _fetch_missing_from_release(stage_in, unbuildable, args.fetch_missing_from_release, clean_ver)
+
+        res = install_local_releases(
+            stage_in,
+            clean_ver,
+            releases_dir=RELEASES_DIR,
+            keep=args.keep,
+            dry_run=False,
+        )
+        print(json.dumps(res, indent=2))
+
 
 def cmd_stage_release(args: argparse.Namespace) -> None:
     clean_ver = args.version.lstrip("v")
@@ -572,22 +1095,13 @@ def cmd_stage_release(args: argparse.Namespace) -> None:
     platforms_manifest: dict[str, Any] = {}
     checksum_lines: list[str] = []
     manifest_data = json.loads(MANIFEST_PATH.read_text(encoding="utf-8")) if MANIFEST_PATH.exists() else {"platforms": {}}
+    collected = _collect_staged_platform_files(input_dir, clean_ver, include_secondary=True)
 
-    for plat in VALID_PLATFORMS:
-        candidates = [input_dir / f"platform-{plat}", input_dir / plat]
-        plat_dir = next((c for c in candidates if c.exists()), None)
-        if not plat_dir:
-            continue
-
-        plat_files = sorted([p for p in plat_dir.rglob("*") if p.is_file()])
-        if not plat_files:
-            continue
-
+    for plat, items in collected.items():
         artifacts_info: list[dict[str, Any]] = []
         primary_info: dict[str, Any] | None = None
 
-        for src in plat_files:
-            dest_name = _canonical_artifact_name(plat, src, clean_ver)
+        for src, dest_name, is_primary in items:
             dest = output_dir / dest_name
             shutil.copy2(src, dest)
             sha = _sha256_file(dest)
@@ -600,7 +1114,7 @@ def cmd_stage_release(args: argparse.Namespace) -> None:
             }
             artifacts_info.append(item)
             checksum_lines.append(f"{sha}  {dest_name}")
-            if dest_name.lower().endswith(PRIMARY_EXTS[plat]):
+            if is_primary:
                 primary_info = item
 
         if not primary_info and artifacts_info:
@@ -689,6 +1203,43 @@ def build_parser() -> argparse.ArgumentParser:
     p_stg.add_argument("--tag", required=True)
     p_stg.add_argument("--commit", required=True)
     p_stg.set_defaults(func=cmd_stage_release)
+
+    p_inst = sub.add_parser("install-local-releases", help="Copy built installers into releases/<plat>/, update hashes, and keep latest N versions")
+    p_inst.add_argument("--input-dir", required=True)
+    p_inst.add_argument("--version", required=True)
+    p_inst.add_argument("--releases-dir", default="")
+    p_inst.add_argument("--keep", type=int, default=DEFAULT_KEEP_VERSIONS)
+    p_inst.add_argument("--include-secondary", action="store_true")
+    p_inst.add_argument("--dry-run", action="store_true")
+    p_inst.set_defaults(func=cmd_install_local_releases)
+
+    p_prune = sub.add_parser("prune-releases", help="Prune local releases/<plat>/ (and optional mirror repo) to latest N versions")
+    p_prune.add_argument("--releases-dir", default=str(RELEASES_DIR))
+    p_prune.add_argument("--mirror-dir", default="")
+    p_prune.add_argument("--keep", type=int, default=DEFAULT_KEEP_VERSIONS)
+    p_prune.add_argument("--preserve-version", default="")
+    p_prune.add_argument("--dry-run", action="store_true")
+    p_prune.set_defaults(func=cmd_prune_releases)
+
+    p_gh = sub.add_parser("prune-github-releases", help="Prune GitHub Releases on a repository to latest N versions")
+    p_gh.add_argument("--repo", required=True)
+    p_gh.add_argument("--keep", type=int, default=DEFAULT_KEEP_VERSIONS)
+    p_gh.add_argument("--preserve-tag", default="")
+    p_gh.add_argument("--include-drafts", action="store_true")
+    p_gh.add_argument("--cleanup-tag", action="store_true")
+    p_gh.add_argument("--dry-run", action="store_true")
+    p_gh.set_defaults(func=cmd_prune_github_releases)
+
+    p_loc = sub.add_parser("local-build", help="Build shared web dist + native builds into releases/ with keep-N retention")
+    p_loc.add_argument("--version", default="")
+    p_loc.add_argument("--bump", default="none", choices=["patch", "minor", "major", "none"])
+    p_loc.add_argument("--targets", default="auto", help="'auto' (host-native), 'all', or comma-separated targets")
+    p_loc.add_argument("--keep", type=int, default=DEFAULT_KEEP_VERSIONS)
+    p_loc.add_argument("--fetch-missing-from-release", default="", help="Optional release tag (e.g. 'latest' or 'v0.1.6') to fetch non-host builds")
+    p_loc.add_argument("--skip-tests", action="store_true")
+    p_loc.add_argument("--skip-web-build", action="store_true")
+    p_loc.add_argument("--dry-run", action="store_true")
+    p_loc.set_defaults(func=cmd_local_build)
 
     return parser
 

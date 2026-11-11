@@ -135,3 +135,113 @@ def test_sync_version_and_stage_release_in_isolated_tree(tmp_path, monkeypatch):
     assert (out_dir / "LanternEd-0.2.0-universal.dmg").exists()
     assert (out_dir / "LanternEd-v0.2.0.apk").exists()
     assert (out_dir / "LanternEd-v0.2.0.ipa").exists()
+
+
+def test_extract_version_and_keep_latest_two_local_releases(tmp_path, monkeypatch):
+    mod = _load_module()
+
+    assert mod.extract_version_from_artifact_name("LanternEd-Setup-0.1.6.exe") == "0.1.6"
+    assert mod.extract_version_from_artifact_name("LanternEd-0.2.0-rc.1-universal.dmg") == "0.2.0-rc.1"
+    assert mod.extract_version_from_artifact_name("LanternEd-v0.1.6-ios.xcarchive.zip") == "0.1.6"
+    assert mod.extract_version_from_artifact_name("LanternEd-v0.1.1.apk") == "0.1.1"
+    assert mod.extract_version_from_artifact_name("release.json") is None
+    assert mod.extract_version_from_artifact_name("manifest.json") is None
+
+    releases_dir = tmp_path / "releases"
+    for plat, pat in [
+        ("windows", "LanternEd-Setup-{v}.exe"),
+        ("macos", "LanternEd-{v}-universal.dmg"),
+        ("android", "LanternEd-v{v}.apk"),
+        ("ios", "LanternEd-v{v}.ipa"),
+    ]:
+        pdir = releases_dir / plat
+        pdir.mkdir(parents=True, exist_ok=True)
+        (pdir / "release.json").write_text('{"version": "0.1.1"}\n', encoding="utf-8")
+        for old_v in ("0.1.0", "0.1.1"):
+            (pdir / pat.format(v=old_v)).write_bytes(f"{plat}-{old_v}".encode("utf-8"))
+
+    (releases_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": "0.1.1",
+                "releaseDate": "2026-11-06T00:00:00Z",
+                "releaseNotes": "test",
+                "platforms": {p: {"version": "0.1.1", "fileName": ""} for p in ("windows", "macos", "android", "ios")},
+            }
+        ),
+        encoding="utf-8",
+    )
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "CHANGELOG_PATH", changelog)
+
+    dl_dir = tmp_path / "downloaded"
+    for plat, raw_name in [
+        ("windows", "setup.exe"),
+        ("macos", "app.dmg"),
+        ("android", "app-release.apk"),
+        ("ios", "App.ipa"),
+    ]:
+        pdir = dl_dir / f"platform-{plat}"
+        pdir.mkdir(parents=True, exist_ok=True)
+        (pdir / raw_name).write_bytes(f"built-{plat}-0.1.6".encode("utf-8"))
+
+    res = mod.install_local_releases(dl_dir, "0.1.6", releases_dir=releases_dir, keep=2)
+    assert res["version"] == "0.1.6"
+    assert (releases_dir / "CHANGELOG.md").exists()
+
+    # Only latest 2 versions (0.1.6 and 0.1.1) remain for every app; 0.1.0 is pruned; release.json kept
+    assert sorted(p.name for p in (releases_dir / "windows").iterdir()) == [
+        "LanternEd-Setup-0.1.1.exe",
+        "LanternEd-Setup-0.1.6.exe",
+        "release.json",
+    ]
+    assert sorted(p.name for p in (releases_dir / "macos").iterdir()) == [
+        "LanternEd-0.1.1-universal.dmg",
+        "LanternEd-0.1.6-universal.dmg",
+        "release.json",
+    ]
+    assert sorted(p.name for p in (releases_dir / "android").iterdir()) == [
+        "LanternEd-v0.1.1.apk",
+        "LanternEd-v0.1.6.apk",
+        "release.json",
+    ]
+    assert sorted(p.name for p in (releases_dir / "ios").iterdir()) == [
+        "LanternEd-v0.1.1.ipa",
+        "LanternEd-v0.1.6.ipa",
+        "release.json",
+    ]
+
+    # Mirror sync preserves README/LICENSE in target mirror and enforces keep=2 as well
+    mirror_dir = tmp_path / "mirror"
+    mirror_dir.mkdir()
+    (mirror_dir / "README.md").write_text("keep-me\n", encoding="utf-8")
+    (mirror_dir / "windows").mkdir()
+    (mirror_dir / "windows" / "LanternEd-Setup-0.0.9.exe").write_bytes(b"stale")
+    mod.mirror_releases_tree(releases_dir, mirror_dir, keep=2, preserve_version="0.1.6")
+    assert (mirror_dir / "README.md").read_text(encoding="utf-8") == "keep-me\n"
+    assert sorted(p.name for p in (mirror_dir / "windows").iterdir()) == [
+        "LanternEd-Setup-0.1.1.exe",
+        "LanternEd-Setup-0.1.6.exe",
+        "release.json",
+    ]
+
+
+def test_select_releases_to_prune_keeps_latest_two_and_preserves_tag():
+    mod = _load_module()
+    releases = [
+        {"tagName": "v0.1.6", "isDraft": False},
+        {"tagName": "v0.1.5", "isDraft": False},
+        {"tagName": "v0.1.4", "isDraft": False},
+        {"tagName": "v0.1.1", "isDraft": False},
+        {"tagName": "v0.2.0-draft", "isDraft": True},
+        {"tagName": "unversioned-notes", "isDraft": False},
+    ]
+    kept, to_delete = mod.select_releases_to_prune(releases, keep=2, preserve_tag="v0.1.6")
+    assert kept == ["v0.1.6", "v0.1.5"]
+    assert to_delete == ["v0.1.4", "v0.1.1"]
+
+    # If a preserved tag is currently a draft (or manually rebuilt), still keep max 2 total
+    kept2, to_delete2 = mod.select_releases_to_prune(releases, keep=2, preserve_tag="v0.2.0-draft")
+    assert kept2 == ["v0.2.0-draft", "v0.1.6"]
+    assert to_delete2 == ["v0.1.5", "v0.1.4", "v0.1.1"]

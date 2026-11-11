@@ -24,9 +24,9 @@ Offline-first, low-bandwidth LMS, live classroom, and proctored examination plat
   - `frontend/android/` & `frontend/ios/` — Capacitor v8 (`^8.6.0`, `org.lanterned.app`) native mobile wrappers.
 - `deploy/self-hosted/` — `docker-compose.yml` (Postgres 16, API, worker, frontend build, Caddy HTTPS reverse proxy).
 - `ops/` — `pg_backup.sh` (nightly R2 backup via `.github/workflows/backup.yml`) and `loadtest/classday.js`.
-- `releases/` — `manifest.json` served by `/api/v1/releases/*` and platform installers (`windows/`, `macos/`, `android/`, `ios/`).
-- `scripts/` — `test_all.ps1` / `test_all.sh`, `ci_release.py` (SemVer sync, Conventional Commits changelog, release staging), `package_release.py`, `release.py`, `sync_to_app_releases_repo.py`, service probes, seeders.
-- `.github/workflows/` — `ci.yml`, `build.yml`, `release.yml`, `reusable-release.yml`, `backup.yml`.
+- `releases/` — `manifest.json` served by `/api/v1/releases/*` and platform installers (`windows/`, `macos/`, `android/`, `ios/`), automatically capped at the latest 2 versions per app.
+- `scripts/` — `test_all.ps1` / `test_all.sh`, `ci_release.py` (SemVer sync, Conventional Commits changelog, release staging, local 4-app build & keep-2 retention/pruning), `local_release_build.ps1` / `.sh`, `package_release.py`, `release.py`, `sync_to_app_releases_repo.py`, service probes, seeders.
+- `.github/workflows/` — `ci.yml`, `build.yml`, `release.yml`, `reusable-release.yml`, `release-retention.yml`, `backup.yml`.
 
 ## Authentication, Sessions & Multi-Tenancy
 

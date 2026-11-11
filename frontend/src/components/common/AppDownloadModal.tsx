@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   X,
   Download,
@@ -13,13 +13,10 @@ import {
   Check,
   ExternalLink,
   QrCode,
-  ArrowRight,
   Sparkles,
-  Wifi,
-  Zap,
 } from 'lucide-react'
-import { platformAdapter, type OperatingSystem } from '../../services/platformAdapter'
-import { releaseService } from '../../services/releaseService'
+import { platformAdapter } from '../../services/platformAdapter'
+import { APP_CURRENT_VERSION, releaseService, type ReleaseManifest } from '../../services/releaseService'
 
 interface AppDownloadModalProps {
   isOpen: boolean
@@ -33,8 +30,31 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
   const [copiedSha, setCopiedSha] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [showQrCode, setShowQrCode] = useState(false)
+  const [manifest, setManifest] = useState<ReleaseManifest | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+    releaseService
+      .getManifest()
+      .then((data) => {
+        if (active) setManifest(data)
+      })
+      .catch(() => {
+        // Offline / API unreachable: fall back to bundled APP_CURRENT_VERSION metadata
+      })
+    return () => {
+      active = false
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
+
+  const activeVersion = manifest?.version || APP_CURRENT_VERSION
+  const winInfo = manifest?.platforms?.windows
+  const macInfo = manifest?.platforms?.macos
+  const andInfo = manifest?.platforms?.android
+  const iosInfo = manifest?.platforms?.ios
 
   const platforms: Record<
     'windows' | 'macos' | 'android' | 'ios',
@@ -43,7 +63,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       icon: React.ComponentType<{ className?: string }>
       badge: string
       fileName: string
-      sizeMb: number
+      sizeMb: number | null
       minOs: string
       arch: string
       sha256: string
@@ -57,15 +77,15 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'Windows Desktop',
       icon: Monitor,
       badge: 'Installer (.exe / .msi)',
-      fileName: 'LanternEd-Setup-0.1.1.exe',
-      sizeMb: 1.98,
-      minOs: 'Windows 10 / 11 (64-bit)',
-      arch: 'x64 (DirectML Hardware Accelerated)',
-      sha256: '473bc7353cf6fbf752345b9a477c0b01b35897a46e7df01188778756afa669a7',
-      releaseDownloadUrl: 'https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-Setup-0.1.1.exe',
-      rawDownloadUrl: 'https://raw.githubusercontent.com/yynvr1408/LanternEd-App-Releases/main/windows/LanternEd-Setup-0.1.1.exe',
+      fileName: winInfo?.fileName || `LanternEd-Setup-${activeVersion}.exe`,
+      sizeMb: winInfo?.fileSizeMb ?? null,
+      minOs: winInfo?.minOsVersion || 'Windows 10 / 11 (64-bit)',
+      arch: winInfo?.arch || 'x64 (DirectML Hardware Accelerated)',
+      sha256: winInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
+      releaseDownloadUrl: releaseService.getDownloadUrl('windows'),
+      rawDownloadUrl: releaseService.getRawDownloadUrl('windows'),
       steps: [
-        { title: 'Download Setup Executable', desc: 'Click Download to receive LanternEd-Setup-0.1.1.exe (1.98 MB).' },
+        { title: 'Download Setup Executable', desc: `Click Download to receive ${winInfo?.fileName || `LanternEd-Setup-${activeVersion}.exe`}.` },
         { title: 'Run Fast Lightweight Setup', desc: 'Double-click the installer; installation completes in under 10 seconds.' },
         { title: 'Ready with DirectML & Campus LAN', desc: 'Launch LanternEd with native GPU-accelerated Whisper speech-to-text.' },
       ],
@@ -80,15 +100,15 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'macOS Desktop',
       icon: Apple,
       badge: 'Universal DMG (.dmg / .app)',
-      fileName: 'LanternEd-0.1.1-universal.dmg',
-      sizeMb: 6.72,
-      minOs: 'macOS 10.15+ (Catalina through Sequoia)',
-      arch: 'Universal Binary (Apple Silicon M1/M2/M3 & Intel)',
-      sha256: 'a1302cde356516aa9b4cc7daef4b8a240cd4ee632817d11a6604cb3f1d767643',
-      releaseDownloadUrl: 'https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-0.1.1-universal.dmg',
-      rawDownloadUrl: 'https://raw.githubusercontent.com/yynvr1408/LanternEd-App-Releases/main/macos/LanternEd-0.1.1-universal.dmg',
+      fileName: macInfo?.fileName || `LanternEd-${activeVersion}-universal.dmg`,
+      sizeMb: macInfo?.fileSizeMb ?? null,
+      minOs: macInfo?.minOsVersion || 'macOS 10.15+ (Catalina through Sequoia)',
+      arch: macInfo?.arch || 'Universal Binary (Apple Silicon M1/M2/M3 & Intel)',
+      sha256: macInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
+      releaseDownloadUrl: releaseService.getDownloadUrl('macos'),
+      rawDownloadUrl: releaseService.getRawDownloadUrl('macos'),
       steps: [
-        { title: 'Download Universal DMG', desc: 'Get LanternEd-0.1.1-universal.dmg (6.72 MB).' },
+        { title: 'Download Universal DMG', desc: `Get ${macInfo?.fileName || `LanternEd-${activeVersion}-universal.dmg`}.` },
         { title: 'Drag to Applications', desc: 'Mount the disk image and drag LanternEd into your Applications folder.' },
         { title: 'Hardware-Accelerated Metal Run', desc: 'Native Apple Silicon & Intel support with microphone & camera entitlements.' },
       ],
@@ -103,15 +123,15 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'Android Mobile',
       icon: Smartphone,
       badge: 'Package (.apk)',
-      fileName: 'LanternEd-v0.1.1.apk',
-      sizeMb: 3.71,
-      minOs: 'Android 8.0+ (Oreo through Android 15)',
-      arch: 'Universal ARM (arm64-v8a, armeabi-v7a)',
-      sha256: '2a2ca081111041b2c09d81ac540aa544502d98b61e142e69692cf4f62efea890',
-      releaseDownloadUrl: 'https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.apk',
-      rawDownloadUrl: 'https://raw.githubusercontent.com/yynvr1408/LanternEd-App-Releases/main/android/LanternEd-v0.1.1.apk',
+      fileName: andInfo?.fileName || `LanternEd-v${activeVersion}.apk`,
+      sizeMb: andInfo?.fileSizeMb ?? null,
+      minOs: andInfo?.minOsVersion || 'Android 8.0+ (Oreo through Android 15)',
+      arch: andInfo?.arch || 'Universal ARM (arm64-v8a, armeabi-v7a)',
+      sha256: andInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
+      releaseDownloadUrl: releaseService.getDownloadUrl('android'),
+      rawDownloadUrl: releaseService.getRawDownloadUrl('android'),
       steps: [
-        { title: 'Download APK Package', desc: 'Tap Download APK (3.71 MB) or scan the on-screen QR code on your phone.' },
+        { title: 'Download APK Package', desc: `Tap Download Installer (${andInfo?.fileName || `LanternEd-v${activeVersion}.apk`}) or scan the QR code.` },
         { title: 'Allow Unknown Sources', desc: 'When prompted by Android, tap Settings -> Enable "Allow from this source".' },
         { title: 'Install & Learn Offline', desc: 'Tap Install; launch LanternEd for cellular data saving & offline sync.' },
       ],
@@ -126,15 +146,15 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
       title: 'iOS Mobile',
       icon: Smartphone,
       badge: 'Package (.ipa)',
-      fileName: 'LanternEd-v0.1.1.ipa',
-      sizeMb: 1.28,
-      minOs: 'iOS 14.0+ (iPhone & iPad)',
-      arch: '64-bit ARM (arm64)',
-      sha256: 'f84f61ab3c7ddbd18e81febf6f7529c63b29311a54ccbb8db5147b3701b74c16',
-      releaseDownloadUrl: 'https://github.com/yynvr1408/LanternEd-App-Releases/releases/latest/download/LanternEd-v0.1.1.ipa',
-      rawDownloadUrl: 'https://raw.githubusercontent.com/yynvr1408/LanternEd-App-Releases/main/ios/LanternEd-v0.1.1.ipa',
+      fileName: iosInfo?.fileName || `LanternEd-v${activeVersion}.ipa`,
+      sizeMb: iosInfo?.fileSizeMb ?? null,
+      minOs: iosInfo?.minOsVersion || 'iOS 14.0+ (iPhone & iPad)',
+      arch: iosInfo?.arch || '64-bit ARM (arm64)',
+      sha256: iosInfo?.sha256 || 'Verify against SHA256SUMS.txt in the release',
+      releaseDownloadUrl: releaseService.getDownloadUrl('ios'),
+      rawDownloadUrl: releaseService.getRawDownloadUrl('ios'),
       steps: [
-        { title: 'Download IPA Package', desc: 'Download LanternEd-v0.1.1.ipa (1.28 MB).' },
+        { title: 'Download IPA Package', desc: `Download ${iosInfo?.fileName || `LanternEd-v${activeVersion}.ipa`}.` },
         { title: 'Install via Profile or AltStore', desc: 'Install via institutional mobile profile, AltStore, Sideloadly, or TestFlight.' },
         { title: 'Optimized for iPad & iPhone', desc: 'Responsive Split View and background audio streaming out-of-the-box.' },
       ],
@@ -181,7 +201,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
                   Download LanternEd Native Applications
                 </h2>
                 <span className="text-[10px] bg-[#0F5B57] text-white px-2 py-0.5 rounded-full font-bold">
-                  v0.1.1
+                  v{activeVersion}
                 </span>
               </div>
               <p className="text-xs text-[#687775]">
@@ -246,7 +266,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
                     {active.badge}
                   </span>
                   <span className="text-[10px] font-bold text-[#0F5B57] bg-[#DDF3EA] px-2 py-0.5 rounded">
-                    {active.sizeMb} MB Verified
+                    {active.sizeMb !== null ? `${active.sizeMb} MB Verified` : 'SHA-256 Verified'}
                   </span>
                 </div>
                 <p className="text-xs text-[#687775] mt-1">

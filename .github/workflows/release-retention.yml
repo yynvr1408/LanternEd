@@ -1,0 +1,153 @@
+name: Release Retention & 4-App Local Build Sync
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      keep_versions:
+        description: "Latest N versions to retain for every app (Windows, macOS, iOS, Android)"
+        required: true
+        default: "2"
+        type: string
+      rebuild_local_builds:
+        description: "Build all 4 apps from shared web dist/, update local releases/, and publish with keep-N retention"
+        required: true
+        default: true
+        type: boolean
+      draft:
+        description: "When rebuild_local_builds is true, publish release as draft"
+        required: true
+        default: false
+        type: boolean
+      prune_source_repo_releases:
+        description: "Also prune older GitHub Releases on yynvr1408/LanternEd (preserves source git tags)"
+        required: true
+        default: false
+        type: boolean
+      dry_run:
+        description: "Preview pruning without deleting files or releases (only applies when rebuild_local_builds=false)"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  # When triggered manually with rebuild_local_builds=true, reuse the canonical 4-platform release pipeline
+  # with keep_releases enforced so all 4 local builds (releases/<plat>/) + remote releases stay at <= N versions.
+  rebuild-all-4-local:
+    name: Build All 4 Apps + Enforce Latest-N Local & Remote Retention
+    if: github.event_name == 'workflow_dispatch' && inputs.rebuild_local_builds
+    uses: ./.github/workflows/reusable-release.yml
+    with:
+      targets: "all"
+      bump: "none"
+      tag: ""
+      draft: ${{ inputs.draft }}
+      prerelease: false
+      keep_releases: ${{ inputs.keep_versions || '2' }}
+    secrets: inherit
+
+  # Standalone retention pass when a release is published externally or rebuild_local_builds=false
+  enforce-retention:
+    name: Enforce Latest-N Releases Across All 4 Apps
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && !inputs.rebuild_local_builds)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prune local releases/ folders to keep latest N versions per app
+        run: |
+          KEEP_N="${{ inputs.keep_versions || '2' }}"
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          python scripts/ci_release.py prune-releases \
+            --releases-dir "$GITHUB_WORKSPACE/releases" \
+            --keep "$KEEP_N" \
+            $DRY_FLAG
+
+      - name: Commit pruned local releases/ on main (if changed)
+        if: inputs.dry_run != true
+        run: |
+          KEEP_N="${{ inputs.keep_versions || '2' }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A releases/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): prune local builds to latest ${KEEP_N} versions [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Prune yynvr1408/LanternEd-App-Releases (GitHub Releases + main mirror)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.APP_RELEASES_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::RELEASES_TOKEN not configured; skipped remote LanternEd-App-Releases pruning."
+            exit 0
+          fi
+          KEEP_N="${{ inputs.keep_versions || '2' }}"
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          RELEASE_REPO="yynvr1408/LanternEd-App-Releases"
+
+          python scripts/ci_release.py prune-github-releases \
+            --repo "$RELEASE_REPO" \
+            --keep "$KEEP_N" \
+            --cleanup-tag \
+            $DRY_FLAG
+
+          MIRROR_DIR="$RUNNER_TEMP/app-releases-repo"
+          rm -rf "$MIRROR_DIR"
+          GIT_TERMINAL_PROMPT=0 git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${RELEASE_REPO}.git" "$MIRROR_DIR"
+          python scripts/ci_release.py prune-releases \
+            --releases-dir "$GITHUB_WORKSPACE/releases" \
+            --mirror-dir "$MIRROR_DIR" \
+            --keep "$KEEP_N" \
+            $DRY_FLAG
+
+          if [ "${{ inputs.dry_run }}" != "true" ]; then
+            cd "$MIRROR_DIR"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A .
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(release): retain latest ${KEEP_N} versions across all 4 apps"
+              GIT_TERMINAL_PROMPT=0 git push origin main
+            fi
+          fi
+
+      - name: Optionally prune older GitHub Releases on source repo (preserving git tags)
+        if: inputs.prune_source_repo_releases == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          KEEP_N="${{ inputs.keep_versions || '2' }}"
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          python scripts/ci_release.py prune-github-releases \
+            --repo "${{ github.repository }}" \
+            --keep "$KEEP_N" \
+            $DRY_FLAG

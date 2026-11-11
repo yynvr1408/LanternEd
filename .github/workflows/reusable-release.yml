@@ -28,6 +28,11 @@ on:
         required: false
         default: false
         type: boolean
+      keep_releases:
+        description: "Maximum number of latest release versions to retain per app"
+        required: false
+        default: "2"
+        type: string
     secrets:
       RELEASES_TOKEN:
         description: "Fine-grained PAT with Contents Read & Write scoped to yynvr1408/LanternEd-App-Releases"
@@ -495,15 +500,31 @@ jobs:
             --tag "$TAG" \
             --commit "$SOURCE_SHA"
 
+          KEEP_N="${{ inputs.keep_releases || '2' }}"
+          python scripts/ci_release.py install-local-releases \
+            --input-dir downloaded-platforms \
+            --version "$VERSION" \
+            --keep "$KEEP_N"
+
           ls -lh release-staging
           cat release-staging/SHA256SUMS.txt
+          ls -lh releases/windows releases/macos releases/android releases/ios
 
-      - name: Commit version bump + CHANGELOG.md and push tag
+      - name: Upload local-releases bundle artifact (latest 2 versions per app)
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-releases-v${{ needs.prepare.outputs.version }}
+          path: releases/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Commit version bump, local 4-app builds + CHANGELOG.md and push tag
         run: |
           TAG="${{ needs.prepare.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          git add -A releases/
           for f in \
             CHANGELOG.md \
             frontend/package.json \
@@ -513,9 +534,7 @@ jobs:
             frontend/android/app/build.gradle \
             frontend/ios/App/App.xcodeproj/project.pbxproj \
             frontend/src/services/releaseService.ts \
-            windows_launcher/setup.iss \
-            releases/manifest.json \
-            releases/*/release.json; do
+            windows_launcher/setup.iss; do
             if [ -e "$f" ]; then
               git add "$f"
             fi
@@ -532,7 +551,7 @@ jobs:
             git push origin "refs/tags/${TAG}"
           fi
 
-      - name: Publish unified 4-platform release to yynvr1408/LanternEd-App-Releases
+      - name: Publish unified 4-platform release to yynvr1408/LanternEd-App-Releases (keep latest 2)
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN || secrets.APP_RELEASES_TOKEN }}
         run: |
@@ -543,6 +562,7 @@ jobs:
 
           TAG="${{ needs.prepare.outputs.tag }}"
           VERSION="${{ needs.prepare.outputs.version }}"
+          KEEP_N="${{ inputs.keep_releases || '2' }}"
           RELEASE_REPO="yynvr1408/LanternEd-App-Releases"
 
           DRAFT_BOOL="false"
@@ -587,4 +607,31 @@ jobs:
               --notes-file release-notes.md \
               --draft="$DRAFT_BOOL" \
               --prerelease="$PRE_BOOL"
+          fi
+
+          # Enforce latest-N retention on GitHub Releases + tags in LanternEd-App-Releases
+          cd "$GITHUB_WORKSPACE"
+          python scripts/ci_release.py prune-github-releases \
+            --repo "$RELEASE_REPO" \
+            --keep "$KEEP_N" \
+            --preserve-tag "$TAG" \
+            --cleanup-tag
+
+          # Mirror pruned latest-N 4-app builds & manifest into LanternEd-App-Releases main branch
+          MIRROR_DIR="$RUNNER_TEMP/app-releases-repo"
+          rm -rf "$MIRROR_DIR"
+          GIT_TERMINAL_PROMPT=0 git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${RELEASE_REPO}.git" "$MIRROR_DIR"
+          python scripts/ci_release.py prune-releases \
+            --releases-dir "$GITHUB_WORKSPACE/releases" \
+            --mirror-dir "$MIRROR_DIR" \
+            --keep "$KEEP_N" \
+            --preserve-version "$VERSION"
+
+          cd "$MIRROR_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): publish ${TAG} (keep latest ${KEEP_N} versions)"
+            GIT_TERMINAL_PROMPT=0 git push origin main
           fi
