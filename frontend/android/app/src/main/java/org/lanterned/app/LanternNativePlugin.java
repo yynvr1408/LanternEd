@@ -180,12 +180,7 @@ public class LanternNativePlugin extends Plugin {
             stopServerInternal();
             try {
                 acquireMulticastLock();
-                ServerSocket ss;
-                try {
-                    ss = new ServerSocket(requestedPort);
-                } catch (IOException busy) {
-                    ss = new ServerSocket(0);
-                }
+                final ServerSocket ss = openServerSocket(requestedPort);
                 int boundPort = ss.getLocalPort();
                 String localIp = detectLocalIp();
 
@@ -404,6 +399,14 @@ public class LanternNativePlugin extends Plugin {
             call.resolve(out);
         } catch (Exception e) {
             call.reject("Share failed: " + e.getMessage());
+        }
+    }
+
+    private static ServerSocket openServerSocket(int preferredPort) throws IOException {
+        try {
+            return new ServerSocket(preferredPort);
+        } catch (IOException busy) {
+            return new ServerSocket(0);
         }
     }
 
