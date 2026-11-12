@@ -18,7 +18,9 @@ import { syncManager } from '../../services/syncManager'
 import { platformAdapter } from '../../services/platformAdapter'
 import { useAuth } from '../../context/AuthContext'
 import { useSync } from '../../context/SyncContext'
-import { Badge, Button, Dialog, LoadingState } from '../../components/ui'
+import { Badge, Button, Dialog, Input, LoadingState, Textarea } from '../../components/ui'
+import { CodingSandboxPanel } from '../../components/exam/CodingSandboxPanel'
+import { Camera, Lock } from 'lucide-react'
 
 export const StudentExamRunnerPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>()
@@ -246,6 +248,99 @@ export const StudentExamRunnerPage: React.FC = () => {
     handleSubmitExam()
   }
 
+  const handleAnswerChange = (questionId: string, value: any) => {
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: value }
+      if (examId && examData && user?.id) {
+        void syncManager.saveExamDraftLocally({
+          examId,
+          attemptId: examData.attempt_id,
+          studentId: user.id,
+          answers: next,
+          flagged: flaggedRef.current,
+          offlineEvents: offlineEventsRef.current,
+        })
+      }
+      return next
+    })
+  }
+
+  // Native Device Lockdown + Optional Low-Bandwidth Webcam Snapshot Proctoring
+  const [lockdownActive, setLockdownActive] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+
+  useEffect(() => {
+    if (isLoading || !examData || submittedReceipt || !examData.require_device_lockdown) return
+    let active = true
+    void platformAdapter.setExamLockdown(true).then((res) => {
+      if (active) setLockdownActive(res.active)
+    })
+    return () => {
+      active = false
+      void platformAdapter.setExamLockdown(false)
+    }
+  }, [isLoading, examData, submittedReceipt])
+
+  useEffect(() => {
+    if (isLoading || !examData || !examId || submittedReceipt || !examData.require_webcam_proctoring) return
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return
+
+    let cancelled = false
+    let stream: MediaStream | null = null
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const captureSnapshot = () => {
+      if (!stream || cancelled) return
+      try {
+        const video = document.createElement('video')
+        video.srcObject = stream
+        video.muted = true
+        void video.play().catch(() => {})
+        const canvas = document.createElement('canvas')
+        canvas.width = 160
+        canvas.height = 120
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, 160, 120)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.45)
+          void examService
+            .uploadProctorSnapshot(examId, {
+              attempt_id: examData.attempt_id,
+              image_data_url: dataUrl,
+              face_detected: true,
+              camera_status: 'active',
+            })
+            .catch(() => {})
+        }
+      } catch {
+        // Never disrupt exam if camera snapshot fails
+      }
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { width: 160, height: 120 } })
+      .then((s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop())
+          return
+        }
+        stream = s
+        setCameraActive(true)
+        setTimeout(captureSnapshot, 1500)
+        intervalId = setInterval(captureSnapshot, 45000)
+      })
+      .catch(() => {
+        // Non-blocking fallback when running without camera permissions
+        setCameraActive(false)
+      })
+
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+    }
+  }, [isLoading, examData, examId, submittedReceipt])
+
   const handleSubmitExam = async () => {
     if (!examId || !examData) return
     setIsSubmitting(true)
@@ -457,6 +552,16 @@ export const StudentExamRunnerPage: React.FC = () => {
 
         {/* Right Action */}
         <div className="flex items-center gap-2">
+          {lockdownActive && (
+            <Badge variant="success" className="hidden sm:inline-flex items-center gap-1">
+              <Lock className="w-3 h-3" /> OS Lockdown
+            </Badge>
+          )}
+          {cameraActive && (
+            <Badge variant="info" className="hidden sm:inline-flex items-center gap-1">
+              <Camera className="w-3 h-3" /> Proctor Cam
+            </Badge>
+          )}
           {tabBlurCount > 0 && (
             <Badge variant="warning" className="hidden sm:inline-flex">
               {tabBlurCount}/{examData.max_tab_switches} Blur Alerts
@@ -522,33 +627,97 @@ export const StudentExamRunnerPage: React.FC = () => {
                 {currentQ.prompt}
               </div>
 
-              {/* Options */}
-              <div className="space-y-2.5 pt-2">
-                {currentQ.options.map((opt) => {
-                  const isSelected = answers[currentQ.id] === opt.id
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => handleSelectOption(currentQ.id, opt.id)}
-                      className={`w-full p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-[#0F5B57] bg-[#F4FBF7] text-[#0F5B57] font-semibold ring-1 ring-[#0F5B57]'
-                          : 'border-[#E1E8E4] bg-white text-[#202B2A] hover:bg-[#F9FBFA]'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
-                          isSelected ? 'border-[#0F5B57] bg-[#0F5B57]' : 'border-[#CBD7D1] bg-white'
+              {/* Dynamic Answer Renderer: Coding Sandbox, Numerical, Subjective, MCQ Multi/Single */}
+              {currentQ.question_type === 'coding' ? (
+                <CodingSandboxPanel
+                  examId={examId || ''}
+                  attemptId={examData.attempt_id}
+                  question={currentQ}
+                  value={answers[currentQ.id]}
+                  onChange={(val) => handleAnswerChange(currentQ.id, val)}
+                />
+              ) : currentQ.question_type === 'numerical' ? (
+                <div className="space-y-2 pt-2 max-w-sm">
+                  <label className="text-xs font-semibold text-[#687775] block">Numerical Answer</label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={answers[currentQ.id] ?? ''}
+                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                    placeholder="Enter numeric value..."
+                  />
+                </div>
+              ) : currentQ.question_type === 'subjective' ? (
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-semibold text-[#687775] block">Written Response</label>
+                  <Textarea
+                    rows={6}
+                    value={answers[currentQ.id] ?? ''}
+                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                    placeholder="Write your explanation clearly..."
+                  />
+                </div>
+              ) : currentQ.question_type === 'mcq_multi' ? (
+                <div className="space-y-2.5 pt-2">
+                  {currentQ.options.map((opt) => {
+                    const selectedList: string[] = Array.isArray(answers[currentQ.id]) ? answers[currentQ.id] : []
+                    const isSelected = selectedList.includes(opt.id)
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          const next = isSelected
+                            ? selectedList.filter((id) => id !== opt.id)
+                            : [...selectedList, opt.id]
+                          handleAnswerChange(currentQ.id, next)
+                        }}
+                        className={`w-full p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#0F5B57] bg-[#F4FBF7] text-[#0F5B57] font-semibold ring-1 ring-[#0F5B57]'
+                            : 'border-[#E1E8E4] bg-white text-[#202B2A] hover:bg-[#F9FBFA]'
                         }`}
                       >
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <span className="text-sm">{opt.text}</span>
-                    </button>
-                  )
-                })}
-              </div>
+                        <div
+                          className={`w-5 h-5 rounded border mt-0.5 flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-[#0F5B57] bg-[#0F5B57] text-white' : 'border-[#CBD7D1] bg-white'
+                          }`}
+                        >
+                          {isSelected && <span className="text-[11px] font-bold">✓</span>}
+                        </div>
+                        <span className="text-sm">{opt.text}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-2.5 pt-2">
+                  {currentQ.options.map((opt) => {
+                    const isSelected = answers[currentQ.id] === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleSelectOption(currentQ.id, opt.id)}
+                        className={`w-full p-4 rounded-xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#0F5B57] bg-[#F4FBF7] text-[#0F5B57] font-semibold ring-1 ring-[#0F5B57]'
+                            : 'border-[#E1E8E4] bg-white text-[#202B2A] hover:bg-[#F9FBFA]'
+                        }`}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-[#0F5B57] bg-[#0F5B57]' : 'border-[#CBD7D1] bg-white'
+                          }`}
+                        >
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                        </div>
+                        <span className="text-sm">{opt.text}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-center py-12 text-[#687775]">No questions loaded.</p>

@@ -5,6 +5,7 @@ from app.db.models.gradebook import (
     Rubric,
     RubricCriterion,
 )
+from app.db.models.interop import InteropPackage, XapiStatement
 from app.db.models.exam import (
     AttemptStatus,
     Exam,
@@ -103,4 +104,6 @@ __all__ = [
     "ExamAttempt",
     "AttemptStatus",
     "ExamAuditLog",
+    "InteropPackage",
+    "XapiStatement",
 ]

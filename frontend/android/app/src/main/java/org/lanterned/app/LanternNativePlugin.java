@@ -1,5 +1,6 @@
 package org.lanterned.app;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -11,6 +12,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.os.StatFs;
+import android.view.View;
 import android.view.WindowManager;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSArray;
@@ -165,6 +167,46 @@ public class LanternNativePlugin extends Plugin {
             }
             JSObject out = new JSObject();
             out.put("enabled", enabled);
+            call.resolve(out);
+        });
+    }
+
+    @PluginMethod
+    public void setExamLockdown(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        getActivity().runOnUiThread(() -> {
+            if (enabled) {
+                getActivity().getWindow().addFlags(
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_SECURE
+                );
+                getActivity().getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                );
+            } else {
+                getActivity().getWindow().clearFlags(
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_SECURE
+                );
+                getActivity().getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+            }
+
+            ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+            int lockTaskState = am != null ? am.getLockTaskModeState() : ActivityManager.LOCK_TASK_MODE_NONE;
+
+            JSArray caps = new JSArray();
+            caps.put("flag_secure_screenshot_block");
+            caps.put("immersive_fullscreen");
+            caps.put("lock_task_awareness");
+
+            JSObject out = new JSObject();
+            out.put("active", enabled);
+            out.put("platform", "android");
+            out.put("secureWindow", enabled);
+            out.put("lockTaskModeState", lockTaskState);
+            out.put("capabilities", caps);
             call.resolve(out);
         });
     }

@@ -23,6 +23,7 @@ import { PageContainer } from '../../components/layout/PageContainer'
 import { SyllabusImportDialog } from '../../components/course/SyllabusImportDialog'
 import { CourseGradebookTab } from '../../components/course/CourseGradebookTab'
 import { CourseExamsTab } from '../../components/course/CourseExamsTab'
+import { CourseInteropPanel } from '../../components/course/CourseInteropPanel'
 import { Clock, Sliders } from 'lucide-react'
 import {
   Card,
@@ -402,6 +403,12 @@ export const TeacherManageCoursePage: React.FC = () => {
       {activeCourseTab === 'exams' && courseId && (
         <div className="mb-8">
           <CourseExamsTab courseId={courseId} />
+        </div>
+      )}
+
+      {activeCourseTab === 'curriculum' && courseId && (
+        <div className="mb-8">
+          <CourseInteropPanel courseId={courseId} canManage={true} />
         </div>
       )}
 

@@ -25,7 +25,8 @@ public class LanternNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getLanServerStats", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "discoverLanRooms", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "localTranscribeAudio", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "shareContent", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "shareContent", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setExamLockdown", returnType: CAPPluginReturnPromise)
     ]
 
     private let stateQueue = DispatchQueue(label: "org.lanterned.ios.lan.state")
@@ -389,6 +390,20 @@ public class LanternNativePlugin: CAPPlugin, CAPBridgedPlugin {
             vc.present(activity, animated: true) {
                 call.resolve(["shared": true])
             }
+        }
+    }
+
+    @objc public func setExamLockdown(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? false
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = enabled
+            let guidedAccess = UIAccessibility.isGuidedAccessEnabled
+            call.resolve([
+                "active": enabled,
+                "platform": "ios",
+                "guidedAccessEnabled": guidedAccess,
+                "capabilities": ["idle_timer_lock", "guided_access_check", "scene_background_guard"]
+            ])
         }
     }
 

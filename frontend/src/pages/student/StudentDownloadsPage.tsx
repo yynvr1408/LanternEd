@@ -9,6 +9,7 @@ import { StorageMeter } from '../../components/download/StorageMeter'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { OfflineLibraryToolsSection } from '../../components/downloads/OfflineLibraryToolsSection'
 
 export const StudentDownloadsPage: React.FC = () => {
   const [downloads, setDownloads] = useState<DownloadedResource[]>([])
@@ -239,6 +240,10 @@ export const StudentDownloadsPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <div className="mt-8">
+        <OfflineLibraryToolsSection />
+      </div>
     </PageContainer>
   )
 }

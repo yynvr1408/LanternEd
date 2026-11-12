@@ -240,7 +240,7 @@ export interface Summary {
   created_at: string
 }
 
-export type SyncOperationType = 'submit_assignment' | 'save_draft' | 'exam_submit' | 'recording_progress'
+export type SyncOperationType = 'submit_assignment' | 'save_draft' | 'exam_submit' | 'recording_progress' | 'xapi_statement'
 export type SyncStatus = 'pending' | 'syncing' | 'failed' | 'completed'
 export type SyncOutcomeKind = 'expired' | 'closed' | 'conflict' | 'rejected' | 'network'
 

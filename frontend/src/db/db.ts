@@ -57,6 +57,15 @@ export interface PlaybackPosition {
   updatedAt: string
 }
 
+export interface OerPackRecord {
+  id: string
+  title: string
+  provider: string
+  subject: string
+  lessons: Array<{ id: string; title: string; content: string }>
+  installedAt: string
+}
+
 class LanternEDDatabase extends Dexie {
   downloadedResources!: EntityTable<DownloadedResource, 'id'>
   downloadedRecordings!: EntityTable<DownloadedRecording, 'id'>
@@ -69,6 +78,7 @@ class LanternEDDatabase extends Dexie {
   assignmentDrafts!: EntityTable<AssignmentDraft, 'id'>
   examDrafts!: EntityTable<ExamDraft, 'id'>
   syncOperations!: EntityTable<SyncOperation, 'id'>
+  oerPacks!: EntityTable<OerPackRecord, 'id'>
 
   constructor() {
     super('LanternEDDB')
@@ -132,6 +142,22 @@ class LanternEDDatabase extends Dexie {
       assignmentDrafts: 'id, assignmentId, studentId, courseId, syncStatus, savedAt',
       examDrafts: 'id, examId, attemptId, syncStatus, updatedAt',
       syncOperations: 'id, operationType, entityId, status, idempotencyKey, createdAt',
+    })
+
+    // Schema version 6: portable OER / Kiwix / .lanternpack offline library packs
+    this.version(6).stores({
+      downloadedResources: 'id, resourceId, courseId, lessonId, fileType, downloadedAt',
+      downloadedRecordings: 'id, recordingId, courseId, title, downloadedAt',
+      downloadedSummaries: 'id, classId, courseId, downloadedAt',
+      downloadJobs: 'id, status, updatedAt',
+      downloadParts: '[jobId+index], jobId',
+      playbackPositions: 'id, updatedAt',
+      cachedLessonMetadata: 'id, courseId, title, updatedAt',
+      cachedSummaries: 'classId, courseId, status, reviewStatus, updatedAt',
+      assignmentDrafts: 'id, assignmentId, studentId, courseId, syncStatus, updatedAt',
+      examDrafts: 'id, examId, attemptId, syncStatus, updatedAt',
+      syncOperations: 'id, operationType, entityId, status, idempotencyKey, createdAt',
+      oerPacks: 'id, title, subject, installedAt',
     })
   }
 

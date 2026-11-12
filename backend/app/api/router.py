@@ -13,6 +13,8 @@ from app.api.v1 import (
     registration,
     exams,
     gradebook,
+    interop,
+    oer,
     releases,
     resources,
     sections,
@@ -42,3 +44,5 @@ api_router.include_router(notifications.router)
 api_router.include_router(releases.router)
 api_router.include_router(gradebook.router)
 api_router.include_router(exams.router)
+api_router.include_router(interop.router)
+api_router.include_router(oer.router)

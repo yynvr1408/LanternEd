@@ -2,8 +2,12 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_current_user, get_db
+from app.core.permissions import require_role
+from app.db.models.enums import UserRole
 from app.db.models.user import User
 from app.schemas.exam import (
+    CodeRunRequest,
+    CodeRunResponse,
     ExamAttemptOut,
     ExamCreate,
     ExamHeartbeatRequest,
@@ -12,6 +16,10 @@ from app.schemas.exam import (
     ExamStartResponse,
     ExamSubmitRequest,
     ExamSubmitResponse,
+    ProctorAttemptMonitorOut,
+    ProctorFlagRequest,
+    ProctorSnapshotRequest,
+    ProctorSnapshotResponse,
     QuestionBankCreate,
     QuestionBankOut,
     QuestionItemCreate,
@@ -43,6 +51,8 @@ def list_exams(
             shuffle_options=e.shuffle_options,
             enforce_fullscreen=e.enforce_fullscreen,
             max_tab_switches=e.max_tab_switches,
+            require_webcam_proctoring=bool(getattr(e, "require_webcam_proctoring", False)),
+            require_device_lockdown=bool(getattr(e, "require_device_lockdown", False)),
             status=e.status.value if hasattr(e.status, "value") else str(e.status),
             sections=[
                 {
@@ -82,6 +92,8 @@ def create_exam(
         shuffle_options=e.shuffle_options,
         enforce_fullscreen=e.enforce_fullscreen,
         max_tab_switches=e.max_tab_switches,
+        require_webcam_proctoring=bool(getattr(e, "require_webcam_proctoring", False)),
+        require_device_lockdown=bool(getattr(e, "require_device_lockdown", False)),
         status=e.status.value if hasattr(e.status, "value") else str(e.status),
         sections=[
             {
@@ -212,3 +224,45 @@ def add_question(
         course_outcome_tag=it.course_outcome_tag,
         explanation=it.explanation,
     )
+
+
+@router.post("/exams/{exam_id}/run-code", response_model=CodeRunResponse)
+def run_code_sandbox(
+    exam_id: str,
+    payload: CodeRunRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return exam_service.run_code_for_exam(db, current_user.id, exam_id, payload)
+
+
+@router.post("/exams/{exam_id}/proctor-snapshot", response_model=ProctorSnapshotResponse)
+def upload_proctor_snapshot(
+    exam_id: str,
+    payload: ProctorSnapshotRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return exam_service.record_proctor_snapshot(db, current_user.id, exam_id, payload)
+
+
+@router.get("/exams/{exam_id}/proctor-monitor", response_model=list[ProctorAttemptMonitorOut])
+def proctor_monitor(
+    exam_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_role(current_user, UserRole.teacher)
+    return exam_service.get_proctor_monitor(db, exam_id)
+
+
+@router.post("/exams/{exam_id}/attempts/{attempt_id}/flag", response_model=ProctorAttemptMonitorOut)
+def update_attempt_flag(
+    exam_id: str,
+    attempt_id: str,
+    payload: ProctorFlagRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_role(current_user, UserRole.teacher)
+    return exam_service.set_attempt_flag(db, exam_id, attempt_id, payload)

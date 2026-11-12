@@ -86,6 +86,8 @@ class Exam(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     shuffle_options: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     enforce_fullscreen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     max_tab_switches: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    require_webcam_proctoring: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    require_device_lockdown: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[ExamStatus] = mapped_column(
         Enum(ExamStatus, native_enum=False), nullable=False, default=ExamStatus.draft
     )

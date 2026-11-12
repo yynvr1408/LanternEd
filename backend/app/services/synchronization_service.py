@@ -136,10 +136,26 @@ def _apply_recording_progress(db: Session, user: User, op: SyncOperationIn) -> d
     }
 
 
+def _apply_xapi_statement(db: Session, user: User, op: SyncOperationIn) -> dict:
+    from app.services import interop_service
+
+    statements = op.payload.get("statements")
+    if isinstance(statements, list):
+        batch = statements
+    else:
+        batch = [{**op.payload, "course_id": op.payload.get("course_id") or op.entity_id}]
+    rows = interop_service.record_xapi_statements(db, user=user, statements=batch, commit=False)
+    return {
+        "server_entity_id": rows[0].id if rows else op.entity_id,
+        "server_updated_at": utcnow(),
+    }
+
+
 _HANDLERS = {
     SyncOperationType.assignment_submission.value: _apply_assignment_submission,
     SyncOperationType.exam_submit.value: _apply_exam_submit,
     SyncOperationType.recording_progress.value: _apply_recording_progress,
+    SyncOperationType.xapi_statement.value: _apply_xapi_statement,
 }
 
 

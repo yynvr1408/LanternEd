@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import {
   Calendar,
+  Camera,
   CheckCircle2,
   Clock,
+  Code2,
   Eye,
   FileQuestion,
+  Lock,
   Plus,
   Shield,
   ShieldAlert,
   Users,
 } from 'lucide-react'
-import { examService, type Exam, type ExamAttempt } from '../../services/examService'
+import {
+  examService,
+  type Exam,
+  type ExamAttempt,
+  type ProctorAttemptMonitor,
+  type QuestionBank,
+} from '../../services/examService'
 import { Badge, Button, Dialog, FormField, Input, LoadingState, Textarea } from '../ui'
 
 interface CourseExamsTabProps {
@@ -31,20 +40,45 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
   const [endDate, setEndDate] = useState('')
   const [totalMarks, setTotalMarks] = useState(100)
   const [enforceFullscreen, setEnforceFullscreen] = useState(true)
+  const [requireWebcam, setRequireWebcam] = useState(false)
+  const [requireLockdown, setRequireLockdown] = useState(false)
   const [maxTabSwitches, setMaxTabSwitches] = useState(3)
+  const [selectedBankId, setSelectedBankId] = useState('')
+  const [banks, setBanks] = useState<QuestionBank[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Attempts modal
+  // Question bank coding / MCQ modal
+  const [isBankOpen, setIsBankOpen] = useState(false)
+  const [qType, setQType] = useState<'coding' | 'mcq_single'>('coding')
+  const [qPrompt, setQPrompt] = useState('')
+  const [qLang, setQLang] = useState('python')
+  const [qStarter, setQStarter] = useState('print(input())')
+  const [qStdin, setQStdin] = useState('2 3')
+  const [qExpectedOut, setQExpectedOut] = useState('5')
+  const [qMarks, setQMarks] = useState(10)
+  const [isSavingQ, setIsSavingQ] = useState(false)
+
+  // Attempts + Live Proctor Monitor modals
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
   const [attempts, setAttempts] = useState<ExamAttempt[]>([])
   const [loadingAttempts, setLoadingAttempts] = useState(false)
+  const [proctorExam, setProctorExam] = useState<Exam | null>(null)
+  const [proctorRows, setProctorRows] = useState<ProctorAttemptMonitor[]>([])
+  const [loadingProctor, setLoadingProctor] = useState(false)
 
   const loadData = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await examService.listCourseExams(courseId)
+      const [data, bankList] = await Promise.all([
+        examService.listCourseExams(courseId),
+        examService.listQuestionBanks(courseId).catch(() => []),
+      ])
       setExams(data)
+      setBanks(bankList)
+      if (!selectedBankId && bankList.length > 0) {
+        setSelectedBankId(bankList[0].id)
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load examinations.')
     } finally {
@@ -76,10 +110,13 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
         total_marks: totalMarks,
         enforce_fullscreen: enforceFullscreen,
         max_tab_switches: maxTabSwitches,
+        require_webcam_proctoring: requireWebcam,
+        require_device_lockdown: requireLockdown,
         sections: [
           {
             title: 'General Assessment',
             marks_per_question: 2.0,
+            question_bank_id: selectedBankId || undefined,
           },
         ],
       })
@@ -107,6 +144,74 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
     }
   }
 
+  const handleOpenProctorMonitor = async (exam: Exam) => {
+    setProctorExam(exam)
+    setLoadingProctor(true)
+    try {
+      setProctorRows(await examService.getProctorMonitor(exam.id))
+    } catch {
+      setProctorRows([])
+    } finally {
+      setLoadingProctor(false)
+    }
+  }
+
+  const handleToggleFlag = async (attemptId: string, currentFlag: boolean) => {
+    if (!proctorExam) return
+    const updated = await examService.flagAttempt(proctorExam.id, attemptId, {
+      is_flagged: !currentFlag,
+      reason: !currentFlag ? 'Flagged by live proctor monitor' : 'Cleared by instructor',
+    })
+    setProctorRows((prev) => prev.map((r) => (r.attempt_id === attemptId ? updated : r)))
+  }
+
+  const handleAddQuestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!qPrompt.trim()) return
+    setIsSavingQ(true)
+    try {
+      let bankId = selectedBankId
+      if (!bankId) {
+        const created = await examService.createQuestionBank(courseId, { title: 'Course Question Pool' })
+        bankId = created.id
+        setSelectedBankId(bankId)
+      }
+      if (qType === 'coding') {
+        await examService.addQuestionItem(bankId, {
+          question_type: 'coding',
+          prompt: qPrompt.trim(),
+          default_marks: qMarks,
+          correct_answer: {},
+          code_harness: {
+            language: qLang,
+            starter_code: qStarter,
+            test_cases: [
+              { name: 'Sample Case', stdin: qStdin, expected_stdout: qExpectedOut, hidden: false },
+            ],
+          },
+        })
+      } else {
+        await examService.addQuestionItem(bankId, {
+          question_type: 'mcq_single',
+          prompt: qPrompt.trim(),
+          default_marks: qMarks,
+          options: [
+            { id: 'opt_a', text: 'True / Valid' },
+            { id: 'opt_b', text: 'False / Invalid' },
+          ],
+          correct_answer: ['opt_a'],
+        })
+      }
+      setQPrompt('')
+      setIsBankOpen(false)
+      await loadData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save question item.')
+    } finally {
+      setIsSavingQ(false)
+    }
+  }
+
   if (isLoading) {
     return <LoadingState message="Loading course examinations and testing pools..." />
   }
@@ -122,14 +227,24 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
           </p>
         </div>
 
-        <Button
-          size="sm"
-          variant="primary"
-          icon={<Plus className="w-3.5 h-3.5" />}
-          onClick={() => setIsCreateOpen(true)}
-        >
-          Author Examination
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            icon={<Code2 className="w-3.5 h-3.5" />}
+            onClick={() => setIsBankOpen(true)}
+          >
+            Add Coding / Bank Question
+          </Button>
+          <Button
+            size="sm"
+            variant="primary"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setIsCreateOpen(true)}
+          >
+            Author Examination
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -185,16 +300,30 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-[#E1E8E4]">
-                <span className="text-xs font-bold text-[#0F5B57]">{exam.total_marks} Points</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  icon={<Eye className="w-3.5 h-3.5" />}
-                  onClick={() => handleViewAttempts(exam)}
-                >
-                  View Sittings & Scores
-                </Button>
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E1E8E4]">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#0F5B57]">{exam.total_marks} Points</span>
+                  {exam.require_webcam_proctoring && <Badge variant="info" size="sm">Cam</Badge>}
+                  {exam.require_device_lockdown && <Badge variant="warning" size="sm">Lockdown</Badge>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Camera className="w-3.5 h-3.5" />}
+                    onClick={() => handleOpenProctorMonitor(exam)}
+                  >
+                    Live Proctor
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={<Eye className="w-3.5 h-3.5" />}
+                    onClick={() => handleViewAttempts(exam)}
+                  >
+                    Sittings
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
@@ -302,6 +431,55 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="p-3 bg-[#F8FAF7] border border-[#E1E8E4] rounded-xl flex items-center justify-between cursor-pointer">
+              <div>
+                <span className="font-bold text-[#202B2A] flex items-center gap-1">
+                  <Camera className="w-3.5 h-3.5 text-[#0F5B57]" /> Webcam Checks
+                </span>
+                <span className="text-[11px] text-[#687775]">Low-bandwidth periodic thumbnails</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={requireWebcam}
+                onChange={(e) => setRequireWebcam(e.target.checked)}
+                className="w-4 h-4 text-[#0F5B57] rounded"
+              />
+            </label>
+            <label className="p-3 bg-[#F8FAF7] border border-[#E1E8E4] rounded-xl flex items-center justify-between cursor-pointer">
+              <div>
+                <span className="font-bold text-[#202B2A] flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-[#0F5B57]" /> Native OS Lockdown
+                </span>
+                <span className="text-[11px] text-[#687775]">Desktop Always-on-Top / Android FLAG_SECURE</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={requireLockdown}
+                onChange={(e) => setRequireLockdown(e.target.checked)}
+                className="w-4 h-4 text-[#0F5B57] rounded"
+              />
+            </label>
+          </div>
+
+          {banks.length > 0 && (
+            <FormField label="Linked Question Pool" htmlFor="ex-bank">
+              <select
+                id="ex-bank"
+                value={selectedBankId}
+                onChange={(e) => setSelectedBankId(e.target.value)}
+                className="w-full text-xs border border-[#CBD7D1] rounded-lg px-2.5 py-2 bg-white text-[#202B2A]"
+              >
+                <option value="">None (blank exam)</option>
+                {banks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.title} ({b.item_count} items)
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          )}
+
           <div className="flex justify-end gap-2 pt-3 border-t border-[#E1E8E4]">
             <Button variant="outline" size="sm" onClick={() => setIsCreateOpen(false)}>
               Cancel
@@ -384,6 +562,156 @@ export const CourseExamsTab: React.FC<CourseExamsTabProps> = ({ courseId }) => {
               Close
             </Button>
           </div>
+        </div>
+      </Dialog>
+
+      {/* Coding / Question Bank Authoring Modal */}
+      <Dialog
+        isOpen={isBankOpen}
+        onClose={() => setIsBankOpen(false)}
+        title="Add Question to Course Pool"
+        description="Author auto-graded coding sandbox exercises (Python/JS/C/C++) or objective checks."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleAddQuestion} className="space-y-3 text-xs">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Question Type" htmlFor="qb-type">
+              <select
+                id="qb-type"
+                value={qType}
+                onChange={(e) => setQType(e.target.value as 'coding' | 'mcq_single')}
+                className="w-full border border-[#CBD7D1] rounded-lg px-2.5 py-2 bg-white text-[#202B2A]"
+              >
+                <option value="coding">Coding Sandbox (Auto-Graded)</option>
+                <option value="mcq_single">Quick True/False MCQ</option>
+              </select>
+            </FormField>
+            <FormField label="Marks" htmlFor="qb-marks">
+              <Input
+                id="qb-marks"
+                type="number"
+                min={1}
+                value={qMarks}
+                onChange={(e) => setQMarks(Number(e.target.value))}
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Question Prompt" htmlFor="qb-prompt" required>
+            <Textarea
+              id="qb-prompt"
+              rows={3}
+              value={qPrompt}
+              onChange={(e) => setQPrompt(e.target.value)}
+              placeholder="e.g. Read two integers from stdin and print their sum."
+              required
+            />
+          </FormField>
+
+          {qType === 'coding' && (
+            <div className="space-y-3 p-3 rounded-xl bg-[#F8FAF7] border border-[#E1E8E4]">
+              <FormField label="Default Language" htmlFor="qb-lang">
+                <select
+                  id="qb-lang"
+                  value={qLang}
+                  onChange={(e) => setQLang(e.target.value)}
+                  className="w-full border border-[#CBD7D1] rounded-lg px-2.5 py-1.5 bg-white text-[#202B2A]"
+                >
+                  <option value="python">Python 3</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="c">C</option>
+                  <option value="cpp">C++</option>
+                </select>
+              </FormField>
+              <FormField label="Starter Code" htmlFor="qb-starter">
+                <Textarea
+                  id="qb-starter"
+                  rows={3}
+                  value={qStarter}
+                  onChange={(e) => setQStarter(e.target.value)}
+                  className="font-mono text-xs"
+                />
+              </FormField>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Sample Stdin" htmlFor="qb-stdin">
+                  <Input id="qb-stdin" value={qStdin} onChange={(e) => setQStdin(e.target.value)} className="font-mono" />
+                </FormField>
+                <FormField label="Expected Stdout" htmlFor="qb-out">
+                  <Input id="qb-out" value={qExpectedOut} onChange={(e) => setQExpectedOut(e.target.value)} className="font-mono" />
+                </FormField>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#E1E8E4]">
+            <Button size="sm" variant="outline" onClick={() => setIsBankOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" type="submit" isLoading={isSavingQ}>
+              Save Question
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Live Proctor Monitor Dialog */}
+      <Dialog
+        isOpen={!!proctorExam}
+        onClose={() => setProctorExam(null)}
+        title={proctorExam ? `Live Proctor Monitor · ${proctorExam.title}` : 'Live Proctor Monitor'}
+        description="Real-time candidate integrity overview, webcam snapshot thumbnails, and blur alerts."
+        maxWidth="xl"
+      >
+        <div className="space-y-4 text-xs">
+          {loadingProctor ? (
+            <LoadingState message="Polling live proctoring feed..." />
+          ) : proctorRows.length === 0 ? (
+            <p className="text-center py-8 text-[#687775]">No candidates have entered this sitting yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {proctorRows.map((row) => (
+                <div
+                  key={row.attempt_id}
+                  className={`p-3.5 rounded-xl border flex flex-col justify-between gap-3 ${
+                    row.is_flagged_for_review ? 'border-[#F04438] bg-[#FEF3F2]' : 'border-[#E1E8E4] bg-white'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-sm text-[#202B2A]">{row.student_name}</div>
+                      <div className="text-[11px] text-[#687775] font-mono">
+                        Blur Count: {row.tab_blur_count} · Snapshots: {row.snapshot_count}
+                      </div>
+                    </div>
+                    <Badge variant={row.is_flagged_for_review ? 'error' : 'success'}>
+                      {row.is_flagged_for_review ? 'FLAGGED' : row.status.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  {row.latest_snapshot_url && (
+                    <img
+                      src={row.latest_snapshot_url}
+                      alt={`Proctor snapshot for ${row.student_name}`}
+                      className="w-full h-28 object-cover rounded-lg border border-[#E1E8E4]"
+                    />
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-[#687775]">
+                      {row.lockdown_active ? 'OS Lockdown Active' : 'Browser Runner'}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant={row.is_flagged_for_review ? 'outline' : 'destructive'}
+                      onClick={() => handleToggleFlag(row.attempt_id, row.is_flagged_for_review)}
+                    >
+                      {row.is_flagged_for_review ? 'Clear Flag' : 'Flag Attempt'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Dialog>
     </div>

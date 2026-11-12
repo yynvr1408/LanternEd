@@ -127,6 +127,7 @@ class SyncOperationType(str, enum.Enum):
     assignment_submission = "assignment_submission"
     exam_submit = "exam_submit"
     recording_progress = "recording_progress"
+    xapi_statement = "xapi_statement"
     unsupported = "unsupported"  # an operation_type the server doesn't handle; recorded so retries stay idempotent
 
 

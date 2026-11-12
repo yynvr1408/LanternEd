@@ -18,6 +18,7 @@ import { classService } from '../../services/classService'
 import { assignmentService } from '../../services/assignmentService'
 import { gradebookService, type StudentGradeSummary } from '../../services/gradebookService'
 import { examService, type Exam } from '../../services/examService'
+import { CourseInteropPanel } from '../../components/course/CourseInteropPanel'
 import { Award, Clock, Shield } from 'lucide-react'
 import { downloadManager } from '../../services/downloadManager'
 import { formatDueDate } from '../../utils/dates'
@@ -333,6 +334,12 @@ export const StudentCourseDetailPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {courseId && (
+        <div className="mt-6">
+          <CourseInteropPanel courseId={courseId} canManage={false} />
+        </div>
+      )}
     </PageContainer>
   )
 }

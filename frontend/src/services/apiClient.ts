@@ -902,6 +902,8 @@ export const api = {
         position_seconds: op.payload?.position_seconds ?? 0,
         completed: Boolean(op.payload?.completed),
       }
+    } else if (op.operationType === 'xapi_statement') {
+      payload = op.payload ?? {}
     } else {
       payload = { answer: { text: op.payload?.content ?? '' } }
     }

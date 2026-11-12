@@ -220,6 +220,22 @@ export const syncManager = {
     return { draft, operation }
   },
 
+  async enqueueXapiStatement(courseId: string, statement: Record<string, any>): Promise<SyncOperation> {
+    const id = generateUUID()
+    const op: SyncOperation = {
+      id,
+      operationType: 'xapi_statement',
+      entityId: courseId,
+      payload: statement,
+      status: 'pending',
+      idempotencyKey: `xapi-${courseId}-${id}`,
+      createdAt: new Date().toISOString(),
+      retryCount: 0,
+    }
+    await db.syncOperations.put(op)
+    return op
+  },
+
   /**
    * Coalesces offline video/audio watch progress into the sync queue so progress is never lost.
    */

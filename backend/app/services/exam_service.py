@@ -22,12 +22,19 @@ from app.db.models.exam import (
     QuestionType,
 )
 from app.schemas.exam import (
+    CodeRunRequest,
+    CodeRunResponse,
+    CodeTestCaseResult,
     ExamCreate,
     ExamHeartbeatRequest,
     ExamHeartbeatResponse,
     ExamStartResponse,
     ExamSubmitRequest,
     ExamSubmitResponse,
+    ProctorAttemptMonitorOut,
+    ProctorFlagRequest,
+    ProctorSnapshotRequest,
+    ProctorSnapshotResponse,
     QuestionBankCreate,
     QuestionItemCreate,
     QuestionItemStudentView,
@@ -93,6 +100,8 @@ def create_exam(db: Session, course_id: str, creator_id: str, payload: ExamCreat
         shuffle_options=payload.shuffle_options,
         enforce_fullscreen=payload.enforce_fullscreen,
         max_tab_switches=payload.max_tab_switches,
+        require_webcam_proctoring=payload.require_webcam_proctoring,
+        require_device_lockdown=payload.require_device_lockdown,
         status=ExamStatus.published,
         created_by=creator_id,
     )
@@ -185,6 +194,23 @@ def start_exam_attempt(
                 opts = list(it.options)
                 if exam.shuffle_options and it.question_type in (QuestionType.mcq_single, QuestionType.mcq_multi):
                     random.shuffle(opts)
+                safe_harness: dict = {}
+                if it.question_type == QuestionType.coding and isinstance(it.code_harness, dict):
+                    raw_cases = it.code_harness.get("test_cases") or []
+                    sample_cases = [
+                        {
+                            "name": tc.get("name", f"Sample {idx + 1}"),
+                            "stdin": tc.get("stdin", tc.get("input", "")),
+                            "expected_stdout": tc.get("expected_stdout", tc.get("expected_output", "")),
+                        }
+                        for idx, tc in enumerate(raw_cases)
+                        if isinstance(tc, dict) and not tc.get("hidden", False)
+                    ]
+                    safe_harness = {
+                        "language": it.code_harness.get("language", "python"),
+                        "starter_code": it.code_harness.get("starter_code", ""),
+                        "sample_test_cases": sample_cases,
+                    }
                 questions.append(
                     QuestionItemStudentView(
                         id=it.id,
@@ -192,6 +218,7 @@ def start_exam_attempt(
                         prompt=it.prompt,
                         options=opts,
                         default_marks=sec.marks_per_question or it.default_marks,
+                        code_harness=safe_harness,
                     )
                 )
 
@@ -210,6 +237,8 @@ def start_exam_attempt(
         duration_seconds=remaining,
         enforce_fullscreen=exam.enforce_fullscreen,
         max_tab_switches=exam.max_tab_switches,
+        require_webcam_proctoring=bool(getattr(exam, "require_webcam_proctoring", False)),
+        require_device_lockdown=bool(getattr(exam, "require_device_lockdown", False)),
         questions=questions,
         existing_responses=attempt.responses or {},
     )
@@ -368,7 +397,20 @@ def submit_exam_attempt(
                         auto_score += marks
                 except (ValueError, TypeError):
                     pass
-            elif qtype in ("coding", "subjective"):
+            elif qtype == "coding":
+                from app.services import code_runner_service
+
+                earned, can_auto_grade, _ = code_runner_service.evaluate_coding_question(
+                    code_harness=it.code_harness,
+                    correct_answer=it.correct_answer,
+                    student_answer=student_ans,
+                    max_marks=marks,
+                )
+                if can_auto_grade:
+                    auto_score += earned
+                else:
+                    has_subjective = True
+            elif qtype == "subjective":
                 has_subjective = True
 
     attempt.auto_graded_score = auto_score
@@ -398,3 +440,179 @@ def submit_exam_attempt(
 
 def list_exam_attempts(db: Session, exam_id: str) -> list[ExamAttempt]:
     return db.execute(select(ExamAttempt).where(ExamAttempt.exam_id == exam_id)).scalars().all()
+
+
+def run_code_for_exam(db: Session, user_id: str, exam_id: str, payload: CodeRunRequest) -> CodeRunResponse:
+    """Runs student code inside the sandbox against sample (non-hidden) test cases or custom stdin."""
+    from app.services import code_runner_service
+
+    exam = get_exam_or_404(db, exam_id)
+    if payload.attempt_id:
+        attempt = db.get(ExamAttempt, payload.attempt_id)
+        if not attempt or attempt.exam_id != exam.id or attempt.student_id != user_id:
+            raise ForbiddenError("Unauthorized exam attempt access.")
+
+    sample_cases: list[dict] = []
+    if payload.question_id:
+        item = db.get(QuestionItem, payload.question_id)
+        if item:
+            all_cases = code_runner_service.extract_test_cases(item.code_harness, item.correct_answer)
+            sample_cases = [tc for tc in all_cases if not tc.get("hidden", False)]
+
+    single = code_runner_service.execute_source(
+        payload.source_code,
+        language=payload.language,
+        stdin_data=payload.stdin,
+    )
+    test_results: list[CodeTestCaseResult] = []
+    if sample_cases and single.get("compiler_available", True):
+        for tc in sample_cases:
+            res = code_runner_service.execute_source(
+                payload.source_code,
+                language=payload.language,
+                stdin_data=tc["stdin"],
+            )
+            passed = bool(
+                res["compiled"]
+                and not res["timed_out"]
+                and res["exit_code"] == 0
+                and code_runner_service._normalize_output(res["stdout"])
+                == code_runner_service._normalize_output(tc["expected_stdout"])
+            )
+            test_results.append(
+                CodeTestCaseResult(
+                    name=tc["name"],
+                    passed=passed,
+                    stdin=tc["stdin"],
+                    expected_stdout=tc["expected_stdout"],
+                    actual_stdout=res["stdout"],
+                    stderr=res["stderr"],
+                    timed_out=res["timed_out"],
+                    runtime_ms=res["runtime_ms"],
+                )
+            )
+
+    return CodeRunResponse(
+        language=single["language"],
+        compiler_available=single["compiler_available"],
+        compiled=single["compiled"],
+        timed_out=single["timed_out"],
+        exit_code=single["exit_code"],
+        stdout=single["stdout"],
+        stderr=single["stderr"],
+        runtime_ms=single["runtime_ms"],
+        test_results=test_results,
+    )
+
+
+def record_proctor_snapshot(
+    db: Session,
+    student_id: str,
+    exam_id: str,
+    payload: ProctorSnapshotRequest,
+) -> ProctorSnapshotResponse:
+    """Stores a bounded low-bandwidth proctoring webcam audit frame on an active sitting."""
+    attempt = db.get(ExamAttempt, payload.attempt_id)
+    if not attempt or attempt.exam_id != exam_id:
+        raise NotFoundError("Exam attempt not found.")
+    if attempt.student_id != student_id:
+        raise ForbiddenError("Unauthorized attempt access.")
+
+    data_url = (payload.image_data_url or "").strip()
+    if len(data_url) > 96_000:
+        raise ValidationFailedError("Proctoring snapshot exceeds 96KB low-bandwidth frame limit.")
+    if data_url and not data_url.startswith("data:image/"):
+        raise ValidationFailedError("Proctoring snapshot must be a valid image data URL.")
+
+    now = utcnow()
+    log = ExamAuditLog(
+        attempt_id=attempt.id,
+        event_type="webcam_snapshot",
+        event_data={
+            "image_data_url": data_url,
+            "face_detected": bool(payload.face_detected),
+            "camera_status": str(payload.camera_status or "active")[:40],
+            "captured_at": now.isoformat(),
+        },
+        created_at=now,
+    )
+    if not payload.face_detected:
+        attempt.is_flagged_for_review = True
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return ProctorSnapshotResponse(recorded=True, event_id=log.id, captured_at=now)
+
+
+def get_proctor_monitor(db: Session, exam_id: str) -> list[ProctorAttemptMonitorOut]:
+    from app.db.models.user import User
+
+    get_exam_or_404(db, exam_id)
+    attempts = list_exam_attempts(db, exam_id)
+    if not attempts:
+        return []
+
+    student_ids = list({a.student_id for a in attempts})
+    users = db.execute(select(User).where(User.id.in_(student_ids))).scalars().all()
+    user_map = {u.id: u.full_name for u in users}
+
+    attempt_ids = [a.id for a in attempts]
+    logs = (
+        db.execute(
+            select(ExamAuditLog)
+            .where(ExamAuditLog.attempt_id.in_(attempt_ids))
+            .order_by(ExamAuditLog.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    logs_by_attempt: dict[str, list[ExamAuditLog]] = {}
+    for log in logs:
+        logs_by_attempt.setdefault(log.attempt_id, []).append(log)
+
+    out: list[ProctorAttemptMonitorOut] = []
+    for att in attempts:
+        att_logs = logs_by_attempt.get(att.id, [])
+        snapshots = [lg for lg in att_logs if lg.event_type == "webcam_snapshot"]
+        latest_snap = snapshots[0].event_data.get("image_data_url") if snapshots else None
+        latest_ev = att_logs[0] if att_logs else None
+        lockdown_active = any(lg.event_type == "device_lockdown_enabled" for lg in att_logs) and not any(
+            lg.event_type == "device_lockdown_released" for lg in att_logs[:1]
+        )
+        out.append(
+            ProctorAttemptMonitorOut(
+                attempt_id=att.id,
+                student_id=att.student_id,
+                student_name=user_map.get(att.student_id, "Student"),
+                status=att.status.value if hasattr(att.status, "value") else str(att.status),
+                started_at=att.started_at,
+                submitted_at=att.submitted_at,
+                tab_blur_count=att.tab_blur_count,
+                is_flagged_for_review=att.is_flagged_for_review,
+                snapshot_count=len(snapshots),
+                latest_snapshot_url=latest_snap,
+                latest_event_type=latest_ev.event_type if latest_ev else None,
+                latest_event_at=latest_ev.created_at if latest_ev else None,
+                lockdown_active=lockdown_active,
+            )
+        )
+    return out
+
+
+def set_attempt_flag(
+    db: Session, exam_id: str, attempt_id: str, payload: ProctorFlagRequest
+) -> ProctorAttemptMonitorOut:
+    attempt = db.get(ExamAttempt, attempt_id)
+    if not attempt or attempt.exam_id != exam_id:
+        raise NotFoundError("Exam attempt not found.")
+    attempt.is_flagged_for_review = bool(payload.is_flagged)
+    db.add(
+        ExamAuditLog(
+            attempt_id=attempt.id,
+            event_type="proctor_flag_updated",
+            event_data={"is_flagged": payload.is_flagged, "reason": payload.reason or ""},
+        )
+    )
+    db.commit()
+    rows = [r for r in get_proctor_monitor(db, exam_id) if r.attempt_id == attempt.id]
+    return rows[0]

@@ -39,6 +39,7 @@ class QuestionItemStudentView(BaseModel):
     prompt: str
     options: list[dict[str, str]]
     default_marks: float
+    code_harness: dict[str, Any] = {}
 
 
 class QuestionBankCreate(BaseModel):
@@ -83,6 +84,8 @@ class ExamCreate(BaseModel):
     shuffle_options: bool = True
     enforce_fullscreen: bool = True
     max_tab_switches: int = 3
+    require_webcam_proctoring: bool = False
+    require_device_lockdown: bool = False
     sections: list[ExamSectionCreate] = []
 
 
@@ -99,6 +102,8 @@ class ExamOut(BaseModel):
     shuffle_options: bool
     enforce_fullscreen: bool
     max_tab_switches: int
+    require_webcam_proctoring: bool = False
+    require_device_lockdown: bool = False
     status: str
     sections: list[ExamSectionOut]
     created_at: datetime
@@ -111,6 +116,8 @@ class ExamStartResponse(BaseModel):
     duration_seconds: int
     enforce_fullscreen: bool
     max_tab_switches: int
+    require_webcam_proctoring: bool = False
+    require_device_lockdown: bool = False
     questions: list[QuestionItemStudentView]
     existing_responses: dict[str, Any]
 
@@ -162,3 +169,68 @@ class ExamAttemptOut(BaseModel):
     status: str
     tab_blur_count: int
     is_flagged_for_review: bool
+
+
+class CodeRunRequest(BaseModel):
+    attempt_id: str | None = None
+    question_id: str | None = None
+    language: str = "python"
+    source_code: str
+    stdin: str = ""
+
+
+class CodeTestCaseResult(BaseModel):
+    name: str
+    passed: bool
+    stdin: str = ""
+    expected_stdout: str = ""
+    actual_stdout: str = ""
+    stderr: str = ""
+    timed_out: bool = False
+    runtime_ms: int = 0
+
+
+class CodeRunResponse(BaseModel):
+    language: str
+    compiler_available: bool
+    compiled: bool
+    timed_out: bool
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    runtime_ms: int = 0
+    test_results: list[CodeTestCaseResult] = []
+
+
+class ProctorSnapshotRequest(BaseModel):
+    attempt_id: str
+    image_data_url: str  # Compact base64 JPEG <= 64KB
+    face_detected: bool = True
+    camera_status: str = "active"
+
+
+class ProctorSnapshotResponse(BaseModel):
+    recorded: bool
+    event_id: str
+    captured_at: datetime
+
+
+class ProctorAttemptMonitorOut(BaseModel):
+    attempt_id: str
+    student_id: str
+    student_name: str
+    status: str
+    started_at: datetime
+    submitted_at: datetime | None = None
+    tab_blur_count: int
+    is_flagged_for_review: bool
+    snapshot_count: int = 0
+    latest_snapshot_url: str | None = None
+    latest_event_type: str | None = None
+    latest_event_at: datetime | None = None
+    lockdown_active: bool = False
+
+
+class ProctorFlagRequest(BaseModel):
+    is_flagged: bool
+    reason: str | None = None

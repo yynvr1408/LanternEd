@@ -691,4 +691,90 @@ export const platformAdapter = {
 
     return false
   },
+
+  /**
+   * Cross-platform native Exam Device Lockdown (Tauri Windows/macOS fullscreen+always-on-top,
+   * Android FLAG_SECURE + immersive lock task, iOS Guided Access / idle lock, Web Fullscreen API).
+   */
+  async setExamLockdown(enabled: boolean): Promise<{
+    active: boolean
+    platform: string
+    capabilities: string[]
+    guidedAccessEnabled?: boolean
+    secureWindow?: boolean
+  }> {
+    const tauriInvoke = getTauriInvoker()
+    if (this.getPlatform() === 'tauri' && tauriInvoke) {
+      try {
+        return await tauriInvoke('set_exam_lockdown', { enabled })
+      } catch {
+        // fall through to web fullscreen
+      }
+    }
+
+    const capNative = getCapacitorNative()
+    if (this.getPlatform() === 'capacitor' && capNative?.setExamLockdown) {
+      try {
+        return await capNative.setExamLockdown({ enabled })
+      } catch {
+        // fall through
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      try {
+        if (enabled && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen()
+        } else if (!enabled && document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen()
+        }
+      } catch {
+        // Ignore headless or permission rejections cleanly
+      }
+    }
+
+    return {
+      active: enabled,
+      platform: this.getOperatingSystem(),
+      capabilities: ['fullscreen', 'visibility_telemetry', 'blur_guard'],
+    }
+  },
+
+  /**
+   * Scans a local directory / USB mount for `.lanternpack.zip` bundles (Tauri Desktop).
+   */
+  async scanRemovablePacks(directory?: string): Promise<Array<{ name: string; path: string; sizeBytes: number }>> {
+    const tauriInvoke = getTauriInvoker()
+    if (this.getPlatform() === 'tauri' && tauriInvoke) {
+      try {
+        return await tauriInvoke('scan_removable_packs', { directory: directory || null })
+      } catch {
+        return []
+      }
+    }
+    return []
+  },
+
+  /** Checks whether live Web Speech API / native OS Speech Recognition is available without stubs. */
+  getSpeechRecognitionStatus(): {
+    available: boolean
+    engine: string
+  } {
+    if (this.getPlatform() === 'tauri') {
+      return { available: true, engine: `tauri-${this.getOperatingSystem()}-whisper` }
+    }
+    if (this.getPlatform() === 'capacitor') {
+      return {
+        available: true,
+        engine: this.getOperatingSystem() === 'ios' ? 'ios-sf-speech' : 'android-speech-recognizer',
+      }
+    }
+    if (typeof window !== 'undefined') {
+      const w = window as any
+      if (w.SpeechRecognition || w.webkitSpeechRecognition) {
+        return { available: true, engine: 'web-speech-api' }
+      }
+    }
+    return { available: false, engine: 'offline-fallback' }
+  },
 }

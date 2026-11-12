@@ -5,12 +5,60 @@ export interface QuestionOption {
   text: string
 }
 
+export interface CodeHarnessSampleCase {
+  name: string
+  stdin: string
+  expected_stdout: string
+}
+
 export interface QuestionItemStudentView {
   id: string
   question_type: string
   prompt: string
   options: QuestionOption[]
   default_marks: number
+  code_harness?: {
+    language?: string
+    starter_code?: string
+    sample_test_cases?: CodeHarnessSampleCase[]
+  }
+}
+
+export interface CodeRunResponse {
+  language: string
+  compiler_available: boolean
+  compiled: boolean
+  timed_out: boolean
+  exit_code?: number | null
+  stdout: string
+  stderr: string
+  runtime_ms: number
+  test_results: Array<{
+    name: string
+    passed: boolean
+    stdin: string
+    expected_stdout: string
+    actual_stdout: string
+    stderr: string
+    timed_out: boolean
+    runtime_ms: number
+  }>
+}
+
+export interface ProctorAttemptMonitor {
+  attempt_id: string
+  student_id: string
+  student_name: string
+  status: string
+  started_at: string
+  submitted_at?: string | null
+  tab_blur_count: number
+  is_flagged_for_review: boolean
+  snapshot_count: number
+  latest_snapshot_url?: string | null
+  latest_event_type?: string | null
+  latest_event_at?: string | null
+  lockdown_active: boolean
 }
 
 export interface ExamSection {
@@ -35,6 +83,8 @@ export interface Exam {
   shuffle_options: boolean
   enforce_fullscreen: boolean
   max_tab_switches: number
+  require_webcam_proctoring?: boolean
+  require_device_lockdown?: boolean
   status: string
   sections: ExamSection[]
   created_at: string
@@ -47,6 +97,8 @@ export interface ExamStartResponse {
   duration_seconds: number
   enforce_fullscreen: boolean
   max_tab_switches: number
+  require_webcam_proctoring?: boolean
+  require_device_lockdown?: boolean
   questions: QuestionItemStudentView[]
   existing_responses: Record<string, any>
 }
@@ -108,6 +160,8 @@ export const examService = {
     shuffle_options?: boolean
     enforce_fullscreen?: boolean
     max_tab_switches?: number
+    require_webcam_proctoring?: boolean
+    require_device_lockdown?: boolean
     sections: {
       title: string
       marks_per_question: number
@@ -168,12 +222,49 @@ export const examService = {
     prompt: string
     options?: { id: string; text: string }[]
     correct_answer: any
+    code_harness?: Record<string, any>
     default_marks?: number
     bloom_level?: string
     course_outcome_tag?: string
     explanation?: string
   }): Promise<any> {
     return apiRequest<any>(`/question-banks/${bankId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  },
+
+  async runCode(examId: string, input: {
+    attempt_id?: string
+    question_id?: string
+    language: string
+    source_code: string
+    stdin?: string
+  }): Promise<CodeRunResponse> {
+    return apiRequest<CodeRunResponse>(`/exams/${examId}/run-code`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  },
+
+  async uploadProctorSnapshot(examId: string, input: {
+    attempt_id: string
+    image_data_url: string
+    face_detected: boolean
+    camera_status: string
+  }): Promise<{ recorded: boolean; event_id: string; captured_at: string }> {
+    return apiRequest(`/exams/${examId}/proctor-snapshot`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  },
+
+  async getProctorMonitor(examId: string): Promise<ProctorAttemptMonitor[]> {
+    return apiRequest<ProctorAttemptMonitor[]>(`/exams/${examId}/proctor-monitor`)
+  },
+
+  async flagAttempt(examId: string, attemptId: string, input: { is_flagged: boolean; reason?: string }): Promise<ProctorAttemptMonitor> {
+    return apiRequest<ProctorAttemptMonitor>(`/exams/${examId}/attempts/${attemptId}/flag`, {
       method: 'POST',
       body: JSON.stringify(input),
     })

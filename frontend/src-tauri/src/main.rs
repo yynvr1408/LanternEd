@@ -57,6 +57,22 @@ pub struct DeviceMetrics {
     pub is_battery_saving: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LockdownStatus {
+    pub active: bool,
+    pub platform: String,
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackFileInfo {
+    pub name: String,
+    pub path: String,
+    pub size_bytes: u64,
+}
+
 #[derive(Clone)]
 struct CachedLanPack {
     content_type: String,
@@ -618,6 +634,51 @@ fn get_device_metrics() -> DeviceMetrics {
     }
 }
 
+#[tauri::command]
+fn set_exam_lockdown(window: tauri::WebviewWindow, enabled: bool) -> LockdownStatus {
+    let _ = window.set_fullscreen(enabled);
+    let _ = window.set_always_on_top(enabled);
+    if enabled {
+        let _ = window.set_focus();
+    }
+    LockdownStatus {
+        active: enabled,
+        platform: std::env::consts::OS.to_string(),
+        capabilities: vec![
+            "fullscreen".to_string(),
+            "always_on_top".to_string(),
+            "focus_guard".to_string(),
+        ],
+    }
+}
+
+#[tauri::command]
+fn scan_removable_packs(directory: Option<String>) -> Vec<PackFileInfo> {
+    let mut found = Vec::new();
+    let target = directory
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::current_dir().ok());
+    if let Some(dir) = target {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.ends_with(".lanternpack.zip") || name.ends_with(".zim") {
+                        let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                        found.push(PackFileInfo {
+                            name,
+                            path: path.to_string_lossy().to_string(),
+                            size_bytes,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    found
+}
+
 mod num_cpus {
     pub fn get_physical() -> usize {
         std::thread::available_parallelism()
@@ -652,6 +713,18 @@ mod tests {
         let ip = detect_local_ip();
         assert!(!ip.is_empty());
     }
+
+    #[test]
+    fn scan_removable_packs_discovers_lanternpack_files() {
+        let tmp = std::env::temp_dir().join("lanterned_pack_scan_test");
+        let _ = std::fs::create_dir_all(&tmp);
+        let sample = tmp.join("stem.lanternpack.zip");
+        let _ = std::fs::write(&sample, b"PK\x03\x04");
+        let hits = scan_removable_packs(Some(tmp.to_string_lossy().to_string()));
+        assert!(hits.iter().any(|h| h.name == "stem.lanternpack.zip"));
+        let _ = std::fs::remove_file(&sample);
+        let _ = std::fs::remove_dir(&tmp);
+    }
 }
 
 fn main() {
@@ -664,7 +737,9 @@ fn main() {
             broadcast_lan_message,
             register_lan_pack,
             get_lan_server_stats,
-            get_device_metrics
+            get_device_metrics,
+            set_exam_lockdown,
+            scan_removable_packs
         ])
         .run(tauri::generate_context!())
         .expect("error while running LanternEd desktop application");
