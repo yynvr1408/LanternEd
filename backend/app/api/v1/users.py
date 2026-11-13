@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db.base import utcnow
 from app.core.permissions import require_role
-from app.dependencies import get_current_user, get_db
+from app.dependencies import extract_token_from_request, get_current_user, get_db
 from app.db.models.enums import UserRole
 from app.db.models.user import User
 from app.schemas.admin import StudentVisibleTeacherOut
@@ -118,6 +118,6 @@ def revoke_all_my_sessions(
     settings: Settings = Depends(get_settings),
 ):
     """Signs out every other device for this account, keeping the caller's own session."""
-    current_token = request.cookies.get(settings.session_cookie_name)
+    current_token = extract_token_from_request(request, settings.session_cookie_name)
     count = auth_service.revoke_all_sessions_except(db, user, keep_token=current_token)
     return RevokeAllResponse(revoked_count=count)

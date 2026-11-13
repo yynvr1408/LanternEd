@@ -166,17 +166,41 @@ export class AdminApiError extends Error {
   }
 }
 
+export const ADMIN_TOKEN_KEY = 'lanterned_admin_token'
+
+export function getAdminToken(): string | null {
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY) || sessionStorage.getItem(ADMIN_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setAdminToken(token: string | null | undefined): void {
+  try {
+    if (token) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, token)
+    } else {
+      localStorage.removeItem(ADMIN_TOKEN_KEY)
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY)
+    }
+  } catch {}
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response
+  const adminToken = getAdminToken()
+  const headers: Record<string, string> = {
+    'X-LanternED-Admin': '1',
+    ...(adminToken ? { Authorization: `Bearer ${adminToken}`, 'X-Admin-Token': adminToken } : {}),
+    ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+  }
   try {
     res = await fetch(apiUrl(`/admin${path}`), {
       method,
       credentials: 'include',
       cache: 'no-store',
-      headers: {
-        'X-LanternED-Admin': '1',
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -200,9 +224,20 @@ const qs = (params: Record<string, string | number | undefined>) => {
 }
 
 export const adminApi = {
-  login: (username: string, password: string) =>
-    request<{ username: string; display_name: string }>('POST', '/auth/login', { username, password }),
-  logout: () => request<void>('POST', '/auth/logout'),
+  login: async (username: string, password: string) => {
+    const data = await request<{ username: string; display_name: string; token?: string; session_token?: string }>('POST', '/auth/login', { username, password })
+    if (data?.token || data?.session_token) {
+      setAdminToken(data.token || data.session_token)
+    }
+    return data
+  },
+  logout: async () => {
+    try {
+      await request<void>('POST', '/auth/logout')
+    } finally {
+      setAdminToken(null)
+    }
+  },
   me: () => request<{ username: string; display_name: string }>('GET', '/auth/me'),
   refresh: () => request<{ username: string; display_name: string }>('POST', '/auth/refresh'),
   overview: () => request<AdminOverview>('GET', '/overview'),

@@ -7,7 +7,37 @@ from app.db.models.enums import UserRole, UserStatus
 from app.db.models.user import User
 from app.db.session import get_db
 
-__all__ = ["get_db", "get_settings", "get_current_user", "get_optional_user"]
+__all__ = ["get_db", "get_settings", "get_current_user", "get_optional_user", "extract_token_from_request"]
+
+
+def extract_token_from_request(request: Request, cookie_name: str) -> str | None:
+    """Extracts session or admin token from Authorization header (Bearer), custom headers, or cookie.
+    Guarantees reliable authentication across cross-origin deployments (e.g. Vercel SPA + Render API)
+    where third-party cookies are blocked by modern browsers (Safari ITP, Chrome Privacy Sandbox),
+    as well as inside native desktop (Tauri) and mobile (Capacitor) webviews."""
+    # 1. Bearer token in standard Authorization header
+    auth_header = request.headers.get("authorization")
+    if auth_header:
+        scheme, _, param = auth_header.partition(" ")
+        if scheme.lower() == "bearer" and param.strip():
+            return param.strip()
+
+    # 2. Custom header fallback for webviews / API clients
+    if cookie_name == "lanterned_admin_session":
+        admin_header = request.headers.get("x-admin-token")
+        if admin_header and admin_header.strip():
+            return admin_header.strip()
+    else:
+        session_header = request.headers.get("x-session-token")
+        if session_header and session_header.strip():
+            return session_header.strip()
+
+    # 3. Cookie fallback
+    cookie_val = request.cookies.get(cookie_name)
+    if cookie_val and cookie_val.strip():
+        return cookie_val.strip()
+
+    return None
 
 
 def get_optional_user(
@@ -15,7 +45,7 @@ def get_optional_user(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> User | None:
-    token = request.cookies.get(settings.session_cookie_name)
+    token = extract_token_from_request(request, settings.session_cookie_name)
     if not token:
         return None
 
@@ -50,7 +80,7 @@ def get_current_admin(
     settings: Settings = Depends(get_settings),
     _csrf: None = Depends(require_admin_csrf),
 ) -> User:
-    token = request.cookies.get(settings.admin_cookie_name)
+    token = extract_token_from_request(request, settings.admin_cookie_name)
     if not token:
         raise UnauthorizedError("Authentication required.")
 

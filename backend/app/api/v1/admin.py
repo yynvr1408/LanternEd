@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db.models.enums import CollegeRegistrationRequestStatus, CollegeStatus
 from app.db.models.user import User
-from app.dependencies import get_current_admin, get_db, require_admin_csrf
+from app.dependencies import extract_token_from_request, get_current_admin, get_db, require_admin_csrf
 from app.schemas.admin import (
     AdminLoginRequest,
     AdminOut,
@@ -38,8 +38,8 @@ from app.services import admin_service, auth_service, billing_service, college_s
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def _admin_out(user: User) -> AdminOut:
-    return AdminOut(username=user.email, display_name=user.full_name)
+def _admin_out(user: User, token: str | None = None) -> AdminOut:
+    return AdminOut(username=user.email, display_name=user.full_name, token=token, session_token=token)
 
 
 @router.post("/auth/login", response_model=AdminOut, dependencies=[Depends(require_admin_csrf)])
@@ -63,7 +63,7 @@ def admin_login(
         path="/",
     )
     response.headers["Cache-Control"] = "no-store"
-    return _admin_out(admin)
+    return _admin_out(admin, token=token)
 
 
 @router.post("/auth/logout", status_code=204)
@@ -74,7 +74,7 @@ def admin_logout(
     settings: Settings = Depends(get_settings),
     admin: User = Depends(get_current_admin),
 ):
-    token = request.cookies.get(settings.admin_cookie_name)
+    token = extract_token_from_request(request, settings.admin_cookie_name)
     if token:
         auth_service.revoke_session(db, token)
     samesite = settings.session_cookie_samesite.lower()
@@ -84,9 +84,10 @@ def admin_logout(
 
 
 @router.get("/auth/me", response_model=AdminOut)
-def admin_me(response: Response, admin: User = Depends(get_current_admin)):
+def admin_me(request: Request, response: Response, admin: User = Depends(get_current_admin), settings: Settings = Depends(get_settings)):
+    token = extract_token_from_request(request, settings.admin_cookie_name)
     response.headers["Cache-Control"] = "no-store"
-    return _admin_out(admin)
+    return _admin_out(admin, token=token)
 
 
 @router.post("/auth/refresh", response_model=AdminOut)
@@ -96,7 +97,7 @@ def admin_refresh(
     settings: Settings = Depends(get_settings),
     admin: User = Depends(get_current_admin),
 ):
-    token = request.cookies.get(settings.admin_cookie_name)
+    token = extract_token_from_request(request, settings.admin_cookie_name)
     samesite = settings.session_cookie_samesite.lower()
     if token:
         response.set_cookie(
@@ -109,7 +110,7 @@ def admin_refresh(
             path="/",
         )
     response.headers["Cache-Control"] = "no-store"
-    return _admin_out(admin)
+    return _admin_out(admin, token=token)
 
 
 @router.get("/overview", response_model=OverviewOut)

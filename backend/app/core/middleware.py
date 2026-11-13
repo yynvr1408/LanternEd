@@ -55,12 +55,17 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
         origin = origin.rstrip("/")
         if origin in self.allowed_origins:
             return True
-        if any("vercel.app" in o for o in self.allowed_origins) and (
-            origin.endswith(".vercel.app") or origin.startswith("https://lanterned")
-        ):
+        # Allow any Vercel deployment, official LanternED domains, and custom previews
+        if origin.endswith(".vercel.app") or "lanterned" in origin or "lantern-ed" in origin:
+            return True
+        # Native app shells: Tauri (Windows/macOS) and Capacitor (Android/iOS)
+        if origin.startswith("tauri://") or origin in {"http://tauri.localhost", "https://tauri.localhost"} or origin.startswith("capacitor://"):
+            return True
+        # Local development / loopback testing
+        parts = urlsplit(origin)
+        if parts.hostname in {"localhost", "127.0.0.1"}:
             return True
         # Same-origin deployments (the SPA served by the same host as the API, as in the
         # self-hosted Caddy setup) send an Origin equal to the request's own host.
         host = request.headers.get("host")
-        parts = urlsplit(origin)
         return bool(host) and parts.scheme in {"http", "https"} and parts.netloc == host

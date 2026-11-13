@@ -1,5 +1,5 @@
 import type { CollegeSelection } from './registrationApi'
-import { api, apiRequest } from './apiClient'
+import { api, apiRequest, setAuthToken } from './apiClient'
 import type { AuthResponse, User } from '../types'
 
 /**
@@ -52,6 +52,9 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     })
     if (isOtpChallenge(data)) return data // no session yet: nothing to cache
+    if (data.token || data.session_token) {
+      setAuthToken(data.token || data.session_token)
+    }
     this.cacheUser(data.user)
     return data
   },
@@ -62,6 +65,9 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify({ email, otp }),
     })
+    if (data.token || data.session_token) {
+      setAuthToken(data.token || data.session_token)
+    }
     this.cacheUser(data.user)
     return data
   },
@@ -110,6 +116,9 @@ export const authService = {
       }),
     })
     if (isRegistrationPending(data)) return data
+    if (data.token || data.session_token) {
+      setAuthToken(data.token || data.session_token)
+    }
     this.cacheUser(data.user)
     return data
   },
@@ -153,6 +162,7 @@ export const authService = {
   },
 
   clearLocalSession(): void {
+    setAuthToken(null)
     sessionStorage.removeItem('lanterned_user')
     localStorage.removeItem('lanterned_user')
   },

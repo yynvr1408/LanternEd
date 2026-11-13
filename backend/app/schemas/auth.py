@@ -55,6 +55,8 @@ class LoginOtpRequired(BaseModel):
 
 class AuthResponse(BaseModel):
     user: UserOut
+    token: str | None = None
+    session_token: str | None = None
 
 
 class RegistrationPendingOut(BaseModel):

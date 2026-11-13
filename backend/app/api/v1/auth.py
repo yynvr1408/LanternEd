@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
 from app.db.models.enums import UserStatus
-from app.dependencies import get_current_user, get_db
+from app.dependencies import extract_token_from_request, get_current_user, get_db
 from app.db.models.user import User
 from app.schemas.auth import (
     AuthResponse,
@@ -113,7 +113,7 @@ def register(
         )
     token = auth_service.create_session(db, user)
     _set_session_cookie(response, token, settings)
-    return AuthResponse(user=UserOut.model_validate(user))
+    return AuthResponse(user=UserOut.model_validate(user), token=token, session_token=token)
 
 
 @router.post("/login", response_model=AuthResponse, responses={202: {"model": LoginOtpRequired}})
@@ -126,7 +126,8 @@ def login(
 ):
     ip = request.client.host if request.client else None
     user = auth_service.authenticate_user(db, email=payload.email, password=payload.password, ip=ip)
-    if auth_service.login_requires_otp(db, user, request.cookies.get(settings.session_cookie_name)):
+    incoming_token = extract_token_from_request(request, settings.session_cookie_name)
+    if auth_service.login_requires_otp(db, user, incoming_token):
         # Somebody is already signed in to this account: no session until the owner approves via emailed code.
         sent, dev_otp = auth_service.request_login_otp(db, user, ip=ip)
         body = {
@@ -141,7 +142,7 @@ def login(
         return JSONResponse(status_code=202, content=body)
     token = auth_service.create_session(db, user)
     _set_session_cookie(response, token, settings)
-    return AuthResponse(user=UserOut.model_validate(user))
+    return AuthResponse(user=UserOut.model_validate(user), token=token, session_token=token)
 
 
 @router.post("/login/verify-otp", response_model=AuthResponse)
@@ -155,7 +156,7 @@ def verify_login_otp(
     user = auth_service.verify_login_otp(db, email=payload.email, otp=payload.otp, ip=request.client.host if request.client else None)
     token = auth_service.create_session(db, user)
     _set_session_cookie(response, token, settings)
-    return AuthResponse(user=UserOut.model_validate(user))
+    return AuthResponse(user=UserOut.model_validate(user), token=token, session_token=token)
 
 
 @router.post("/logout", status_code=204)
@@ -166,7 +167,7 @@ def logout(
     settings: Settings = Depends(get_settings),
     _: User = Depends(get_current_user),
 ):
-    token = request.cookies.get(settings.session_cookie_name)
+    token = extract_token_from_request(request, settings.session_cookie_name)
     if token:
         auth_service.revoke_session(db, token)
     _delete_session_cookie(response, settings)

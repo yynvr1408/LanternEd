@@ -14,6 +14,8 @@ class AdminLoginRequest(BaseModel):
 class AdminOut(BaseModel):
     username: str
     display_name: str
+    token: str | None = None
+    session_token: str | None = None
 
 
 def _clean(value: str | None) -> str | None:

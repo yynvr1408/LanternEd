@@ -58,6 +58,7 @@ def bootstrap_admin(db: Session) -> None:
         admin.password_hash = hash_password(settings.admin_password)
         auth_service.revoke_all_sessions_except(db, admin, keep_token=None)
         changed = True
+        logger.info("Administrator password synchronized with environment configuration.")
     if admin.status != UserStatus.active:
         admin.status = UserStatus.active
         changed = True

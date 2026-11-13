@@ -11,9 +11,11 @@ export interface User {
   whatsapp_opt_in?: boolean
 }
 
-/** Sessions are httpOnly cookies set by the server; JavaScript never holds a token. */
+/** Sessions support both httpOnly cookies and bearer tokens for cross-origin & webview reliability. */
 export interface AuthResponse {
   user: User
+  token?: string
+  session_token?: string
 }
 
 export interface Lesson {

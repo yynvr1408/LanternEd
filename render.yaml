@@ -47,6 +47,8 @@ services:
         value: eleven_turbo_v2_5
       - key: EMBEDDED_WORKER
         value: "true"
+      - key: ADMIN_RESET_PASSWORD_ON_START
+        value: "true"
 
       # Secrets & Credentials (Render will prompt for these once)
       - key: DATABASE_URL

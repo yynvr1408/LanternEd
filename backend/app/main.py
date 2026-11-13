@@ -102,13 +102,13 @@ app.add_middleware(RequestIdMiddleware)  # added after, so it wraps the origin c
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app" if any("vercel.app" in o for o in allowed_origins) else None,
+    allow_origin_regex=r"^https://.*\.vercel\.app$|^https://.*lantern-?ed.*$|^tauri://.*$|^https?://tauri\.localhost$|^capacitor://.*$|^https?://localhost(:[0-9]+)?$|^https?://127\.0\.0\.1(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     # Browsers on another origin can only read these response headers if they are exposed; resumable
     # downloads need Content-Range to learn a file's real size and verify each chunk.
-    expose_headers=["Content-Range", "Accept-Ranges", "X-Request-ID"],
+    expose_headers=["Content-Range", "Accept-Ranges", "X-Request-ID", "Set-Cookie"],
 )
 # Every JSON response (class/course lists, summaries, ...) goes out compressed on a slow link.
 # minimum_size skips the overhead on tiny payloads where compression wouldn't pay for itself.

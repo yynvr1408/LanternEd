@@ -86,6 +86,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export const AUTH_TOKEN_KEY = 'lanterned_session_token'
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setAuthToken(token: string | null | undefined): void {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token)
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY)
+      sessionStorage.removeItem(AUTH_TOKEN_KEY)
+    }
+  } catch {}
+}
+
 export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...init } = options
   options = init
@@ -94,6 +115,15 @@ export async function apiRequest<T>(endpoint: string, options: ApiRequestOptions
   const headers = new Headers(options.headers || {})
   if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
+  }
+  const token = getAuthToken()
+  if (token) {
+    if (!headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    if (!headers.has('X-Session-Token')) {
+      headers.set('X-Session-Token', token)
+    }
   }
 
   // Check simulated network bandwidth
@@ -181,10 +211,21 @@ export async function apiBlobRequest(endpoint: string, options: ApiRequestOption
   options.signal?.addEventListener('abort', () => controller.abort())
   let timedOut = false
   const timer = timeoutMs > 0 ? setTimeout(() => { timedOut = true; controller.abort() }, timeoutMs) : undefined
+  const headers = new Headers(init.headers || {})
+  const token = getAuthToken()
+  if (token) {
+    if (!headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    if (!headers.has('X-Session-Token')) {
+      headers.set('X-Session-Token', token)
+    }
+  }
 
   try {
     const response = await fetch(apiUrl(endpoint), {
       ...init,
+      headers,
       credentials: 'include',
       signal: controller.signal,
     })
